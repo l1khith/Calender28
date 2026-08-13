@@ -213,6 +213,14 @@ fun FixedCalendarApp(
             onSaveRecurring = { id, title, desc, recType, recDays, interval, priority, isActive, endDate, reminderTime ->
                 viewModel.saveRecurringTask(id, title, desc, recType, recDays, interval, priority, isActive, endDate, reminderTime)
                 showAddTaskDialog = false
+            },
+            onDeleteTask = { task ->
+                viewModel.deleteTask(task)
+                showAddTaskDialog = false
+            },
+            onDeleteRecurring = { recId ->
+                viewModel.deleteRecurringTask(recId)
+                showAddTaskDialog = false
             }
         )
     }

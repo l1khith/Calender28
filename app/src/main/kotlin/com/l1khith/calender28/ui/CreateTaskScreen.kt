@@ -58,7 +58,9 @@ fun CreateTaskScreen(
     ) -> Unit = { _, _, _, _, _, _, _, _, _, _ -> },
     existingRecurringCount: Int = 0,
     isProActive: Boolean = false,
-    onOpenPaywall: () -> Unit = {}
+    onOpenPaywall: () -> Unit = {},
+    onDeleteTask: (AppTask) -> Unit = {},
+    onDeleteRecurring: (String) -> Unit = {}
 ) {
     var title by remember { mutableStateOf(task?.title ?: "") }
     var description by remember { mutableStateOf(task?.description ?: "") }
@@ -160,25 +162,52 @@ fun CreateTaskScreen(
                     fontSize = 20.sp
                 )
 
-                TextButton(
-                    onClick = {
-                        if (title.trim().isNotEmpty()) {
-                            if (isReminder && !reminderTime.isNullOrEmpty()) {
-                                notifPermissionLauncher()
-                            } else {
-                                performSave()
-                            }
-                        }
-                    },
-                    enabled = title.trim().isNotEmpty()
-                ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    if (task != null) {
+                        IconButton(
+                            onClick = {
+                                val parentId = task.recurringParentId ?: if (task.id.startsWith("gen_")) {
+                                    val parts = task.id.split("_")
+                                    if (parts.size >= 3) parts[1] else task.id
+                                } else null
 
-                    Text(
-                        text = "Save",
-                        color = if (title.trim().isNotEmpty()) MatrixColors.Primary else MatrixColors.TextSecondary,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 15.sp
-                    )
+                                if (parentId != null || taskTypeLabel == "Recurring") {
+                                    onDeleteRecurring(parentId ?: task.id)
+                                } else {
+                                    onDeleteTask(task)
+                                }
+                                onDismiss()
+                            },
+                            modifier = Modifier.size(24.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Delete,
+                                contentDescription = "Delete Task",
+                                tint = Color(0xFFEF4444)
+                            )
+                        }
+                        Spacer(modifier = Modifier.width(12.dp))
+                    }
+
+                    TextButton(
+                        onClick = {
+                            if (title.trim().isNotEmpty()) {
+                                if (isReminder && !reminderTime.isNullOrEmpty()) {
+                                    notifPermissionLauncher()
+                                } else {
+                                    performSave()
+                                }
+                            }
+                        },
+                        enabled = title.trim().isNotEmpty()
+                    ) {
+                        Text(
+                            text = "Save",
+                            color = if (title.trim().isNotEmpty()) MatrixColors.Primary else MatrixColors.TextSecondary,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 15.sp
+                        )
+                    }
                 }
             }
             HorizontalDivider(color = MatrixColors.OutlineVariant, thickness = 1.dp)
@@ -286,7 +315,11 @@ fun CreateTaskScreen(
                                         .background(if (isSelected) MatrixColors.PrimaryContainer else Color.Transparent)
                                         .clickable {
                                             taskTypeLabel = label
-                                            isReminder = (label == "Scheduled")
+                                            if (label == "Scheduled" || label == "Recurring") {
+                                                isReminder = true
+                                            } else if (label == "Normal") {
+                                                isReminder = false
+                                            }
                                         }
                                         .padding(vertical = 10.dp),
                                     contentAlignment = Alignment.Center

@@ -17,6 +17,14 @@ object HabitCycleEngine {
 
     const val DAYS_IN_CYCLE = 28
 
+    fun getEpochDay(timestampMs: Long): Long {
+        val tz = java.util.TimeZone.getDefault()
+        val localMs = timestampMs + tz.getOffset(timestampMs)
+        return (localMs / 86400000L).coerceAtLeast(0L)
+    }
+
+    fun currentEpochDay(): Long = getEpochDay(System.currentTimeMillis())
+
     fun computePosition(epochDay: Long, anchorEpochDay: Long = 0L): HabitCyclePosition {
         val delta = epochDay - anchorEpochDay
         val cycleIndex: Long

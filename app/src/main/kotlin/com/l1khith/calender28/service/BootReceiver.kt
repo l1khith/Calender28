@@ -4,14 +4,16 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.util.Log
+import com.l1khith.calender28.data.AppTask
 import com.l1khith.calender28.data.TaskDatabase
+import com.l1khith.calender28.utils.FixedCalendarHelper
 import com.l1khith.calender28.widget.WidgetUpdater
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 
-private const val TAG = "BootReceiver"
+private const val TAG = "ServiceBootReceiver"
 
 class BootReceiver : BroadcastReceiver() {
 
@@ -37,31 +39,69 @@ class BootReceiver : BroadcastReceiver() {
             try {
                 val db = TaskDatabase(context)
                 val scheduler = AlarmScheduler(context)
+                val today = FixedCalendarHelper.currentFixedDate()
+                val todayStr = today.toString()
 
-                // Reschedule all active task reminders
+                // 1. Reschedule all active normal task reminders (including generated recurring instances)
                 val allTasks = db.getAllTasks()
                 val activeTasksWithReminders = allTasks.filter {
-                    it.reminder && !it.completed && it.utcTimestamp != null && it.utcTimestamp > System.currentTimeMillis()
+                    it.reminder && !it.completed && it.utcTimestamp != null
                 }
+                var taskCount = 0
                 activeTasksWithReminders.forEach { task ->
-                    scheduler.scheduleTaskReminder(task)
+                    if (scheduler.scheduleTaskReminder(task)) {
+                        taskCount++
+                    }
                 }
 
-                // Reschedule all active recurring tasks
+                // 2. For active recurring tasks, generate today's instance if missing
                 val activeRecurring = db.getAllRecurringTasks().filter { it.isActive }
+                var recurringGenCount = 0
                 activeRecurring.forEach { recurring ->
-                    scheduler.scheduleRecurringTask(recurring)
+                    if (FixedCalendarHelper.shouldGenerateInstance(recurring, today)) {
+                        val hasGen = allTasks.any {
+                            it.recurringParentId == recurring.id && it.associatedDate == todayStr
+                        }
+                        if (!hasGen) {
+                            val isRem = if (recurring.reminderTime != null) 1 else 0
+                            val utcTs = if (recurring.reminderTime != null) {
+                                FixedCalendarHelper.toTimestamp(today, recurring.reminderTime)
+                            } else null
+
+                            val genTask = AppTask(
+                                id = "gen_${recurring.id}_$todayStr",
+                                title = recurring.title,
+                                description = recurring.description,
+                                associatedDate = todayStr,
+                                isReminder = isRem,
+                                reminderTime = recurring.reminderTime,
+                                utcTimestamp = utcTs,
+                                isCompleted = 0,
+                                priority = recurring.priority,
+                                recurringParentId = recurring.id,
+                                isGenerated = 1
+                            )
+                            db.insertTask(genTask)
+                            if (isRem == 1) {
+                                scheduler.scheduleTaskReminder(genTask)
+                            }
+                            recurringGenCount++
+                        }
+                    }
                 }
 
-                // Reschedule all habit reminders
+                // 3. Reschedule all habit reminders
                 val activeHabits = db.getAllHabits().filter { !it.isPaused && !it.reminderTime.isNullOrEmpty() }
+                var habitCount = 0
                 activeHabits.forEach { habit ->
-                    scheduler.scheduleHabitReminder(habit)
+                    if (scheduler.scheduleHabitReminder(habit)) {
+                        habitCount++
+                    }
                 }
 
                 Log.d(
                     TAG,
-                    "Rescheduled ${activeTasksWithReminders.size} task alarms, ${activeRecurring.size} recurring alarms, ${activeHabits.size} habit alarms"
+                    "Rescheduled $taskCount task alarms, generated $recurringGenCount recurring instances, $habitCount habit alarms"
                 )
 
                 WidgetUpdater.updateWidget(context)

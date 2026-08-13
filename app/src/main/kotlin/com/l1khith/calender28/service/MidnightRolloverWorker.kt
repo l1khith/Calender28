@@ -27,26 +27,31 @@ class MidnightRolloverWorker(
             val scheduler = AlarmScheduler(applicationContext)
             val today = FixedCalendarHelper.currentFixedDate()
 
-            // 1. Run catch-up rollover for active recurring tasks
+            // 1. Run catch-up rollover — generates instances and schedules alarms via service/AlarmScheduler
             db.catchUpRollover(today.toString())
 
-            // 2. Reschedule active recurring tasks & habit reminders
-            val activeRecurring = db.getAllRecurringTasks().filter { it.isActive }
-            activeRecurring.forEach { recurring ->
-                scheduler.scheduleRecurringTask(recurring)
+            // 2. Reschedule alarms for any generated tasks that might have been created
+            val allTasks = db.getAllTasks()
+            val todayTasks = allTasks.filter {
+                it.reminder && !it.completed && it.utcTimestamp != null && it.associatedDate == today.toString()
+            }
+            todayTasks.forEach { task ->
+                scheduler.scheduleTaskReminder(task)
             }
 
+            // 3. Reschedule all habit reminders for today
             val activeHabits = db.getAllHabits().filter { !it.isPaused && !it.reminderTime.isNullOrEmpty() }
             activeHabits.forEach { habit ->
                 scheduler.scheduleHabitReminder(habit)
             }
 
-            // 3. Update Widget
+            // 4. Update Widget
             WidgetUpdater.updateWidget(applicationContext)
 
-            // 4. Schedule next midnight rollover
+            // 5. Schedule next midnight rollover
             scheduleNextMidnightRollover(applicationContext)
 
+            Log.d(TAG, "doWork: Completed. ${todayTasks.size} task alarms, ${activeHabits.size} habit alarms rescheduled")
             Result.success()
         } catch (e: Exception) {
             Log.e(TAG, "Error in MidnightRolloverWorker", e)

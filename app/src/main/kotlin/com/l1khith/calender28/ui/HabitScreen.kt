@@ -78,6 +78,25 @@ fun HabitSection(
 
     val selectedHabit = habits.find { it.id == selectedHabitId }
 
+    fun toggleDay(habit: Habit, dayInCycle: Int) {
+        val todayEpochDay = HabitCycleEngine.currentEpochDay()
+        val anchorEpochDay = HabitCycleEngine.getEpochDay(habit.createdAtMs)
+        val currentCyclePos = HabitCycleEngine.computePosition(todayEpochDay, anchorEpochDay)
+
+        if (dayInCycle > currentCyclePos.safeDayInCycle) {
+            com.l1khith.calender28.utils.showPlatformToast("Cannot log habit for future days!")
+            return
+        }
+
+        val isCompleted = habit.completedDays.contains(dayInCycle)
+        if (viewModel != null) {
+            viewModel.toggleHabitDay(habit.id, currentCyclePos.cycleIndex, dayInCycle, isCompleted)
+        } else {
+            database.upsertHabitEntry(habit.id, currentCyclePos.cycleIndex, dayInCycle, !isCompleted)
+            refreshHabits()
+        }
+    }
+
     if (selectedHabit != null) {
         Dialog(
             onDismissRequest = { selectedHabitId = null },
@@ -86,20 +105,14 @@ fun HabitSection(
             HabitDetailScreen(
                 habit = selectedHabit,
                 onBack = { selectedHabitId = null },
+                onToggleDay = { dayIndex ->
+                    toggleDay(selectedHabit, dayIndex)
+                },
                 onUpdateHabit = { updated ->
                     if (viewModel != null) {
                         viewModel.updateHabit(updated)
                     } else {
                         database.updateHabit(updated)
-                        val today = FixedCalendarHelper.fromTimestamp(currentTimeMillis())
-                        val todayEpochDay = today.toEpochDay()
-                        val anchorEpochDay = (updated.createdAtMs / 86400000L).coerceAtLeast(0L)
-                        val currentCyclePos = HabitCycleEngine.computePosition(todayEpochDay, anchorEpochDay)
-
-                        for (dayInCycle in 1..28) {
-                            val isDone = updated.completedDays.contains(dayInCycle)
-                            database.upsertHabitEntry(updated.id, currentCyclePos.cycleIndex, dayInCycle, isDone)
-                        }
                         refreshHabits()
                     }
                 },
@@ -134,22 +147,6 @@ fun HabitSection(
                     selectedHabitId = newHabit.id
                 }
             )
-        }
-    }
-
-    fun toggleDay(habit: Habit, dayInCycle: Int) {
-        val isCompleted = habit.completedDays.contains(dayInCycle)
-        if (viewModel != null) {
-            val today = FixedCalendarHelper.fromTimestamp(currentTimeMillis())
-            val todayEpochDay = today.toEpochDay()
-            val anchorEpochDay = (habit.createdAtMs / 86400000L).coerceAtLeast(0L)
-            val currentCyclePos = HabitCycleEngine.computePosition(todayEpochDay, anchorEpochDay)
-            viewModel.toggleHabitDay(habit.id, currentCyclePos.cycleIndex, dayInCycle, isCompleted)
-        } else {
-            val updatedDays = if (isCompleted) habit.completedDays - dayInCycle else habit.completedDays + dayInCycle
-            val updated = habit.copy(completedDays = updatedDays)
-            database.updateHabit(updated)
-            refreshHabits()
         }
     }
 
@@ -299,7 +296,12 @@ fun HabitSection(
 
                         Spacer(modifier = Modifier.height(14.dp))
 
-                        // 4x7 Day Grid for Habit
+                        // 4x7 Day Grid for Habit (Days 1 to 28)
+                        val todayEpochDay = HabitCycleEngine.currentEpochDay()
+                        val anchorEpochDay = HabitCycleEngine.getEpochDay(habit.createdAtMs)
+                        val currentPos = HabitCycleEngine.computePosition(todayEpochDay, anchorEpochDay)
+                        val todayCycleDay = currentPos.safeDayInCycle
+
                         Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                             for (row in 0 until 4) {
                                 Row(
@@ -309,6 +311,8 @@ fun HabitSection(
                                     for (col in 1..7) {
                                         val dayNum = row * 7 + col
                                         val isDone = habit.completedDays.contains(dayNum)
+                                        val isToday = dayNum == todayCycleDay
+                                        val isFuture = dayNum > todayCycleDay
 
                                         Box(
                                             modifier = Modifier
@@ -317,21 +321,24 @@ fun HabitSection(
                                                 .clip(MatrixShapes.Sm)
                                                 .background(
                                                     if (isDone) Color(0xFF3B82F6)
+                                                    else if (isFuture) MatrixColors.SurfaceContainerHigh.copy(alpha = 0.2f)
                                                     else MatrixColors.SurfaceContainerHigh.copy(alpha = 0.5f)
                                                 )
                                                 .border(
                                                     1.dp,
-                                                    if (isDone) Color(0xFF60A5FA) else MatrixColors.OutlineVariant.copy(alpha = 0.5f),
+                                                    if (isToday) Color(0xFF60A5FA)
+                                                    else if (isDone) Color(0xFF3B82F6)
+                                                    else MatrixColors.OutlineVariant.copy(alpha = 0.3f),
                                                     MatrixShapes.Sm
                                                 )
-                                                .clickable { toggleDay(habit, dayNum) },
+                                                .clickable(enabled = !isFuture) { toggleDay(habit, dayNum) },
                                             contentAlignment = Alignment.Center
                                         ) {
                                             Text(
                                                 text = if (isDone) "✓" else "$dayNum",
-                                                color = if (isDone) Color.White else MatrixColors.TextSecondary,
+                                                color = if (isDone) Color.White else if (isFuture) MatrixColors.TextSecondary.copy(alpha = 0.3f) else MatrixColors.TextHeader,
                                                 fontSize = 11.sp,
-                                                fontWeight = if (isDone) FontWeight.Bold else FontWeight.Normal
+                                                fontWeight = if (isToday || isDone) FontWeight.Bold else FontWeight.Normal
                                             )
                                         }
                                     }
@@ -644,14 +651,17 @@ fun NewHabitScreen(
 fun HabitDetailScreen(
     habit: Habit,
     onBack: () -> Unit,
+    onToggleDay: (Int) -> Unit = {},
     onUpdateHabit: (Habit) -> Unit,
     onDeleteHabit: (String) -> Unit
 ) {
     val weekHeaders = listOf("M", "T", "W", "T", "F", "S", "S")
 
-    // Determine today's day number in the 28-day cycle month (1..28)
-    val todayFixedDate = FixedCalendarHelper.fromTimestamp(currentTimeMillis())
-    val todayCycleDay = todayFixedDate.day.coerceIn(1, 28)
+    // Determine today's day number in the 28-day cycle relative to habit creation
+    val todayEpochDay = HabitCycleEngine.currentEpochDay()
+    val anchorEpochDay = HabitCycleEngine.getEpochDay(habit.createdAtMs)
+    val currentPos = HabitCycleEngine.computePosition(todayEpochDay, anchorEpochDay)
+    val todayCycleDay = currentPos.safeDayInCycle
 
     var showTimePicker by remember { mutableStateOf(false) }
 
@@ -846,7 +856,7 @@ fun HabitDetailScreen(
 
                         Spacer(modifier = Modifier.height(8.dp))
 
-                        // 4x7 Interactive Dots Grid mapped to 28-day calendar
+                        // 4x7 Interactive Dots Grid mapped to 28-day calendar (Day 1 to Day 28)
                         Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                             for (row in 0 until 4) {
                                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
@@ -854,38 +864,38 @@ fun HabitDetailScreen(
                                         val dayIndex = row * 7 + col
                                         val isToday = dayIndex == todayCycleDay
                                         val isDone = habit.completedDays.contains(dayIndex)
+                                        val isFuture = dayIndex > todayCycleDay
 
                                         Box(
                                             modifier = Modifier
                                                 .weight(1f)
-                                                .clickable {
-                                                    val newDays = if (isDone) habit.completedDays - dayIndex else habit.completedDays + dayIndex
-                                                    onUpdateHabit(habit.copy(completedDays = newDays))
+                                                .clickable(enabled = !isFuture) {
+                                                    onToggleDay(dayIndex)
                                                 },
                                             contentAlignment = Alignment.Center
                                         ) {
                                             Box(
                                                 modifier = Modifier
-                                                    .size(24.dp)
+                                                    .size(28.dp)
                                                     .clip(CircleShape)
                                                     .background(
-                                                        if (isDone) Color(0xFF93C5FD).copy(alpha = 0.85f)
-                                                        else MatrixColors.OutlineVariant.copy(alpha = 0.3f)
+                                                        if (isDone) Color(0xFF3B82F6)
+                                                        else if (isFuture) MatrixColors.OutlineVariant.copy(alpha = 0.15f)
+                                                        else MatrixColors.OutlineVariant.copy(alpha = 0.4f)
                                                     )
                                                     .border(
                                                         width = if (isToday) 2.dp else 0.dp,
-                                                        color = if (isToday) Color(0xFF3B82F6) else Color.Transparent,
+                                                        color = if (isToday) Color(0xFF60A5FA) else Color.Transparent,
                                                         shape = CircleShape
                                                     ),
                                                 contentAlignment = Alignment.Center
                                             ) {
-                                                if (isDone) {
-                                                    Surface(
-                                                        shape = CircleShape,
-                                                        color = Color.White,
-                                                        modifier = Modifier.size(6.dp)
-                                                    ) {}
-                                                }
+                                                Text(
+                                                    text = if (isDone) "✓" else "$dayIndex",
+                                                    color = if (isDone) Color.White else if (isFuture) MatrixColors.TextSecondary.copy(alpha = 0.35f) else MatrixColors.TextHeader,
+                                                    fontSize = 10.sp,
+                                                    fontWeight = if (isToday || isDone) FontWeight.Bold else FontWeight.Normal
+                                                )
                                             }
                                         }
                                     }
@@ -896,7 +906,7 @@ fun HabitDetailScreen(
                 }
             }
 
-            // MANAGEMENT CARD (Reminder Time & Pause Habit only - Priority Level removed per user request)
+            // MANAGEMENT CARD (Reminder Time only)
             item {
                 Card(
                     modifier = Modifier.fillMaxWidth(),
@@ -926,28 +936,6 @@ fun HabitDetailScreen(
                                 }
                             }
                             Icon(imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null, tint = MatrixColors.TextSecondary)
-                        }
-
-                        HorizontalDivider(color = MatrixColors.OutlineVariant, thickness = 1.dp)
-
-                        Row(
-                            modifier = Modifier.fillMaxWidth().padding(16.dp),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Icon(imageVector = AppIcons.PauseHabit, contentDescription = null, tint = MatrixColors.TextSecondary, modifier = Modifier.size(20.dp))
-                                Spacer(modifier = Modifier.width(12.dp))
-                                Column {
-                                    Text("Pause Habit", color = MatrixColors.TextHeader, fontSize = 14.sp)
-                                    Text("Temporarily stop tracking", color = MatrixColors.TextSecondary, fontSize = 12.sp)
-                                }
-                            }
-                            Switch(
-                                checked = habit.isPaused,
-                                onCheckedChange = { onUpdateHabit(habit.copy(isPaused = it)) },
-                                colors = SwitchDefaults.colors(checkedThumbColor = Color.White, checkedTrackColor = Color(0xFF3B82F6))
-                            )
                         }
                     }
                 }

@@ -66,9 +66,8 @@ class NotificationActionReceiver : BroadcastReceiver() {
                         val habitId = intent.getStringExtra("habit_id") ?: return@launch
                         val habit = db.getAllHabits().find { it.id == habitId } ?: return@launch
 
-                        val today = FixedCalendarHelper.currentFixedDate()
-                        val todayEpochDay = today.toEpochDay()
-                        val anchorEpochDay = (habit.createdAtMs / 86400000L).coerceAtLeast(0L)
+                        val todayEpochDay = HabitCycleEngine.currentEpochDay()
+                        val anchorEpochDay = HabitCycleEngine.getEpochDay(habit.createdAtMs)
                         val pos = HabitCycleEngine.computePosition(todayEpochDay, anchorEpochDay)
 
                         db.upsertHabitEntry(habitId, pos.cycleIndex, pos.safeDayInCycle, true)

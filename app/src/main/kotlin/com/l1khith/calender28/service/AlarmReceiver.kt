@@ -13,7 +13,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 
-private const val TAG = "AlarmReceiver"
+private const val TAG = "ServiceAlarmReceiver"
 
 class AlarmReceiver : BroadcastReceiver() {
 
@@ -38,9 +38,6 @@ class AlarmReceiver : BroadcastReceiver() {
                 val description = intent.getStringExtra(AlarmScheduler.EXTRA_DESCRIPTION)
                     ?: intent.getStringExtra("task_desc")
 
-                val isRecurring = intent.getBooleanExtra(AlarmScheduler.EXTRA_IS_RECURRING, false)
-                val recurrenceIndex = intent.getIntExtra(AlarmScheduler.EXTRA_RECURRENCE_INDEX, 0)
-
                 Log.d(TAG, "onReceive: Triggered alarm for itemId=$itemId, itemType=$itemType, title=$title")
 
                 val db = TaskDatabase(context)
@@ -49,13 +46,18 @@ class AlarmReceiver : BroadcastReceiver() {
 
                 when (itemType) {
                     AlarmScheduler.TYPE_TASK -> {
+                        // Handles both normal tasks AND generated recurring task instances
                         val task = db.getAllTasks().find { it.id == itemId }
                         if (task != null) {
                             if (!task.completed) {
+                                Log.d(TAG, "Showing task reminder for id=$itemId title='${task.title}'")
                                 notificationHelper.showTaskReminder(task)
+                            } else {
+                                Log.d(TAG, "Task $itemId already completed, skipping notification")
                             }
                         } else {
-                            // Temporary or generated task fallback
+                            // Task may have been deleted; show from intent extras as fallback
+                            Log.d(TAG, "Task $itemId not found in DB, showing from intent extras")
                             val tempTask = com.l1khith.calender28.data.AppTask(
                                 id = itemId,
                                 title = title,
@@ -70,28 +72,27 @@ class AlarmReceiver : BroadcastReceiver() {
                         }
                     }
 
-                    AlarmScheduler.TYPE_RECURRING -> {
-                        val recurring = db.getAllRecurringTasks().find { it.id == itemId }
-                        if (recurring != null && recurring.isActive) {
-                            notificationHelper.showRecurringTaskReminder(recurring, recurrenceIndex)
-                            scheduler.scheduleRecurringTask(recurring)
-                        }
-                    }
-
                     AlarmScheduler.TYPE_HABIT -> {
                         val habit = db.getAllHabits().find { it.id == itemId }
                         if (habit != null && !habit.isPaused) {
-                            val today = FixedCalendarHelper.currentFixedDate()
-                            val todayEpochDay = today.toEpochDay()
-                            val anchorEpochDay = (habit.createdAtMs / 86400000L).coerceAtLeast(0L)
+                            val todayEpochDay = HabitCycleEngine.currentEpochDay()
+                            val anchorEpochDay = HabitCycleEngine.getEpochDay(habit.createdAtMs)
                             val pos = HabitCycleEngine.computePosition(todayEpochDay, anchorEpochDay)
 
                             val isAlreadyCompletedToday = habit.completedDays.contains(pos.safeDayInCycle)
                             if (!isAlreadyCompletedToday) {
+                                Log.d(TAG, "Showing habit reminder for id=$itemId name='${habit.name}'")
                                 notificationHelper.showHabitReminder(habit)
+                            } else {
+                                Log.d(TAG, "Habit $itemId already completed today, skipping notification")
                             }
+                            // Schedule tomorrow's habit reminder
                             scheduler.scheduleHabitReminder(habit)
                         }
+                    }
+
+                    else -> {
+                        Log.w(TAG, "Unknown itemType=$itemType for itemId=$itemId, ignoring")
                     }
                 }
 

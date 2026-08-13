@@ -47,6 +47,9 @@ interface TaskDao {
     @Query("DELETE FROM tasks WHERE recurring_parent_id = :parentId AND is_completed = 0")
     suspend fun deleteIncompleteGeneratedTasks(parentId: String): Int
 
+    @Query("DELETE FROM tasks WHERE recurring_parent_id = :parentId OR id LIKE 'gen_' || :parentId || '_%'")
+    suspend fun deleteAllGeneratedTasksForParent(parentId: String): Int
+
     @Query("SELECT COUNT(*) FROM tasks WHERE associated_date = :dateStr AND recurring_parent_id = :parentId")
     suspend fun countGeneratedInstanceForDate(dateStr: String, parentId: String): Int
 

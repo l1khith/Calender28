@@ -14,7 +14,6 @@ import androidx.core.app.NotificationManagerCompat
 import com.l1khith.calender28.MainActivity
 import com.l1khith.calender28.data.AppTask
 import com.l1khith.calender28.data.Habit
-import com.l1khith.calender28.data.RecurringTask
 import com.l1khith.calender28.data.TaskDatabase
 
 private const val TAG = "NotificationHelper"
@@ -143,48 +142,6 @@ class NotificationHelper(private val context: Context) {
         }
     }
 
-    fun showRecurringTaskReminder(recurring: RecurringTask, occurrenceIndex: Int = 0) {
-        val notificationId = "${recurring.id}_$occurrenceIndex".hashCode() and 0x7FFFFFFF
-        Log.d(TAG, "showRecurringTaskReminder: Displaying notification for recurring task id=${recurring.id}")
-
-        val markCompleteIntent = Intent(context, NotificationActionReceiver::class.java).apply {
-            action = ACTION_MARK_COMPLETE
-            putExtra("recurring_id", recurring.id)
-            putExtra("occurrence_index", occurrenceIndex)
-        }
-
-        val contentIntent = context.packageManager.getLaunchIntentForPackage(context.packageName)?.apply {
-            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
-            putExtra("navigate_to", "recurring_detail")
-            putExtra("recurring_id", recurring.id)
-        } ?: Intent(context, MainActivity::class.java)
-
-        val builder = NotificationCompat.Builder(context, CHANNEL_RECURRING_REMINDERS)
-            .setSmallIcon(android.R.drawable.ic_popup_sync)
-            .setContentTitle("🔁 ${recurring.title}")
-            .setContentText(recurring.description ?: "Recurring task routine")
-            .setPriority(NotificationCompat.PRIORITY_HIGH)
-            .setAutoCancel(true)
-            .setContentIntent(
-                PendingIntent.getActivity(
-                    context, notificationId, contentIntent,
-                    PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-                )
-            )
-            .addAction(
-                android.R.drawable.checkbox_on_background, "Done",
-                PendingIntent.getBroadcast(
-                    context, notificationId, markCompleteIntent,
-                    PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-                )
-            )
-
-        try {
-            notificationManager.notify(notificationId, builder.build())
-        } catch (e: SecurityException) {
-            Log.e(TAG, "Notification permission missing", e)
-        }
-    }
 
     fun showHabitReminder(habit: Habit) {
         val notificationId = "${habit.id}_habit".hashCode() and 0x7FFFFFFF

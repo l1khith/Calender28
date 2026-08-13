@@ -26,7 +26,7 @@ fun rememberCalendarPermissionLauncher(
     val launcher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestMultiplePermissions()
     ) { permissions ->
-        val isGranted = permissions.values.any { it }
+        val isGranted = permissions[Manifest.permission.READ_CALENDAR] == true
         if (isGranted) {
             onGranted()
         } else {
@@ -36,8 +36,7 @@ fun rememberCalendarPermissionLauncher(
     }
     return {
         val hasRead = ContextCompat.checkSelfPermission(context, Manifest.permission.READ_CALENDAR) == PackageManager.PERMISSION_GRANTED
-        val hasWrite = ContextCompat.checkSelfPermission(context, Manifest.permission.WRITE_CALENDAR) == PackageManager.PERMISSION_GRANTED
-        if (hasRead || hasWrite) {
+        if (hasRead) {
             onGranted()
         } else {
             launcher.launch(arrayOf(Manifest.permission.READ_CALENDAR, Manifest.permission.WRITE_CALENDAR))

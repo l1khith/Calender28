@@ -172,12 +172,11 @@ class TaskDatabase(private val context: Context) {
 
     fun getAllHabits(): List<Habit> = runBlocking {
         val habits = db.habitDao().getAllHabits()
-        val today = FixedCalendarHelper.fromTimestamp(currentTimeMillis())
-        val todayEpochDay = today.toEpochDay()
+        val todayEpochDay = HabitCycleEngine.currentEpochDay()
 
         val result = mutableListOf<Habit>()
         for (hEntity in habits) {
-            val anchorEpochDay = (hEntity.created_at_ms / 86400000L).coerceAtLeast(0L)
+            val anchorEpochDay = HabitCycleEngine.getEpochDay(hEntity.created_at_ms)
             val currentPos = HabitCycleEngine.computePosition(todayEpochDay, anchorEpochDay)
 
             val rawEntries = db.habitEntryDao().getHabitEntries(hEntity.id, currentPos.cycleIndex)

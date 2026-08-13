@@ -8,14 +8,12 @@ import android.os.Build
 import android.util.Log
 import com.l1khith.calender28.data.AppTask
 import com.l1khith.calender28.data.Habit
-import com.l1khith.calender28.data.RecurringTask
 import com.l1khith.calender28.data.ScheduledAlarmEntity
 import com.l1khith.calender28.data.TaskDatabase
 import com.l1khith.calender28.utils.FixedCalendarHelper
 import kotlinx.coroutines.runBlocking
-import java.util.Calendar
 
-private const val TAG = "AlarmScheduler"
+private const val TAG = "ServiceAlarmScheduler"
 
 class AlarmScheduler(private val context: Context) {
 
@@ -30,60 +28,52 @@ class AlarmScheduler(private val context: Context) {
         const val EXTRA_RECURRENCE_INDEX = "recurrence_index"
 
         const val TYPE_TASK = "task"
-        const val TYPE_RECURRING = "recurring"
         const val TYPE_HABIT = "habit"
     }
 
+    // ═══════════════════════════════════════════════════════════════════════
+    // SCHEDULE TASK REMINDER (handles both normal and generated tasks)
+    // ═══════════════════════════════════════════════════════════════════════
     fun scheduleTaskReminder(task: AppTask): Boolean {
         if (task.isReminder != 1 || task.utcTimestamp == null || task.completed) {
-            Log.d(TAG, "scheduleTaskReminder: Skipping task id=${task.id}")
+            Log.d(TAG, "scheduleTaskReminder: Skipping task id=${task.id} (isReminder=${task.isReminder}, utcTimestamp=${task.utcTimestamp}, completed=${task.completed})")
             return false
         }
-        val triggerTime = task.utcTimestamp
-        if (triggerTime <= System.currentTimeMillis()) return false
+
+        var triggerTime = task.utcTimestamp
+        val now = System.currentTimeMillis()
+
+        // For generated recurring tasks whose time passed today, roll forward 24h
+        if (triggerTime <= now) {
+            if (task.recurringParentId != null) {
+                while (triggerTime <= now) {
+                    triggerTime += 86400000L
+                }
+                Log.d(TAG, "scheduleTaskReminder: Generated recurring task ${task.id} time passed, rolled to triggerTime=$triggerTime")
+            } else {
+                Log.d(TAG, "scheduleTaskReminder: Task ${task.id} timestamp $triggerTime is in the past, skipping")
+                return false
+            }
+        }
 
         val intent = createAlarmIntent(
             itemId = task.id,
             itemType = TYPE_TASK,
             title = task.title,
             description = task.description,
-            isRecurring = false
+            isRecurring = task.recurringParentId != null
         )
 
         val alarmId = task.id.hashCode() and 0x7FFFFFFF
-        saveAlarmRecord(alarmId, task.id, TYPE_TASK, triggerTime, false)
-        return scheduleExactAlarm(alarmId, triggerTime, intent)
+        saveAlarmRecord(alarmId, task.id, TYPE_TASK, triggerTime, task.recurringParentId != null)
+        val result = scheduleExactAlarm(alarmId, triggerTime, intent)
+        Log.d(TAG, "scheduleTaskReminder: Scheduled task=${task.id} title='${task.title}' at triggerTime=$triggerTime result=$result")
+        return result
     }
 
-    fun scheduleRecurringTask(recurringTask: RecurringTask): Boolean {
-        if (!recurringTask.isActive) return false
-
-        val nowFixed = FixedCalendarHelper.currentFixedDate()
-        var triggerMs = if (!recurringTask.reminderTime.isNullOrEmpty()) {
-            FixedCalendarHelper.toTimestamp(nowFixed, recurringTask.reminderTime)
-        } else {
-            System.currentTimeMillis() + 86400000L
-        }
-
-        val nowMs = System.currentTimeMillis()
-        while (triggerMs <= nowMs) {
-            triggerMs += 86400000L
-        }
-
-        val intent = createAlarmIntent(
-            itemId = recurringTask.id,
-            itemType = TYPE_RECURRING,
-            title = recurringTask.title,
-            description = recurringTask.description,
-            isRecurring = true,
-            recurrenceIndex = 0
-        )
-
-        val alarmId = "${recurringTask.id}_rec".hashCode() and 0x7FFFFFFF
-        saveAlarmRecord(alarmId, recurringTask.id, TYPE_RECURRING, triggerMs, true, 0)
-        return scheduleExactAlarm(alarmId, triggerMs, intent)
-    }
-
+    // ═══════════════════════════════════════════════════════════════════════
+    // SCHEDULE HABIT DAILY REMINDER
+    // ═══════════════════════════════════════════════════════════════════════
     fun scheduleHabitReminder(habit: Habit): Boolean {
         if (habit.isPaused || habit.reminderTime.isNullOrEmpty()) return false
 
@@ -105,9 +95,14 @@ class AlarmScheduler(private val context: Context) {
 
         val alarmId = "${habit.id}_daily".hashCode() and 0x7FFFFFFF
         saveAlarmRecord(alarmId, habit.id, TYPE_HABIT, triggerMs, true, 0)
-        return scheduleExactAlarm(alarmId, triggerMs, intent)
+        val result = scheduleExactAlarm(alarmId, triggerMs, intent)
+        Log.d(TAG, "scheduleHabitReminder: Scheduled habit=${habit.id} name='${habit.name}' at triggerMs=$triggerMs result=$result")
+        return result
     }
 
+    // ═══════════════════════════════════════════════════════════════════════
+    // CANCEL ALARM
+    // ═══════════════════════════════════════════════════════════════════════
     fun cancelAlarm(alarmId: Int) {
         Log.d(TAG, "cancelAlarm: Cancelling alarmId=$alarmId")
         val intent = Intent(context, AlarmReceiver::class.java)
@@ -120,6 +115,11 @@ class AlarmScheduler(private val context: Context) {
             it.cancel()
         }
         deleteAlarmRecord(alarmId)
+    }
+
+    fun cancelTaskAlarm(task: AppTask) {
+        val alarmId = task.id.hashCode() and 0x7FFFFFFF
+        cancelAlarm(alarmId)
     }
 
     fun cancelAllForItem(itemId: String) {
@@ -138,10 +138,13 @@ class AlarmScheduler(private val context: Context) {
         }
     }
 
+    // ═══════════════════════════════════════════════════════════════════════
+    // PRIVATE: Exact Alarm Scheduling with Permission Check
+    // ═══════════════════════════════════════════════════════════════════════
     private fun scheduleExactAlarm(alarmId: Int, triggerTime: Long, intent: Intent): Boolean {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             if (!NotificationPermissionHelper.canScheduleExactAlarms(context)) {
-                Log.w(TAG, "Cannot schedule exact alarms — permission denied")
+                Log.w(TAG, "Cannot schedule exact alarms — permission denied, falling back")
                 val pendingIntent = PendingIntent.getBroadcast(
                     context, alarmId, intent,
                     PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
@@ -159,7 +162,7 @@ class AlarmScheduler(private val context: Context) {
         return try {
             val alarmClockInfo = AlarmManager.AlarmClockInfo(triggerTime, pendingIntent)
             alarmManager.setAlarmClock(alarmClockInfo, pendingIntent)
-            Log.d(TAG, "Scheduled alarm $alarmId at $triggerTime via setAlarmClock")
+            Log.d(TAG, "Scheduled exact alarm $alarmId at $triggerTime via setAlarmClock")
             true
         } catch (e: SecurityException) {
             Log.e(TAG, "SecurityException — falling back to inexact", e)

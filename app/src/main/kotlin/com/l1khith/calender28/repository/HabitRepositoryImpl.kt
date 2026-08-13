@@ -27,11 +27,10 @@ class HabitRepositoryImpl(private val context: Context) : HabitRepository {
         Log.d(TAG, "getAllHabitsFlow: Observing habits flow")
         return habitDao.observeAllHabits().map { entities ->
             Log.d(TAG, "getAllHabitsFlow: Flow emitted ${entities.size} habit entities")
-            val today = FixedCalendarHelper.fromTimestamp(System.currentTimeMillis())
-            val todayEpochDay = today.toEpochDay()
+            val todayEpochDay = HabitCycleEngine.currentEpochDay()
             val result = mutableListOf<Habit>()
             for (hEntity in entities) {
-                val anchorEpochDay = (hEntity.created_at_ms / 86400000L).coerceAtLeast(0L)
+                val anchorEpochDay = HabitCycleEngine.getEpochDay(hEntity.created_at_ms)
                 val currentPos = HabitCycleEngine.computePosition(todayEpochDay, anchorEpochDay)
                 val rawEntries = try {
                     habitEntryDao.getHabitEntries(hEntity.id, currentPos.cycleIndex)
@@ -61,12 +60,11 @@ class HabitRepositoryImpl(private val context: Context) : HabitRepository {
         Log.d(TAG, "getAllHabits: Querying all habits from DB")
         val habits = habitDao.getAllHabits()
         Log.d(TAG, "getAllHabits: Query returned ${habits.size} habits")
-        val today = FixedCalendarHelper.fromTimestamp(System.currentTimeMillis())
-        val todayEpochDay = today.toEpochDay()
+        val todayEpochDay = HabitCycleEngine.currentEpochDay()
 
         val result = mutableListOf<Habit>()
         for (hEntity in habits) {
-            val anchorEpochDay = (hEntity.created_at_ms / 86400000L).coerceAtLeast(0L)
+            val anchorEpochDay = HabitCycleEngine.getEpochDay(hEntity.created_at_ms)
             val currentPos = HabitCycleEngine.computePosition(todayEpochDay, anchorEpochDay)
 
             val rawEntries = try {

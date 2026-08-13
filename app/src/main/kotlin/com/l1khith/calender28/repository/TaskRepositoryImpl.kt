@@ -9,7 +9,7 @@ import com.l1khith.calender28.data.RecurringTask
 import com.l1khith.calender28.data.RecurringTaskEntity
 import com.l1khith.calender28.data.RoomTaskDatabase
 import com.l1khith.calender28.data.toEntity
-import com.l1khith.calender28.utils.AlarmScheduler
+import com.l1khith.calender28.service.AlarmScheduler as ServiceAlarmScheduler
 import com.l1khith.calender28.utils.FixedCalendarHelper
 import com.l1khith.calender28.utils.FixedDate
 import kotlinx.coroutines.Dispatchers
@@ -25,7 +25,7 @@ class TaskRepositoryImpl(private val context: Context) : TaskRepository {
     private val db = RoomTaskDatabase.getInstance(context)
     private val taskDao = db.taskDao()
     private val recurringTaskDao = db.recurringTaskDao()
-    private val alarmScheduler = AlarmScheduler(context)
+    private val serviceAlarmScheduler = ServiceAlarmScheduler(context)
 
     override fun getTasksForDateFlow(dateStr: String): Flow<List<AppTask>> {
         Log.d(TAG, "getTasksForDateFlow: Observing tasks for date=$dateStr")
@@ -136,14 +136,12 @@ class TaskRepositoryImpl(private val context: Context) : TaskRepository {
         )
 
         if (id != null) {
-            alarmScheduler.cancelTaskAlarm(task)
-            taskDao.updateTask(task.toEntity())
-        } else {
-            taskDao.insertTask(task.toEntity())
+            serviceAlarmScheduler.cancelTaskAlarm(task)
         }
+        taskDao.insertTask(task.toEntity())
 
         if (isReminder) {
-            alarmScheduler.scheduleTaskAlarm(task)
+            serviceAlarmScheduler.scheduleTaskReminder(task)
         }
 
         task
@@ -155,19 +153,26 @@ class TaskRepositoryImpl(private val context: Context) : TaskRepository {
         Unit
     }
 
-    override suspend fun deleteTask(taskId: String, recurringParentId: String?) = withContext(Dispatchers.IO) {
+    override suspend fun deleteTask(taskId: String, recurringParentId: String?): Unit = withContext(Dispatchers.IO) {
         Log.d(TAG, "deleteTask: Deleting taskId=$taskId, recurringParentId=$recurringParentId")
-        val list: List<AppTaskEntity> = taskDao.getAllTasks()
-        for (entity in list) {
-            if (entity.id == taskId) {
-                alarmScheduler.cancelTaskAlarm(entity.toAppTask())
-                break
+        val actualParentId = recurringParentId ?: if (taskId.startsWith("gen_")) {
+            val parts = taskId.split("_")
+            if (parts.size >= 3) parts[1] else null
+        } else null
+
+        if (actualParentId != null) {
+            deleteRecurringTask(actualParentId)
+        } else {
+            val list: List<AppTaskEntity> = taskDao.getAllTasks()
+            for (entity in list) {
+                if (entity.id == taskId) {
+                    serviceAlarmScheduler.cancelTaskAlarm(entity.toAppTask())
+                    break
+                }
             }
+            taskDao.deleteTask(taskId)
         }
-        taskDao.deleteTask(taskId)
-        if (recurringParentId != null) {
-            recurringTaskDao.deleteRecurringTask(recurringParentId)
-        }
+        Unit
     }
 
     override suspend fun toggleTaskCompletion(task: AppTask): AppTask = withContext(Dispatchers.IO) {
@@ -177,9 +182,9 @@ class TaskRepositoryImpl(private val context: Context) : TaskRepository {
         taskDao.updateTask(updatedTask.toEntity())
 
         if (updatedTask.completed) {
-            alarmScheduler.cancelTaskAlarm(updatedTask)
+            serviceAlarmScheduler.cancelTaskAlarm(updatedTask)
         } else if (updatedTask.reminder) {
-            alarmScheduler.scheduleTaskAlarm(updatedTask)
+            serviceAlarmScheduler.scheduleTaskReminder(updatedTask)
         }
 
         updatedTask
@@ -215,7 +220,7 @@ class TaskRepositoryImpl(private val context: Context) : TaskRepository {
             val list: List<AppTaskEntity> = taskDao.getAllTasks()
             for (entity in list) {
                 if (entity.recurring_parent_id == recurringId && entity.is_completed == 0) {
-                    alarmScheduler.cancelTaskAlarm(entity.toAppTask())
+                    serviceAlarmScheduler.cancelTaskAlarm(entity.toAppTask())
                 }
             }
             taskDao.deleteIncompleteGeneratedTasks(recurringId)
@@ -236,9 +241,7 @@ class TaskRepositoryImpl(private val context: Context) : TaskRepository {
         )
 
         recurringTaskDao.insertRecurringTask(recurringTask.toEntity())
-        if (isActive) {
-            com.l1khith.calender28.service.AlarmScheduler(context).scheduleRecurringTask(recurringTask)
-        }
+        // No scheduleRecurringTask() — recurring tasks work via generated instances
 
         if (isActive && FixedCalendarHelper.shouldGenerateInstance(recurringTask, targetDate)) {
             val isRem = if (reminderTime != null) 1 else 0
@@ -261,7 +264,8 @@ class TaskRepositoryImpl(private val context: Context) : TaskRepository {
             )
             taskDao.insertTask(genTask.toEntity())
             if (isRem == 1) {
-                alarmScheduler.scheduleTaskAlarm(genTask)
+                serviceAlarmScheduler.scheduleTaskReminder(genTask)
+                Log.d(TAG, "saveRecurringTask: Scheduled alarm for generated task ${genTask.id}")
             }
         }
 
@@ -272,10 +276,11 @@ class TaskRepositoryImpl(private val context: Context) : TaskRepository {
         Log.d(TAG, "deleteRecurringTask: Deleting recurring taskId=$id")
         val list: List<AppTaskEntity> = taskDao.getAllTasks()
         for (entity in list) {
-            if (entity.recurring_parent_id == id) {
-                alarmScheduler.cancelTaskAlarm(entity.toAppTask())
+            if (entity.recurring_parent_id == id || entity.id.startsWith("gen_${id}_")) {
+                serviceAlarmScheduler.cancelTaskAlarm(entity.toAppTask())
             }
         }
+        taskDao.deleteAllGeneratedTasksForParent(id)
         recurringTaskDao.deleteRecurringTask(id)
         Unit
     }
@@ -309,7 +314,8 @@ class TaskRepositoryImpl(private val context: Context) : TaskRepository {
                     )
                     taskDao.insertTask(genTask.toEntity())
                     if (isRem == 1) {
-                        alarmScheduler.scheduleTaskAlarm(genTask)
+                        serviceAlarmScheduler.scheduleTaskReminder(genTask)
+                        Log.d(TAG, "catchUpRollover: Scheduled alarm for generated task ${genTask.id}")
                     }
                 }
             }

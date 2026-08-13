@@ -217,7 +217,8 @@ fun TasksScreen(
                                 task = taskItem,
                                 todayDateStr = todayDateStr,
                                 onToggleComplete = { viewModel.toggleTaskCompletion(taskItem) },
-                                onClick = { onEditTask(taskItem) }
+                                onClick = { onEditTask(taskItem) },
+                                onDeleteTask = { viewModel.deleteTask(taskItem) }
                             )
                         }
                     }
@@ -251,7 +252,7 @@ fun TasksScreen(
                             modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)
                         ) {
                             Text(
-                                text = "No tasks for today. Click + to add one!",
+                                text = "No tasks focus for today.",
                                 color = MatrixColors.TextSecondary,
                                 fontSize = 13.sp,
                                 modifier = Modifier.padding(16.dp)
@@ -262,7 +263,8 @@ fun TasksScreen(
                             FocusTaskCard(
                                 task = taskItem,
                                 onToggleComplete = { viewModel.toggleTaskCompletion(taskItem) },
-                                onClick = { onEditTask(taskItem) }
+                                onClick = { onEditTask(taskItem) },
+                                onDeleteTask = { viewModel.deleteTask(taskItem) }
                             )
                         }
                     }
@@ -343,7 +345,8 @@ fun UrgentTaskCard(
     task: AppTask,
     todayDateStr: String,
     onToggleComplete: () -> Unit,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    onDeleteTask: () -> Unit = {}
 ) {
     val isOverdue = task.associatedDate < todayDateStr
     val cardBg = if (isOverdue) Color(0xFF3B2527) else MatrixColors.SurfaceContainerLow
@@ -443,6 +446,18 @@ fun UrgentTaskCard(
                     )
                 }
             }
+
+            IconButton(
+                onClick = onDeleteTask,
+                modifier = Modifier.size(28.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Delete,
+                    contentDescription = "Delete Task",
+                    tint = MatrixColors.TextSecondary,
+                    modifier = Modifier.size(18.dp)
+                )
+            }
         }
     }
 }
@@ -451,7 +466,8 @@ fun UrgentTaskCard(
 fun FocusTaskCard(
     task: AppTask,
     onToggleComplete: () -> Unit,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    onDeleteTask: () -> Unit = {}
 ) {
     Card(
         colors = CardDefaults.cardColors(containerColor = MatrixColors.SurfaceContainerLow),
@@ -529,6 +545,18 @@ fun FocusTaskCard(
                     }
                 }
             }
+
+            IconButton(
+                onClick = onDeleteTask,
+                modifier = Modifier.size(28.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Delete,
+                    contentDescription = "Delete Task",
+                    tint = MatrixColors.TextSecondary,
+                    modifier = Modifier.size(18.dp)
+                )
+            }
         }
     }
 }
@@ -537,7 +565,8 @@ fun FocusTaskCard(
 fun UpcomingTaskCard(
     task: AppTask,
     onToggleComplete: () -> Unit,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    onDeleteTask: () -> Unit = {}
 ) {
     Card(
         colors = CardDefaults.cardColors(containerColor = MatrixColors.SurfaceContainerLow),
@@ -594,6 +623,18 @@ fun UpcomingTaskCard(
                         fontSize = 11.sp
                     )
                 }
+            }
+
+            IconButton(
+                onClick = onDeleteTask,
+                modifier = Modifier.size(28.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Delete,
+                    contentDescription = "Delete Task",
+                    tint = MatrixColors.TextSecondary,
+                    modifier = Modifier.size(16.dp)
+                )
             }
         }
     }
