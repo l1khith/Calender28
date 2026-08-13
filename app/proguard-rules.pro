@@ -1,0 +1,6 @@
+-keep class com.l1khith.calender28.data.** { *; }
+-keep class com.l1khith.calender28.receiver.** { *; }
+-keep class com.revenuecat.purchases.** { *; }
+-keepattributes *Annotation*
+-keepattributes Signature
+-keepattributes Exceptions

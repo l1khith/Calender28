@@ -1,0 +1,226 @@
+package com.l1khith.calender28.service
+
+import android.app.AlarmManager
+import android.app.PendingIntent
+import android.content.Context
+import android.content.Intent
+import android.os.Build
+import android.util.Log
+import com.l1khith.calender28.data.AppTask
+import com.l1khith.calender28.data.Habit
+import com.l1khith.calender28.data.RecurringTask
+import com.l1khith.calender28.data.ScheduledAlarmEntity
+import com.l1khith.calender28.data.TaskDatabase
+import com.l1khith.calender28.utils.FixedCalendarHelper
+import kotlinx.coroutines.runBlocking
+import java.util.Calendar
+
+private const val TAG = "AlarmScheduler"
+
+class AlarmScheduler(private val context: Context) {
+
+    private val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
+
+    companion object {
+        const val EXTRA_ITEM_ID = "item_id"
+        const val EXTRA_ITEM_TYPE = "item_type"
+        const val EXTRA_TITLE = "title"
+        const val EXTRA_DESCRIPTION = "description"
+        const val EXTRA_IS_RECURRING = "is_recurring"
+        const val EXTRA_RECURRENCE_INDEX = "recurrence_index"
+
+        const val TYPE_TASK = "task"
+        const val TYPE_RECURRING = "recurring"
+        const val TYPE_HABIT = "habit"
+    }
+
+    fun scheduleTaskReminder(task: AppTask): Boolean {
+        if (task.isReminder != 1 || task.utcTimestamp == null || task.completed) {
+            Log.d(TAG, "scheduleTaskReminder: Skipping task id=${task.id}")
+            return false
+        }
+        val triggerTime = task.utcTimestamp
+        if (triggerTime <= System.currentTimeMillis()) return false
+
+        val intent = createAlarmIntent(
+            itemId = task.id,
+            itemType = TYPE_TASK,
+            title = task.title,
+            description = task.description,
+            isRecurring = false
+        )
+
+        val alarmId = task.id.hashCode() and 0x7FFFFFFF
+        saveAlarmRecord(alarmId, task.id, TYPE_TASK, triggerTime, false)
+        return scheduleExactAlarm(alarmId, triggerTime, intent)
+    }
+
+    fun scheduleRecurringTask(recurringTask: RecurringTask): Boolean {
+        if (!recurringTask.isActive) return false
+
+        val nowFixed = FixedCalendarHelper.currentFixedDate()
+        var triggerMs = if (!recurringTask.reminderTime.isNullOrEmpty()) {
+            FixedCalendarHelper.toTimestamp(nowFixed, recurringTask.reminderTime)
+        } else {
+            System.currentTimeMillis() + 86400000L
+        }
+
+        val nowMs = System.currentTimeMillis()
+        while (triggerMs <= nowMs) {
+            triggerMs += 86400000L
+        }
+
+        val intent = createAlarmIntent(
+            itemId = recurringTask.id,
+            itemType = TYPE_RECURRING,
+            title = recurringTask.title,
+            description = recurringTask.description,
+            isRecurring = true,
+            recurrenceIndex = 0
+        )
+
+        val alarmId = "${recurringTask.id}_rec".hashCode() and 0x7FFFFFFF
+        saveAlarmRecord(alarmId, recurringTask.id, TYPE_RECURRING, triggerMs, true, 0)
+        return scheduleExactAlarm(alarmId, triggerMs, intent)
+    }
+
+    fun scheduleHabitReminder(habit: Habit): Boolean {
+        if (habit.isPaused || habit.reminderTime.isNullOrEmpty()) return false
+
+        val nowFixed = FixedCalendarHelper.currentFixedDate()
+        var triggerMs = FixedCalendarHelper.toTimestamp(nowFixed, habit.reminderTime)
+
+        val nowMs = System.currentTimeMillis()
+        while (triggerMs <= nowMs) {
+            triggerMs += 86400000L
+        }
+
+        val intent = createAlarmIntent(
+            itemId = habit.id,
+            itemType = TYPE_HABIT,
+            title = habit.name,
+            description = "Time for your ${habit.name} habit!",
+            isRecurring = true
+        )
+
+        val alarmId = "${habit.id}_daily".hashCode() and 0x7FFFFFFF
+        saveAlarmRecord(alarmId, habit.id, TYPE_HABIT, triggerMs, true, 0)
+        return scheduleExactAlarm(alarmId, triggerMs, intent)
+    }
+
+    fun cancelAlarm(alarmId: Int) {
+        Log.d(TAG, "cancelAlarm: Cancelling alarmId=$alarmId")
+        val intent = Intent(context, AlarmReceiver::class.java)
+        val pendingIntent = PendingIntent.getBroadcast(
+            context, alarmId, intent,
+            PendingIntent.FLAG_NO_CREATE or PendingIntent.FLAG_IMMUTABLE
+        )
+        pendingIntent?.let {
+            alarmManager.cancel(it)
+            it.cancel()
+        }
+        deleteAlarmRecord(alarmId)
+    }
+
+    fun cancelAllForItem(itemId: String) {
+        Log.d(TAG, "cancelAllForItem: Cancelling all alarms for itemId=$itemId")
+        runBlocking {
+            try {
+                val db = TaskDatabase(context)
+                val alarms = db.getScheduledAlarmDao().getAlarmsForItem(itemId)
+                alarms.forEach { alarm ->
+                    cancelAlarm(alarm.alarm_id)
+                }
+                db.getScheduledAlarmDao().deleteAlarmsForItem(itemId)
+            } catch (e: Exception) {
+                Log.e(TAG, "Error cancelling alarms for $itemId", e)
+            }
+        }
+    }
+
+    private fun scheduleExactAlarm(alarmId: Int, triggerTime: Long, intent: Intent): Boolean {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            if (!NotificationPermissionHelper.canScheduleExactAlarms(context)) {
+                Log.w(TAG, "Cannot schedule exact alarms — permission denied")
+                val pendingIntent = PendingIntent.getBroadcast(
+                    context, alarmId, intent,
+                    PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+                )
+                alarmManager.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, triggerTime, pendingIntent)
+                return true
+            }
+        }
+
+        val pendingIntent = PendingIntent.getBroadcast(
+            context, alarmId, intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+
+        return try {
+            val alarmClockInfo = AlarmManager.AlarmClockInfo(triggerTime, pendingIntent)
+            alarmManager.setAlarmClock(alarmClockInfo, pendingIntent)
+            Log.d(TAG, "Scheduled alarm $alarmId at $triggerTime via setAlarmClock")
+            true
+        } catch (e: SecurityException) {
+            Log.e(TAG, "SecurityException — falling back to inexact", e)
+            alarmManager.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, triggerTime, pendingIntent)
+            true
+        }
+    }
+
+    private fun createAlarmIntent(
+        itemId: String,
+        itemType: String,
+        title: String,
+        description: String?,
+        isRecurring: Boolean,
+        recurrenceIndex: Int = 0
+    ): Intent {
+        return Intent(context, AlarmReceiver::class.java).apply {
+            putExtra(EXTRA_ITEM_ID, itemId)
+            putExtra(EXTRA_ITEM_TYPE, itemType)
+            putExtra(EXTRA_TITLE, title)
+            putExtra(EXTRA_DESCRIPTION, description ?: "")
+            putExtra(EXTRA_IS_RECURRING, isRecurring)
+            putExtra(EXTRA_RECURRENCE_INDEX, recurrenceIndex)
+        }
+    }
+
+    private fun saveAlarmRecord(
+        alarmId: Int,
+        itemId: String,
+        itemType: String,
+        triggerTimeUtc: Long,
+        isRecurring: Boolean,
+        recurrenceIndex: Int = 0
+    ) {
+        runBlocking {
+            try {
+                val db = TaskDatabase(context)
+                db.getScheduledAlarmDao().insertAlarm(
+                    ScheduledAlarmEntity(
+                        alarm_id = alarmId,
+                        item_id = itemId,
+                        item_type = itemType,
+                        scheduled_time_utc = triggerTimeUtc,
+                        is_recurring = isRecurring,
+                        recurrence_index = recurrenceIndex
+                    )
+                )
+            } catch (e: Exception) {
+                Log.e(TAG, "Error saving alarm record", e)
+            }
+        }
+    }
+
+    private fun deleteAlarmRecord(alarmId: Int) {
+        runBlocking {
+            try {
+                val db = TaskDatabase(context)
+                db.getScheduledAlarmDao().deleteAlarm(alarmId)
+            } catch (e: Exception) {
+                Log.e(TAG, "Error deleting alarm record", e)
+            }
+        }
+    }
+}
