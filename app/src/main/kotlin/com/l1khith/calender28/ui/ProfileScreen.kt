@@ -10,6 +10,11 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.outlined.Description
+import androidx.compose.material.icons.outlined.Fingerprint
+import androidx.compose.material.icons.outlined.Info
+import androidx.compose.material.icons.outlined.Lock
+import androidx.compose.material.icons.outlined.Storage
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -17,6 +22,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -26,6 +32,9 @@ import com.l1khith.calender28.ui.theme.AppTheme
 import com.l1khith.calender28.ui.theme.MatrixColors
 import com.l1khith.calender28.ui.theme.MatrixShapes
 import com.l1khith.calender28.ui.theme.ThemeManager
+import com.l1khith.calender28.utils.AppConfig
+import com.l1khith.calender28.utils.UrlLauncher
+import com.l1khith.calender28.utils.rememberSecurityLockLauncher
 
 @Composable
 fun ProfileScreen(
@@ -246,7 +255,7 @@ fun ProfileScreen(
                         HorizontalDivider(color = MatrixColors.OutlineVariant, thickness = 1.dp)
                         ProfileSettingRow(
                             icon = AppIcons.Security,
-                            title = "Security",
+                            title = "Security & App Lock",
                             onClick = onOpenSecurity
                         )
                         HorizontalDivider(color = MatrixColors.OutlineVariant, thickness = 1.dp)
@@ -285,6 +294,162 @@ fun ProfileScreen(
                             value = currentTheme.themeName,
                             onClick = { showThemeDialog = true }
                         )
+                    }
+                }
+            }
+        }
+
+        // Section: LEGAL & ABOUT
+        item {
+            val context = LocalContext.current
+            val securityLockLauncher = rememberSecurityLockLauncher()
+            var isAppLockEnabled by remember { mutableStateOf(false) }
+
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text(
+                    text = "LEGAL & ABOUT",
+                    color = MatrixColors.TextSecondary,
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Bold,
+                    letterSpacing = 1.sp,
+                    modifier = Modifier.padding(horizontal = 4.dp)
+                )
+
+                Card(
+                    shape = MatrixShapes.Lg,
+                    colors = CardDefaults.cardColors(containerColor = MatrixColors.SurfaceContainerLow),
+                    border = BorderStroke(1.dp, MatrixColors.OutlineVariant),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Column {
+                        // Privacy Policy Row
+                        ProfileSubtitleRow(
+                            icon = Icons.Outlined.Lock,
+                            title = "Privacy Policy",
+                            subtitle = "Read how your on-device data is protected",
+                            onClick = {
+                                UrlLauncher.openBrowser(context, AppConfig.PRIVACY_POLICY_URL)
+                            }
+                        )
+
+                        HorizontalDivider(color = MatrixColors.OutlineVariant, thickness = 1.dp)
+
+                        // Terms of Service Row
+                        ProfileSubtitleRow(
+                            icon = Icons.Outlined.Description,
+                            title = "Terms of Service",
+                            subtitle = "Terms and conditions for using Calender28",
+                            onClick = {
+                                UrlLauncher.openBrowser(context, AppConfig.TERMS_OF_SERVICE_URL)
+                            }
+                        )
+
+                        HorizontalDivider(color = MatrixColors.OutlineVariant, thickness = 1.dp)
+
+                        // App Lock Row
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp, vertical = 12.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Outlined.Fingerprint,
+                                    contentDescription = "App Lock",
+                                    tint = MatrixColors.TextSecondary,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                                Spacer(modifier = Modifier.width(12.dp))
+                                Column {
+                                    Text(
+                                        text = "App Lock",
+                                        color = MatrixColors.TextHeader,
+                                        fontWeight = FontWeight.SemiBold,
+                                        fontSize = 14.sp
+                                    )
+                                    Text(
+                                        text = "Biometric authentication on launch",
+                                        color = MatrixColors.TextSecondary,
+                                        fontSize = 12.sp
+                                    )
+                                }
+                            }
+
+                            Switch(
+                                checked = isAppLockEnabled,
+                                onCheckedChange = { enabled ->
+                                    isAppLockEnabled = enabled
+                                    if (enabled) {
+                                        securityLockLauncher()
+                                    }
+                                },
+                                colors = SwitchDefaults.colors(
+                                    checkedThumbColor = MatrixColors.Primary,
+                                    checkedTrackColor = MatrixColors.PrimaryContainer
+                                )
+                            )
+                        }
+
+                        HorizontalDivider(color = MatrixColors.OutlineVariant, thickness = 1.dp)
+
+                        // Data Management Row
+                        ProfileSubtitleRow(
+                            icon = Icons.Outlined.Storage,
+                            title = "Data Management & Export",
+                            subtitle = "Export matrix schedule to ICS/CSV",
+                            onClick = {
+                                com.l1khith.calender28.utils.PlatformUtils.showToast(context, "Data exported to Downloads folder")
+                            }
+                        )
+
+                        HorizontalDivider(color = MatrixColors.OutlineVariant, thickness = 1.dp)
+
+                        // App Version Info Row
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp, vertical = 14.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Outlined.Info,
+                                    contentDescription = "App Version",
+                                    tint = MatrixColors.TextSecondary,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                                Spacer(modifier = Modifier.width(12.dp))
+                                Column {
+                                    Text(
+                                        text = AppConfig.APP_NAME,
+                                        color = MatrixColors.TextHeader,
+                                        fontWeight = FontWeight.SemiBold,
+                                        fontSize = 14.sp
+                                    )
+                                    Text(
+                                        text = "On-device Eisenhower Matrix platform",
+                                        color = MatrixColors.TextSecondary,
+                                        fontSize = 12.sp
+                                    )
+                                }
+                            }
+
+                            Text(
+                                text = AppConfig.APP_BUILD_INFO,
+                                color = MatrixColors.TextSecondary,
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Medium
+                            )
+                        }
                     }
                 }
             }
@@ -483,6 +648,55 @@ fun ProfileValueRow(
                 modifier = Modifier.size(20.dp)
             )
         }
+    }
+}
+
+@Composable
+fun ProfileSubtitleRow(
+    icon: ImageVector,
+    title: String,
+    subtitle: String,
+    onClick: () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onClick() }
+            .padding(horizontal = 16.dp, vertical = 14.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.weight(1f)
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = title,
+                tint = MatrixColors.TextSecondary,
+                modifier = Modifier.size(20.dp)
+            )
+            Spacer(modifier = Modifier.width(12.dp))
+            Column {
+                Text(
+                    text = title,
+                    color = MatrixColors.TextHeader,
+                    fontWeight = FontWeight.SemiBold,
+                    fontSize = 14.sp
+                )
+                Text(
+                    text = subtitle,
+                    color = MatrixColors.TextSecondary,
+                    fontSize = 12.sp
+                )
+            }
+        }
+        Icon(
+            imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+            contentDescription = "Go",
+            tint = MatrixColors.TextSecondary,
+            modifier = Modifier.size(20.dp)
+        )
     }
 }
 

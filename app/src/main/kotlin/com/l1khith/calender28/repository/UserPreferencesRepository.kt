@@ -16,11 +16,13 @@ class UserPreferencesRepository(
         val KEY_USER_AVATAR_URL = stringPreferencesKey("user_avatar_url")
         val KEY_IS_PRO_USER = booleanPreferencesKey("is_pro_user")
         val KEY_SELECTED_THEME = stringPreferencesKey("selected_theme")
+        val KEY_IS_APP_LOCK_ENABLED = booleanPreferencesKey("is_app_lock_enabled")
 
         const val DEFAULT_USER_NAME = "Guest"
         const val DEFAULT_USER_AVATAR_URL = ""
         const val DEFAULT_IS_PRO_USER = false
         const val DEFAULT_SELECTED_THEME = "DEFAULT"
+        const val DEFAULT_IS_APP_LOCK_ENABLED = false
     }
 
     val userName: Flow<String> = dataStore.data.map { preferences ->
@@ -37,6 +39,10 @@ class UserPreferencesRepository(
 
     val selectedTheme: Flow<String> = dataStore.data.map { preferences ->
         preferences[KEY_SELECTED_THEME] ?: DEFAULT_SELECTED_THEME
+    }
+
+    val isAppLockEnabled: Flow<Boolean> = dataStore.data.map { preferences ->
+        preferences[KEY_IS_APP_LOCK_ENABLED] ?: DEFAULT_IS_APP_LOCK_ENABLED
     }
 
     suspend fun updateUserName(name: String) {
@@ -60,6 +66,12 @@ class UserPreferencesRepository(
     suspend fun updateSelectedTheme(theme: String) {
         dataStore.edit { preferences ->
             preferences[KEY_SELECTED_THEME] = theme
+        }
+    }
+
+    suspend fun updateIsAppLockEnabled(enabled: Boolean) {
+        dataStore.edit { preferences ->
+            preferences[KEY_IS_APP_LOCK_ENABLED] = enabled
         }
     }
 }
