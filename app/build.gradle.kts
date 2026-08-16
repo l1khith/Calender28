@@ -1,3 +1,6 @@
+import java.util.Properties
+import java.io.FileInputStream
+
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
@@ -7,12 +10,12 @@ plugins {
 
 android {
     namespace = "com.l1khith.calender28"
-    compileSdk = 35
+    compileSdk = 37
 
     defaultConfig {
         applicationId = "com.l1khith.calender28"
         minSdk = 24
-        targetSdk = 35
+        targetSdk = 37
         versionCode = 1
         versionName = "1.0.0"
     }
@@ -27,6 +30,35 @@ android {
         targetCompatibility = JavaVersion.VERSION_21
     }
 
+    val keystorePropertiesFile = rootProject.file("keystore.properties")
+    val keystoreProperties = Properties()
+    val hasKeystoreProps = keystorePropertiesFile.exists()
+    if (hasKeystoreProps) {
+        keystoreProperties.load(FileInputStream(keystorePropertiesFile))
+    }
+
+    signingConfigs {
+        create("release") {
+            val keystorePath = keystoreProperties.getProperty("storeFile") 
+                ?: System.getenv("KEYSTORE_FILE") 
+                ?: "calender28-key"
+            val resolvedFile = if (keystorePath.startsWith("/") || keystorePath.contains(":\\")) {
+                file(keystorePath)
+            } else {
+                rootProject.file(keystorePath.removePrefix("../"))
+            }
+
+            if (resolvedFile.exists()) {
+                storeFile = resolvedFile
+                storePassword = keystoreProperties.getProperty("storePassword") ?: System.getenv("KEYSTORE_PASSWORD") ?: ""
+                keyAlias = keystoreProperties.getProperty("keyAlias") ?: System.getenv("KEY_ALIAS") ?: ""
+                keyPassword = keystoreProperties.getProperty("keyPassword") ?: System.getenv("KEY_PASSWORD") ?: ""
+            }
+        }
+    }
+
+    val isSigningConfigured = hasKeystoreProps || (System.getenv("KEYSTORE_PASSWORD") != null && System.getenv("KEY_ALIAS") != null)
+
     buildTypes {
         release {
             isMinifyEnabled = true
@@ -34,6 +66,9 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+            if (isSigningConfigured) {
+                signingConfig = signingConfigs.getByName("release")
+            }
         }
     }
 }

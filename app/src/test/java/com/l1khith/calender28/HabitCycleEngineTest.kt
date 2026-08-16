@@ -139,12 +139,21 @@ class HabitCycleEngineTest {
     fun testComputeCurrentStreak_brokenStreak() {
         val completed = setOf(1, 2, 4, 5) // day 3 missed
         val streak = HabitCycleEngine.computeCurrentStreak(completed, 5)
-        assertEquals(2, streak)
+        assertEquals(2, streak) // only days 4 and 5 count
     }
 
     @Test
-    fun testComputeCurrentStreak_todayNotCompleted() {
+    fun testComputeCurrentStreak_todayNotCompleted_yesterdayCompleted() {
         val completed = setOf(1, 2, 3)
+        // Today is day 4, not logged yet, but days 1..3 were completed
+        val streak = HabitCycleEngine.computeCurrentStreak(completed, 4)
+        assertEquals(3, streak)
+    }
+
+    @Test
+    fun testComputeCurrentStreak_todayNotCompleted_yesterdayMissed() {
+        val completed = setOf(1, 2)
+        // Today is day 4, day 3 was missed
         val streak = HabitCycleEngine.computeCurrentStreak(completed, 4)
         assertEquals(0, streak)
     }
@@ -180,5 +189,17 @@ class HabitCycleEngineTest {
     fun testComputePerfectWeeksCount_empty() {
         val perfectWeeks = HabitCycleEngine.computePerfectWeeksCount(emptySet())
         assertEquals(0, perfectWeeks)
+    }
+
+    @Test
+    fun testHabitModel_brokenStreakDoesNotCountMissedDays() {
+        val habit = com.l1khith.calender28.data.Habit(
+            id = "test-1",
+            name = "Morning Run",
+            completedDays = setOf(1, 2, 4, 5), // Day 3 missed
+            createdAtMs = System.currentTimeMillis() // Day 1 today
+        )
+        // Longest streak should be 2, NOT 4!
+        assertEquals(2, habit.longestStreak)
     }
 }

@@ -57,8 +57,17 @@ object HabitCycleEngine {
     }
 
     fun computeCurrentStreak(completedDays: Set<Int>, currentDayInCycle: Int): Int {
+        if (completedDays.isEmpty() || currentDayInCycle < 1) return 0
+        val startDay = if (completedDays.contains(currentDayInCycle)) {
+            currentDayInCycle
+        } else if (currentDayInCycle > 1 && completedDays.contains(currentDayInCycle - 1)) {
+            currentDayInCycle - 1
+        } else {
+            return 0
+        }
+
         var streak = 0
-        var day = currentDayInCycle
+        var day = startDay
         while (day >= 1 && completedDays.contains(day)) {
             streak++
             day--

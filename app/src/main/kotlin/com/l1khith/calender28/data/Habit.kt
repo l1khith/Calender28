@@ -1,5 +1,7 @@
 package com.l1khith.calender28.data
 
+import com.l1khith.calender28.utils.HabitCycleEngine
+
 data class Habit(
     val id: String,
     val name: String,
@@ -15,17 +17,17 @@ data class Habit(
     val completedCount: Int get() = completedDays.size
     val progressPercent: Int get() = ((completedCount.toFloat() / 28f) * 100).toInt()
     val consistencyPercent: Int get() = if (completedCount > 0) ((completedCount.toFloat() / 28f) * 100).toInt() else 0
-    val streak: Int get() = calculateStreak()
-    val longestStreak: Int get() = calculateStreak()
 
-    private fun calculateStreak(): Int {
-        var count = 0
-        for (i in 1..28) {
-            if (completedDays.contains(i)) {
-                count++
-            }
+    val currentDayInCycle: Int
+        get() {
+            val todayEpochDay = HabitCycleEngine.currentEpochDay()
+            val anchorEpochDay = HabitCycleEngine.getEpochDay(createdAtMs)
+            return HabitCycleEngine.computePosition(todayEpochDay, anchorEpochDay).safeDayInCycle
         }
-        return count
-    }
-}
 
+    val streak: Int
+        get() = HabitCycleEngine.computeCurrentStreak(completedDays, currentDayInCycle)
+
+    val longestStreak: Int
+        get() = HabitCycleEngine.computeBestStreak(completedDays)
+}
