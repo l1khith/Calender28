@@ -112,57 +112,14 @@ fun rememberSecurityLockLauncher(): () -> Unit {
     return remember(context) {
         {
             val activity = context.findFragmentActivity()
-            if (activity == null) {
-                PlatformUtils.showToast(context, "App lock requires FragmentActivity")
-                return@remember
-            }
-
-            val executor = ContextCompat.getMainExecutor(activity)
-            val biometricManager = BiometricManager.from(activity)
-
-            val canAuth = biometricManager.canAuthenticate(
-                BiometricManager.Authenticators.BIOMETRIC_WEAK or
-                BiometricManager.Authenticators.DEVICE_CREDENTIAL
-            )
-
-            if (canAuth == BiometricManager.BIOMETRIC_ERROR_NO_HARDWARE) {
-                PlatformUtils.showToast(context, "No biometric hardware available")
-                return@remember
-            }
-
-            if (canAuth == BiometricManager.BIOMETRIC_ERROR_NONE_ENROLLED) {
-                PlatformUtils.showToast(context, "Please set up a screen lock in Settings first")
-                return@remember
-            }
-
-            val promptInfo = BiometricPrompt.PromptInfo.Builder()
-                .setTitle("Unlock Calender28")
-                .setSubtitle("Verify your identity")
-                .setAllowedAuthenticators(
-                    BiometricManager.Authenticators.BIOMETRIC_WEAK or
-                    BiometricManager.Authenticators.DEVICE_CREDENTIAL
-                )
-                .build()
-
-            val biometricPrompt = BiometricPrompt(
-                activity,
-                executor,
-                object : BiometricPrompt.AuthenticationCallback() {
-                    override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
+            if (activity != null) {
+                com.l1khith.calender28.security.AppLockManager.authenticate(
+                    activity = activity,
+                    onSuccess = {
                         PlatformUtils.showToast(context, "Unlocked successfully")
                     }
-
-                    override fun onAuthenticationError(errorCode: Int, errString: CharSequence) {
-                        PlatformUtils.showToast(context, "Authentication failed: $errString")
-                    }
-
-                    override fun onAuthenticationFailed() {
-                        PlatformUtils.showToast(context, "Authentication failed")
-                    }
-                }
-            )
-
-            biometricPrompt.authenticate(promptInfo)
+                )
+            }
         }
     }
 }

@@ -253,10 +253,12 @@ fun ProfileScreen(
                             )
                         }
 
+                        val isAppLockEnabled by com.l1khith.calender28.security.AppLockManager.isAppLockEnabled.collectAsState()
                         HorizontalDivider(color = MatrixColors.OutlineVariant, thickness = 1.dp)
-                        ProfileSettingRow(
+                        ProfileSubtitleRow(
                             icon = AppIcons.Security,
                             title = "Security & App Lock",
+                            subtitle = if (isAppLockEnabled) "Enabled (Biometric/PIN Protected)" else "Disabled (Tap to configure)",
                             onClick = onOpenSecurity
                         )
                         HorizontalDivider(color = MatrixColors.OutlineVariant, thickness = 1.dp)
@@ -309,8 +311,6 @@ fun ProfileScreen(
         // Section: LEGAL & ABOUT
         item {
             val context = LocalContext.current
-            val securityLockLauncher = rememberSecurityLockLauncher()
-            var isAppLockEnabled by remember { mutableStateOf(false) }
 
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text(
@@ -350,57 +350,6 @@ fun ProfileScreen(
                                 UrlLauncher.openBrowser(context, AppConfig.TERMS_OF_SERVICE_URL)
                             }
                         )
-
-                        HorizontalDivider(color = MatrixColors.OutlineVariant, thickness = 1.dp)
-
-                        // App Lock Row
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 16.dp, vertical = 12.dp),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                modifier = Modifier.weight(1f)
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Outlined.Fingerprint,
-                                    contentDescription = "App Lock",
-                                    tint = MatrixColors.TextSecondary,
-                                    modifier = Modifier.size(20.dp)
-                                )
-                                Spacer(modifier = Modifier.width(12.dp))
-                                Column {
-                                    Text(
-                                        text = "App Lock",
-                                        color = MatrixColors.TextHeader,
-                                        fontWeight = FontWeight.SemiBold,
-                                        fontSize = 14.sp
-                                    )
-                                    Text(
-                                        text = "Biometric authentication on launch",
-                                        color = MatrixColors.TextSecondary,
-                                        fontSize = 12.sp
-                                    )
-                                }
-                            }
-
-                            Switch(
-                                checked = isAppLockEnabled,
-                                onCheckedChange = { enabled ->
-                                    isAppLockEnabled = enabled
-                                    if (enabled) {
-                                        securityLockLauncher()
-                                    }
-                                },
-                                colors = SwitchDefaults.colors(
-                                    checkedThumbColor = MatrixColors.Primary,
-                                    checkedTrackColor = MatrixColors.PrimaryContainer
-                                )
-                            )
-                        }
 
                         HorizontalDivider(color = MatrixColors.OutlineVariant, thickness = 1.dp)
 

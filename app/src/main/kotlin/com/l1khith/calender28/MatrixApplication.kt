@@ -24,6 +24,8 @@ class MatrixApplication : Application() {
         SubscriptionManager.initDataStore(this, applicationScope)
         SubscriptionManager.configure(this, "goog_sample_key")
 
+        com.l1khith.calender28.security.AppLockManager.init(this, applicationScope)
+
         NotificationHelper(this).createNotificationChannels()
         MidnightRolloverWorker.scheduleNextMidnightRollover(this)
         CalendarContentObserver.register(this)

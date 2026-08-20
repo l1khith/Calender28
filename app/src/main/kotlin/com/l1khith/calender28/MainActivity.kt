@@ -8,6 +8,7 @@ import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -46,14 +47,34 @@ class MainActivity : FragmentActivity() {
 
         setContent {
             val deepLinkId = rememberSaveable { mutableStateOf(deepLinkIdState) }
+            val isLocked by com.l1khith.calender28.security.AppLockManager.isLocked.collectAsState()
+
             MatrixTheme {
                 FixedCalendarApp(
                     viewModel = viewModel,
                     initialTaskId = deepLinkId.value,
                     onExitApp = { finish() }
                 )
+
+                if (isLocked) {
+                    com.l1khith.calender28.security.AppLockOverlay(
+                        onUnlockSuccess = {
+                            com.l1khith.calender28.security.AppLockManager.unlock()
+                        }
+                    )
+                }
             }
         }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        com.l1khith.calender28.security.AppLockManager.onActivityResumed()
+    }
+
+    override fun onPause() {
+        super.onPause()
+        com.l1khith.calender28.security.AppLockManager.onActivityPaused()
     }
 
     override fun onNewIntent(intent: Intent) {

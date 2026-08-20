@@ -81,6 +81,7 @@ fun FixedCalendarApp(
     var showCustomerCenterDialog by remember { mutableStateOf(false) }
     var showExitDialog by remember { mutableStateOf(false) }
     var showFocusStatsDialog by remember { mutableStateOf(false) }
+    var showSecurityLockDialog by remember { mutableStateOf(false) }
 
     val focusState by com.l1khith.calender28.service.FocusSessionManager.focusState.collectAsState()
     val focusRepo = remember(context) { com.l1khith.calender28.repository.FocusRepositoryImpl(context) }
@@ -121,9 +122,6 @@ fun FixedCalendarApp(
             pendingNotificationSaveAction = null
         }
     )
-
-    val launchSecurityLock = rememberSecurityLockLauncher()
-
 
     val todayFixed = remember { FixedCalendarHelper.fromTimestamp(currentTimeMillis()) }
 
@@ -464,7 +462,7 @@ fun FixedCalendarApp(
                 3 -> ProfileScreen(
                     onOpenSubscription = { showPaywallDialog = true },
                     onOpenCustomerCenter = { showCustomerCenterDialog = true },
-                    onOpenSecurity = launchSecurityLock,
+                    onOpenSecurity = { showSecurityLockDialog = true },
                     onOpenNotifications = { launchNotificationPermission() },
                     onOpenFocusStats = { showFocusStatsDialog = true },
                     onOpenMonthView = { selectedTab = 0 }
@@ -719,6 +717,12 @@ fun FixedCalendarApp(
             totalFocusSeconds = totalFocusSeconds,
             completedCount = completedFocusCount,
             onDismiss = { showFocusStatsDialog = false }
+        )
+    }
+
+    if (showSecurityLockDialog) {
+        com.l1khith.calender28.security.SecurityLockDialog(
+            onDismiss = { showSecurityLockDialog = false }
         )
     }
 
