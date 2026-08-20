@@ -43,6 +43,7 @@ fun ProfileScreen(
     onOpenSecurity: () -> Unit = {},
     onOpenNotifications: () -> Unit = {},
     onOpenFocusStats: () -> Unit = {},
+    onOpenExportTasks: () -> Unit = {},
     onOpenMonthView: () -> Unit
 ) {
     val isProActive by SubscriptionManager.isProActive.collectAsState()
@@ -357,10 +358,8 @@ fun ProfileScreen(
                         ProfileSubtitleRow(
                             icon = Icons.Outlined.Storage,
                             title = "Data Management & Export",
-                            subtitle = "Export matrix schedule to ICS/CSV",
-                            onClick = {
-                                com.l1khith.calender28.utils.PlatformUtils.showToast(context, "Data exported to Downloads folder")
-                            }
+                            subtitle = "Export current month or all tasks to Downloads (CSV/ICS/JSON)",
+                            onClick = onOpenExportTasks
                         )
 
                         HorizontalDivider(color = MatrixColors.OutlineVariant, thickness = 1.dp)

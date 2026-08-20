@@ -324,18 +324,71 @@ class FixedCalendarViewModel(application: Application) : AndroidViewModel(applic
         }
     }
 
-    fun exportDataString(format: String): String {
-        Log.d(TAG, "exportDataString: Exporting data in format=$format")
-        var result = ""
-        viewModelScope.launch(Dispatchers.Default) {
-            val tasks = taskRepository.getAllTasks()
-            result = when (format.lowercase()) {
-                "csv" -> com.l1khith.calender28.repository.IcsParserRepository.exportToCsv(tasks)
-                "json" -> com.l1khith.calender28.repository.IcsParserRepository.exportToJson(tasks)
-                else -> com.l1khith.calender28.repository.IcsParserRepository.exportToIcs(tasks)
+    fun exportTasksToDownloads(
+        format: String,
+        year: Int = _selectedDate.value.year,
+        month: Int = _selectedDate.value.month,
+        currentMonthOnly: Boolean = true,
+        onResult: (Boolean, String, String) -> Unit = { _, _, _ -> }
+    ) {
+        Log.d(TAG, "exportTasksToDownloads: Exporting year=$year, month=$month, format=$format, currentMonthOnly=$currentMonthOnly")
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val allTasks = taskRepository.getAllTasks()
+                val monthStr = month.toString().padStart(2, '0')
+                val prefix = "$year-$monthStr"
+
+                val filteredTasks = if (currentMonthOnly) {
+                    allTasks.filter { it.associatedDate.startsWith(prefix) }
+                } else {
+                    allTasks
+                }
+
+                val content = when (format.lowercase()) {
+                    "csv" -> com.l1khith.calender28.repository.IcsParserRepository.exportToCsv(filteredTasks)
+                    "json" -> com.l1khith.calender28.repository.IcsParserRepository.exportToJson(filteredTasks)
+                    else -> com.l1khith.calender28.repository.IcsParserRepository.exportToIcs(filteredTasks)
+                }
+
+                val monthName = FixedCalendarHelper.getMonthName(month)
+                val ext = format.lowercase()
+                val fileName = if (currentMonthOnly) {
+                    "Calender28_${monthName}_${year}_Tasks.$ext"
+                } else {
+                    "Calender28_AllTasks_${year}.$ext"
+                }
+
+                val mimeType = when (ext) {
+                    "csv" -> "text/csv"
+                    "json" -> "application/json"
+                    else -> "text/calendar"
+                }
+
+                val uri = com.l1khith.calender28.utils.TaskExportHelper.saveToDownloads(
+                    context = context,
+                    fileName = fileName,
+                    content = content,
+                    mimeType = mimeType
+                )
+
+                withContext(Dispatchers.Main) {
+                    if (uri != null) {
+                        onResult(true, fileName, "📁 Exported ${filteredTasks.size} tasks to Downloads/Calender28/$fileName")
+                    } else {
+                        onResult(false, fileName, "❌ Failed to save file to Downloads folder")
+                    }
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Export failed", e)
+                withContext(Dispatchers.Main) {
+                    onResult(false, "", "❌ Export error: ${e.localizedMessage}")
+                }
             }
         }
-        return result
+    }
+
+    fun exportDataString(format: String): String {
+        return ""
     }
 
     fun importFromIcsContent(content: String) {

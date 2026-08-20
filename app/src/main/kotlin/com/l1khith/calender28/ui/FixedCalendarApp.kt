@@ -465,6 +465,7 @@ fun FixedCalendarApp(
                     onOpenSecurity = { showSecurityLockDialog = true },
                     onOpenNotifications = { launchNotificationPermission() },
                     onOpenFocusStats = { showFocusStatsDialog = true },
+                    onOpenExportTasks = { showExportTasksDialog = true },
                     onOpenMonthView = { selectedTab = 0 }
                 )
 
@@ -670,10 +671,19 @@ fun FixedCalendarApp(
 
     if (showExportTasksDialog) {
         ExportTasksDialog(
+            monthName = FixedCalendarHelper.getMonthName(selectedDate.month),
+            year = selectedDate.year,
             onDismiss = { showExportTasksDialog = false },
-            onExportFormat = { format ->
-                val content = viewModel.exportDataString(format)
-                com.l1khith.calender28.utils.showPlatformToast("Exported ${format.uppercase()} data (${content.length} bytes)")
+            onExportFormat = { format, currentMonthOnly ->
+                viewModel.exportTasksToDownloads(
+                    format = format,
+                    year = selectedDate.year,
+                    month = selectedDate.month,
+                    currentMonthOnly = currentMonthOnly,
+                    onResult = { success, fileName, message ->
+                        com.l1khith.calender28.utils.showPlatformToast(message)
+                    }
+                )
             }
         )
     }

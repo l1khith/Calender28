@@ -20,6 +20,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import com.l1khith.calender28.ui.theme.MatrixColors
+import com.l1khith.calender28.ui.theme.MatrixShapes
+import com.l1khith.calender28.utils.FixedCalendarHelper
 
 @Composable
 fun SyncDialog(
@@ -273,25 +275,73 @@ fun IcsImportDialog(
 
 @Composable
 fun ExportTasksDialog(
+    monthName: String = FixedCalendarHelper.getMonthName(FixedCalendarHelper.currentFixedDate().month),
+    year: Int = FixedCalendarHelper.currentFixedDate().year,
     onDismiss: () -> Unit,
-    onExportFormat: (String) -> Unit
+    onExportFormat: (format: String, currentMonthOnly: Boolean) -> Unit
 ) {
-    var selectedFormat by remember { mutableStateOf("ics") }
+    var selectedFormat by remember { mutableStateOf("csv") }
+    var currentMonthOnly by remember { mutableStateOf(true) }
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Export Matrix Tasks", color = MatrixColors.TextHeader, fontWeight = FontWeight.Bold) },
+        title = {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text("📁 Export Matrix Tasks", color = MatrixColors.TextHeader, fontWeight = FontWeight.Bold, fontSize = 18.sp)
+            }
+        },
         text = {
             Column {
-                Text("Select export file format:", color = MatrixColors.TextSecondary, fontSize = 13.sp)
-                Spacer(modifier = Modifier.height(12.dp))
+                Text("Export tasks to your device's Downloads folder.", color = MatrixColors.TextSecondary, fontSize = 13.sp)
+                Spacer(modifier = Modifier.height(14.dp))
 
-                listOf("ics" to "iCalendar (.ics)", "csv" to "Spreadsheet (.csv)", "json" to "Data Object (.json)").forEach { (format, label) ->
+                // Month filter option
+                Surface(
+                    shape = MatrixShapes.Md,
+                    color = MatrixColors.SurfaceContainerHigh,
+                    border = BorderStroke(1.dp, MatrixColors.OutlineVariant.copy(alpha = 0.5f)),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { currentMonthOnly = !currentMonthOnly }
+                            .padding(12.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = "Current Month Only",
+                                color = MatrixColors.TextHeader,
+                                fontWeight = FontWeight.SemiBold,
+                                fontSize = 14.sp
+                            )
+                            Text(
+                                text = "$monthName $year",
+                                color = MatrixColors.Primary,
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Medium
+                            )
+                        }
+                        Checkbox(
+                            checked = currentMonthOnly,
+                            onCheckedChange = { currentMonthOnly = it },
+                            colors = CheckboxDefaults.colors(checkedColor = MatrixColors.Primary)
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(14.dp))
+                Text("Select file format:", color = MatrixColors.TextSecondary, fontSize = 12.sp, fontWeight = FontWeight.Medium)
+                Spacer(modifier = Modifier.height(8.dp))
+
+                listOf("csv" to "Spreadsheet (.csv)", "ics" to "iCalendar (.ics)", "json" to "Data Object (.json)").forEach { (format, label) ->
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
                             .clickable { selectedFormat = format }
-                            .padding(vertical = 6.dp),
+                            .padding(vertical = 4.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         RadioButton(
@@ -303,17 +353,31 @@ fun ExportTasksDialog(
                         Text(label, color = MatrixColors.TextHeader, fontSize = 14.sp)
                     }
                 }
+
+                Spacer(modifier = Modifier.height(10.dp))
+                Surface(
+                    shape = MatrixShapes.Sm,
+                    color = MatrixColors.SurfaceContainer,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(
+                        text = "💾 Saved to: Downloads/Calender28/",
+                        color = MatrixColors.TextSecondary,
+                        fontSize = 11.sp,
+                        modifier = Modifier.padding(8.dp)
+                    )
+                }
             }
         },
         confirmButton = {
             Button(
                 onClick = {
-                    onExportFormat(selectedFormat)
+                    onExportFormat(selectedFormat, currentMonthOnly)
                     onDismiss()
                 },
                 colors = ButtonDefaults.buttonColors(containerColor = MatrixColors.Primary)
             ) {
-                Text("Export", color = Color.White, fontWeight = FontWeight.Bold)
+                Text("Export to Downloads", color = Color.Black, fontWeight = FontWeight.Bold)
             }
         },
         dismissButton = {
