@@ -17,3 +17,5 @@ keystore.properties
 *.jks
 *.keystore
 calender28-key
+*.log
+app/release/
