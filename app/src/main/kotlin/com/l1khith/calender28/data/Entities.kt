@@ -23,7 +23,12 @@ data class AppTaskEntity(
     val is_completed: Int = 0,
     val priority: Int = 1,
     val recurring_parent_id: String? = null,
-    val is_generated: Int = 0
+    val is_generated: Int = 0,
+    val last_focused_at: Long? = null,
+    val total_focus_time: Int = 0,
+    val focus_count: Int = 0,
+    val last_focus_duration: Int = 0,
+    val last_focus_mode: String? = null
 ) {
     fun toAppTask(): AppTask = AppTask(
         id = id,
@@ -36,7 +41,12 @@ data class AppTaskEntity(
         isCompleted = is_completed,
         priority = priority,
         recurringParentId = recurring_parent_id,
-        isGenerated = is_generated
+        isGenerated = is_generated,
+        lastFocusedAt = last_focused_at,
+        totalFocusTime = total_focus_time,
+        focusCount = focus_count,
+        lastFocusDuration = last_focus_duration,
+        lastFocusMode = last_focus_mode
     )
 
     companion object {
@@ -51,7 +61,12 @@ data class AppTaskEntity(
             is_completed = task.isCompleted,
             priority = task.priority,
             recurring_parent_id = task.recurringParentId,
-            is_generated = task.isGenerated
+            is_generated = task.isGenerated,
+            last_focused_at = task.lastFocusedAt,
+            total_focus_time = task.totalFocusTime,
+            focus_count = task.focusCount,
+            last_focus_duration = task.lastFocusDuration,
+            last_focus_mode = task.lastFocusMode
         )
     }
 }

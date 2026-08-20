@@ -61,6 +61,12 @@ interface TaskDao {
 
     @Query("DELETE FROM tasks WHERE associated_date < :cutoffDate AND is_completed = 0")
     suspend fun purgeOldUncompletedTasks(cutoffDate: String): Int
+
+    @Query("SELECT * FROM tasks WHERE id = :id LIMIT 1")
+    suspend fun getTaskById(id: String): AppTaskEntity?
+
+    @Query("UPDATE tasks SET last_focused_at = :timestamp, total_focus_time = total_focus_time + :durationSeconds, focus_count = focus_count + 1, last_focus_duration = :durationSeconds, last_focus_mode = :mode WHERE id = :id")
+    suspend fun recordTaskFocus(id: String, durationSeconds: Int, mode: String, timestamp: Long): Int
 }
 
 data class DateTaskCount(
@@ -140,4 +146,31 @@ interface ScheduledAlarmDao {
 
     @Query("SELECT * FROM scheduled_alarms WHERE scheduled_time_utc > :now")
     suspend fun getActiveAlarms(now: Long = System.currentTimeMillis()): List<ScheduledAlarmEntity>
+}
+
+@Dao
+interface FocusSessionDao {
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertSession(session: FocusSessionEntity): Long
+
+    @Query("SELECT * FROM focus_sessions ORDER BY startedAt DESC")
+    fun observeAllSessions(): Flow<List<FocusSessionEntity>>
+
+    @Query("SELECT * FROM focus_sessions ORDER BY startedAt DESC")
+    suspend fun getAllSessions(): List<FocusSessionEntity>
+
+    @Query("SELECT * FROM focus_sessions WHERE taskId = :taskId ORDER BY startedAt DESC")
+    fun observeSessionsForTask(taskId: String): Flow<List<FocusSessionEntity>>
+
+    @Query("SELECT SUM(durationSeconds) FROM focus_sessions WHERE completed = 1")
+    fun observeTotalFocusSeconds(): Flow<Long?>
+
+    @Query("SELECT COUNT(*) FROM focus_sessions WHERE completed = 1")
+    fun observeCompletedSessionCount(): Flow<Int>
+
+    @Query("DELETE FROM focus_sessions WHERE id = :id")
+    suspend fun deleteSession(id: Long): Int
+
+    @Query("DELETE FROM focus_sessions")
+    suspend fun clearAllSessions(): Int
 }
