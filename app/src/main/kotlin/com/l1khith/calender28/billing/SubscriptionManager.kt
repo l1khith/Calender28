@@ -31,11 +31,7 @@ object SubscriptionManager {
     private var lastDevTapTime = 0L
 
     private fun getRepo(context: Context): UserPreferencesRepository {
-        val current = prefsRepo
-        if (current != null) return current
-        val newRepo = UserPreferencesRepository(createDataStore(context))
-        prefsRepo = newRepo
-        return newRepo
+        return UserPreferencesRepository.getInstance(context)
     }
 
     fun initDataStore(context: Context, scope: CoroutineScope) {

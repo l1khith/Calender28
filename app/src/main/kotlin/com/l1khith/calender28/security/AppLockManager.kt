@@ -40,7 +40,7 @@ object AppLockManager {
         if (isInitialized) return
         isInitialized = true
 
-        val repo = UserPreferencesRepository(createDataStore(context.applicationContext))
+        val repo = UserPreferencesRepository.getInstance(context.applicationContext)
         prefsRepo = repo
 
         scope.launch(Dispatchers.Default) {
@@ -198,7 +198,7 @@ object AppLockManager {
             title = actionTitle,
             subtitle = actionSubtitle,
             onSuccess = {
-                val repo = prefsRepo ?: UserPreferencesRepository(createDataStore(activity.applicationContext))
+                val repo = prefsRepo ?: UserPreferencesRepository.getInstance(activity.applicationContext)
                 prefsRepo = repo
 
                 scope.launch(Dispatchers.IO) {

@@ -1,5 +1,6 @@
 package com.l1khith.calender28.repository
 
+import android.content.Context
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
@@ -23,6 +24,16 @@ class UserPreferencesRepository(
         const val DEFAULT_IS_PRO_USER = false
         const val DEFAULT_SELECTED_THEME = "DEFAULT"
         const val DEFAULT_IS_APP_LOCK_ENABLED = false
+
+        @Volatile
+        private var instance: UserPreferencesRepository? = null
+
+        fun getInstance(context: Context): UserPreferencesRepository =
+            instance ?: synchronized(this) {
+                instance ?: UserPreferencesRepository(createDataStore(context.applicationContext)).also {
+                    instance = it
+                }
+            }
     }
 
     val userName: Flow<String> = dataStore.data.map { preferences ->
