@@ -80,6 +80,13 @@ fun FixedCalendarApp(
     var showPaywallDialog by remember { mutableStateOf(false) }
     var showCustomerCenterDialog by remember { mutableStateOf(false) }
     var showExitDialog by remember { mutableStateOf(false) }
+    var showFocusStatsDialog by remember { mutableStateOf(false) }
+
+    val focusState by com.l1khith.calender28.service.FocusSessionManager.focusState.collectAsState()
+    val focusRepo = remember(context) { com.l1khith.calender28.repository.FocusRepositoryImpl(context) }
+    val allFocusSessions by focusRepo.getAllFocusSessionsFlow().collectAsState(initial = emptyList())
+    val totalFocusSeconds by focusRepo.getTotalFocusSecondsFlow().collectAsState(initial = 0L)
+    val completedFocusCount by focusRepo.getCompletedSessionCountFlow().collectAsState(initial = 0)
 
     val isProActive by com.l1khith.calender28.billing.SubscriptionManager.isProActive.collectAsState()
 
@@ -221,6 +228,9 @@ fun FixedCalendarApp(
             onDeleteRecurring = { recId ->
                 viewModel.deleteRecurringTask(recId)
                 showAddTaskDialog = false
+            },
+            onStartFocus = { task ->
+                com.l1khith.calender28.service.FocusSessionManager.openSetup(task)
             }
         )
     }
@@ -439,7 +449,10 @@ fun FixedCalendarApp(
                         showAddTaskDialog = true
                     },
                     isProActive = isProActive,
-                    onOpenPaywall = { showPaywallDialog = true }
+                    onOpenPaywall = { showPaywallDialog = true },
+                    onStartFocus = { task ->
+                        com.l1khith.calender28.service.FocusSessionManager.openSetup(task)
+                    }
                 )
 
                 2 -> HabitSection(
@@ -453,6 +466,7 @@ fun FixedCalendarApp(
                     onOpenCustomerCenter = { showCustomerCenterDialog = true },
                     onOpenSecurity = launchSecurityLock,
                     onOpenNotifications = { launchNotificationPermission() },
+                    onOpenFocusStats = { showFocusStatsDialog = true },
                     onOpenMonthView = { selectedTab = 0 }
                 )
 
@@ -592,6 +606,9 @@ fun FixedCalendarApp(
                             showAddTaskDialog = true
                         },
                         onDelete = { viewModel.deleteTask(it) },
+                        onStartFocus = { task ->
+                            com.l1khith.calender28.service.FocusSessionManager.openSetup(task)
+                        },
                         primaryColor = primaryAccent,
                         orangeColor = secondaryAccent,
                         textColor = textColorPrimary,
@@ -694,6 +711,48 @@ fun FixedCalendarApp(
                 onExitApp()
             }
         )
+    }
+
+    if (showFocusStatsDialog) {
+        FocusStatsDialog(
+            sessions = allFocusSessions,
+            totalFocusSeconds = totalFocusSeconds,
+            completedCount = completedFocusCount,
+            onDismiss = { showFocusStatsDialog = false }
+        )
+    }
+
+    // Focus Mode Overlays
+    when (val state = focusState) {
+        is com.l1khith.calender28.service.FocusState.Setup -> {
+            FocusSetupDialog(
+                task = state.task,
+                onDismiss = { com.l1khith.calender28.service.FocusSessionManager.closeSetup() },
+                onStartFocus = { mode, duration ->
+                    com.l1khith.calender28.service.FocusSessionManager.startFocus(context, state.task, mode, duration)
+                }
+            )
+        }
+        is com.l1khith.calender28.service.FocusState.Active -> {
+            FocusActiveOverlay(
+                activeState = state,
+                onTogglePause = { com.l1khith.calender28.service.FocusSessionManager.togglePause(context) },
+                onStop = { com.l1khith.calender28.service.FocusSessionManager.finishSessionAsComplete(context) },
+                onCancel = { com.l1khith.calender28.service.FocusSessionManager.stopOrCancelFocus(context, markAsCancelled = true) }
+            )
+        }
+        is com.l1khith.calender28.service.FocusState.Completed -> {
+            FocusCompletionOverlay(
+                completedState = state,
+                onDone = { markTaskDone ->
+                    com.l1khith.calender28.service.FocusSessionManager.commitCompletedTask(context, markTaskDone)
+                },
+                onAgain = {
+                    com.l1khith.calender28.service.FocusSessionManager.restartSameTask(context)
+                }
+            )
+        }
+        com.l1khith.calender28.service.FocusState.Idle -> {}
     }
 }
 
@@ -1022,6 +1081,7 @@ fun AgendaList(
     onToggleComplete: (AppTask) -> Unit,
     onEdit: (AppTask) -> Unit,
     onDelete: (AppTask) -> Unit,
+    onStartFocus: (AppTask) -> Unit = {},
     primaryColor: Color,
     orangeColor: Color,
     textColor: Color,
@@ -1129,6 +1189,7 @@ fun AgendaList(
                     onToggleComplete = onToggleComplete,
                     onEdit = onEdit,
                     onDelete = onDelete,
+                    onStartFocus = onStartFocus,
                     textColor = textColor,
                     textColorSec = textColorSec,
                     accentColor = orangeColor,
@@ -1164,6 +1225,7 @@ fun AgendaList(
                     onToggleComplete = onToggleComplete,
                     onEdit = onEdit,
                     onDelete = onDelete,
+                    onStartFocus = onStartFocus,
                     textColor = textColor,
                     textColorSec = textColorSec,
                     cardBg = cardBg
@@ -1189,6 +1251,7 @@ fun AgendaList(
                     onToggleComplete = onToggleComplete,
                     onEdit = {},
                     onDelete = onDelete,
+                    onStartFocus = onStartFocus,
                     textColor = textColor,
                     textColorSec = textColorSec,
                     cardBg = cardBg
@@ -1259,6 +1322,7 @@ fun ReminderItem(
     onToggleComplete: (AppTask) -> Unit,
     onEdit: (AppTask) -> Unit,
     onDelete: (AppTask) -> Unit,
+    onStartFocus: (AppTask) -> Unit = {},
     textColor: Color,
     textColorSec: Color,
     accentColor: Color,
@@ -1391,6 +1455,11 @@ fun ReminderItem(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
+                        Text(
+                            text = "⏱️",
+                            fontSize = 13.sp,
+                            modifier = Modifier.clickable { onStartFocus(task) }
+                        )
                         Icon(
                             imageVector = editIcon,
                             contentDescription = "Edit",
@@ -1430,6 +1499,16 @@ fun ReminderItem(
                         maxLines = 2
                     )
                 }
+
+                if (task.hasEverFocused) {
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = "⭐ Focused: ${task.formattedFocusDuration}",
+                        color = MatrixColors.Primary,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Medium
+                    )
+                }
             }
         }
     }
@@ -1442,6 +1521,7 @@ fun TodoItem(
     onToggleComplete: (AppTask) -> Unit,
     onEdit: (AppTask) -> Unit,
     onDelete: (AppTask) -> Unit,
+    onStartFocus: (AppTask) -> Unit = {},
     textColor: Color,
     textColorSec: Color,
     cardBg: Color
@@ -1573,6 +1653,15 @@ fun TodoItem(
                                 maxLines = 2
                             )
                         }
+                        if (task.hasEverFocused) {
+                            Spacer(modifier = Modifier.height(3.dp))
+                            Text(
+                                text = "⭐ Focused: ${task.formattedFocusDuration}",
+                                color = MatrixColors.Primary,
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Medium
+                            )
+                        }
                     }
                 }
 
@@ -1582,33 +1671,41 @@ fun TodoItem(
                     else -> Pair("Personal", MatrixColors.Tertiary)
                 }
 
-                Surface(
-                    shape = MatrixShapes.Xl,
-                    color = categoryColor.copy(alpha = 0.15f),
-                    border = BorderStroke(1.dp, categoryColor),
-                    modifier = Modifier.padding(start = 8.dp)
-                ) {
-                    Row(
-                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-                        verticalAlignment = Alignment.CenterVertically
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = "⏱️",
+                        fontSize = 14.sp,
+                        modifier = Modifier
+                            .padding(end = 8.dp)
+                            .clickable { onStartFocus(task) }
+                    )
+
+                    Surface(
+                        shape = MatrixShapes.Xl,
+                        color = categoryColor.copy(alpha = 0.15f),
+                        border = BorderStroke(1.dp, categoryColor),
+                        modifier = Modifier.padding(start = 2.dp)
                     ) {
-                        Box(
-                            modifier = Modifier
-                                .size(6.dp)
-                                .clip(CircleShape)
-                                .background(categoryColor)
-                        )
-                        Spacer(modifier = Modifier.width(5.dp))
-                        Text(
-                            text = categoryName,
-                            color = categoryColor,
-                            fontWeight = FontWeight.Medium,
-                            fontSize = 11.sp
-                        )
+                        Row(
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(6.dp)
+                                    .clip(CircleShape)
+                                    .background(categoryColor)
+                            )
+                            Spacer(modifier = Modifier.width(5.dp))
+                            Text(
+                                text = categoryName,
+                                color = categoryColor,
+                                fontWeight = FontWeight.Medium,
+                                fontSize = 11.sp
+                            )
+                        }
                     }
                 }
-
-
             }
         }
     }

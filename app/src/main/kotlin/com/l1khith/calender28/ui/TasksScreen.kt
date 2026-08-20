@@ -37,7 +37,8 @@ fun TasksScreen(
     viewModel: FixedCalendarViewModel,
     onEditTask: (AppTask) -> Unit,
     isProActive: Boolean = false,
-    onOpenPaywall: () -> Unit = {}
+    onOpenPaywall: () -> Unit = {},
+    onStartFocus: (AppTask) -> Unit = {}
 ) {
     val allTasks by viewModel.allTasks.collectAsState()
     var searchQuery by remember { mutableStateOf("") }
@@ -218,7 +219,8 @@ fun TasksScreen(
                                 todayDateStr = todayDateStr,
                                 onToggleComplete = { viewModel.toggleTaskCompletion(taskItem) },
                                 onClick = { onEditTask(taskItem) },
-                                onDeleteTask = { viewModel.deleteTask(taskItem) }
+                                onDeleteTask = { viewModel.deleteTask(taskItem) },
+                                onStartFocus = { onStartFocus(taskItem) }
                             )
                         }
                     }
@@ -264,7 +266,8 @@ fun TasksScreen(
                                 task = taskItem,
                                 onToggleComplete = { viewModel.toggleTaskCompletion(taskItem) },
                                 onClick = { onEditTask(taskItem) },
-                                onDeleteTask = { viewModel.deleteTask(taskItem) }
+                                onDeleteTask = { viewModel.deleteTask(taskItem) },
+                                onStartFocus = { onStartFocus(taskItem) }
                             )
                         }
                     }
@@ -327,7 +330,9 @@ fun TasksScreen(
                                     UpcomingTaskCard(
                                         task = taskItem,
                                         onToggleComplete = { viewModel.toggleTaskCompletion(taskItem) },
-                                        onClick = { onEditTask(taskItem) }
+                                        onClick = { onEditTask(taskItem) },
+                                        onDeleteTask = { viewModel.deleteTask(taskItem) },
+                                        onStartFocus = { onStartFocus(taskItem) }
                                     )
                                     Spacer(modifier = Modifier.height(6.dp))
                                 }
@@ -346,7 +351,8 @@ fun UrgentTaskCard(
     todayDateStr: String,
     onToggleComplete: () -> Unit,
     onClick: () -> Unit,
-    onDeleteTask: () -> Unit = {}
+    onDeleteTask: () -> Unit = {},
+    onStartFocus: () -> Unit = {}
 ) {
     val isOverdue = task.associatedDate < todayDateStr
     val cardBg = if (isOverdue) Color(0xFF3B2527) else MatrixColors.SurfaceContainerLow
@@ -445,18 +451,37 @@ fun UrgentTaskCard(
                         maxLines = 1
                     )
                 }
+
+                if (task.hasEverFocused) {
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = "⭐ Focused: ${task.formattedFocusDuration}",
+                        color = MatrixColors.Primary,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Medium
+                    )
+                }
             }
 
-            IconButton(
-                onClick = onDeleteTask,
-                modifier = Modifier.size(28.dp)
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Delete,
-                    contentDescription = "Delete Task",
-                    tint = MatrixColors.TextSecondary,
-                    modifier = Modifier.size(18.dp)
-                )
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                IconButton(
+                    onClick = onStartFocus,
+                    modifier = Modifier.size(28.dp)
+                ) {
+                    Text("⏱️", fontSize = 14.sp)
+                }
+
+                IconButton(
+                    onClick = onDeleteTask,
+                    modifier = Modifier.size(28.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Delete,
+                        contentDescription = "Delete Task",
+                        tint = MatrixColors.TextSecondary,
+                        modifier = Modifier.size(18.dp)
+                    )
+                }
             }
         }
     }
@@ -467,7 +492,8 @@ fun FocusTaskCard(
     task: AppTask,
     onToggleComplete: () -> Unit,
     onClick: () -> Unit,
-    onDeleteTask: () -> Unit = {}
+    onDeleteTask: () -> Unit = {},
+    onStartFocus: () -> Unit = {}
 ) {
     Card(
         colors = CardDefaults.cardColors(containerColor = MatrixColors.SurfaceContainerLow),
@@ -544,18 +570,37 @@ fun FocusTaskCard(
                         }
                     }
                 }
+
+                if (task.hasEverFocused) {
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = "⭐ Focused: ${task.formattedFocusDuration}",
+                        color = MatrixColors.Primary,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Medium
+                    )
+                }
             }
 
-            IconButton(
-                onClick = onDeleteTask,
-                modifier = Modifier.size(28.dp)
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Delete,
-                    contentDescription = "Delete Task",
-                    tint = MatrixColors.TextSecondary,
-                    modifier = Modifier.size(18.dp)
-                )
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                IconButton(
+                    onClick = onStartFocus,
+                    modifier = Modifier.size(28.dp)
+                ) {
+                    Text("⏱️", fontSize = 14.sp)
+                }
+
+                IconButton(
+                    onClick = onDeleteTask,
+                    modifier = Modifier.size(28.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Delete,
+                        contentDescription = "Delete Task",
+                        tint = MatrixColors.TextSecondary,
+                        modifier = Modifier.size(18.dp)
+                    )
+                }
             }
         }
     }
@@ -566,7 +611,8 @@ fun UpcomingTaskCard(
     task: AppTask,
     onToggleComplete: () -> Unit,
     onClick: () -> Unit,
-    onDeleteTask: () -> Unit = {}
+    onDeleteTask: () -> Unit = {},
+    onStartFocus: () -> Unit = {}
 ) {
     Card(
         colors = CardDefaults.cardColors(containerColor = MatrixColors.SurfaceContainerLow),
@@ -623,18 +669,36 @@ fun UpcomingTaskCard(
                         fontSize = 11.sp
                     )
                 }
+
+                if (task.hasEverFocused) {
+                    Text(
+                        text = "⭐ Focused: ${task.formattedFocusDuration}",
+                        color = MatrixColors.Primary,
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Medium
+                    )
+                }
             }
 
-            IconButton(
-                onClick = onDeleteTask,
-                modifier = Modifier.size(28.dp)
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Delete,
-                    contentDescription = "Delete Task",
-                    tint = MatrixColors.TextSecondary,
-                    modifier = Modifier.size(16.dp)
-                )
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                IconButton(
+                    onClick = onStartFocus,
+                    modifier = Modifier.size(26.dp)
+                ) {
+                    Text("⏱️", fontSize = 12.sp)
+                }
+
+                IconButton(
+                    onClick = onDeleteTask,
+                    modifier = Modifier.size(26.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Delete,
+                        contentDescription = "Delete Task",
+                        tint = MatrixColors.TextSecondary,
+                        modifier = Modifier.size(16.dp)
+                    )
+                }
             }
         }
     }

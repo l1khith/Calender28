@@ -42,6 +42,7 @@ fun ProfileScreen(
     onOpenCustomerCenter: () -> Unit,
     onOpenSecurity: () -> Unit = {},
     onOpenNotifications: () -> Unit = {},
+    onOpenFocusStats: () -> Unit = {},
     onOpenMonthView: () -> Unit
 ) {
     val isProActive by SubscriptionManager.isProActive.collectAsState()
@@ -263,6 +264,12 @@ fun ProfileScreen(
                             icon = AppIcons.Notification,
                             title = "Notifications",
                             onClick = onOpenNotifications
+                        )
+                        HorizontalDivider(color = MatrixColors.OutlineVariant, thickness = 1.dp)
+                        ProfileSettingRow(
+                            icon = Icons.Default.Timer,
+                            title = "Focus Analytics & History",
+                            onClick = onOpenFocusStats
                         )
                     }
                 }

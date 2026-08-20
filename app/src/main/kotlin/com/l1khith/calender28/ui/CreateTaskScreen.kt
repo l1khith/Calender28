@@ -60,7 +60,8 @@ fun CreateTaskScreen(
     isProActive: Boolean = false,
     onOpenPaywall: () -> Unit = {},
     onDeleteTask: (AppTask) -> Unit = {},
-    onDeleteRecurring: (String) -> Unit = {}
+    onDeleteRecurring: (String) -> Unit = {},
+    onStartFocus: ((AppTask) -> Unit)? = null
 ) {
     var title by remember { mutableStateOf(task?.title ?: "") }
     var description by remember { mutableStateOf(task?.description ?: "") }
@@ -534,6 +535,86 @@ fun CreateTaskScreen(
                         )
                     }
                 }
+            }
+
+            // Focus Mode Quick Access (For existing tasks)
+            if (task != null && onStartFocus != null) {
+                item {
+                    Card(
+                        shape = MatrixShapes.Lg,
+                        colors = CardDefaults.cardColors(containerColor = MatrixColors.SurfaceContainerLow),
+                        border = BorderStroke(1.dp, MatrixColors.Primary.copy(alpha = 0.5f)),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(16.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text("🎯", fontSize = 18.sp)
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Column {
+                                    Text(
+                                        text = "Distraction-Free Focus",
+                                        color = MatrixColors.TextHeader,
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 14.sp
+                                    )
+                                    Text(
+                                        text = "Run full-screen countdown timer or stopwatch for this task",
+                                        color = MatrixColors.TextSecondary,
+                                        fontSize = 11.sp
+                                    )
+                                }
+                            }
+
+                            if (task.hasEverFocused) {
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Surface(
+                                    shape = MatrixShapes.Sm,
+                                    color = MatrixColors.Primary.copy(alpha = 0.12f),
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    Text(
+                                        text = "⭐ Previously focused: ${task.formattedFocusDuration} (${task.focusCount} sessions)",
+                                        color = MatrixColors.Primary,
+                                        fontSize = 11.sp,
+                                        fontWeight = FontWeight.Medium,
+                                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                                    )
+                                }
+                            }
+
+                            Spacer(modifier = Modifier.height(12.dp))
+
+                            Button(
+                                onClick = {
+                                    onStartFocus(task)
+                                    onDismiss()
+                                },
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(44.dp),
+                                shape = MatrixShapes.Md,
+                                colors = ButtonDefaults.buttonColors(containerColor = MatrixColors.Primary)
+                            ) {
+                                Text(
+                                    text = "⏱️ START FOCUS SESSION",
+                                    color = Color.Black,
+                                    fontWeight = FontWeight.Black,
+                                    fontSize = 13.sp
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+
+            item {
+                Spacer(modifier = Modifier.height(24.dp))
             }
         }
     }

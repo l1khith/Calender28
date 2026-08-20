@@ -1,0 +1,58 @@
+package com.l1khith.calender28.viewmodel
+
+import android.app.Application
+import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.viewModelScope
+import com.l1khith.calender28.data.AppTask
+import com.l1khith.calender28.data.FocusSession
+import com.l1khith.calender28.repository.FocusRepositoryImpl
+import com.l1khith.calender28.service.FocusSessionManager
+import com.l1khith.calender28.service.FocusState
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.stateIn
+
+class FocusViewModel(application: Application) : AndroidViewModel(application) {
+
+    private val context = application.applicationContext
+    private val focusRepo = FocusRepositoryImpl(context)
+
+    val focusState: StateFlow<FocusState> = FocusSessionManager.focusState
+
+    val allSessions: StateFlow<List<FocusSession>> = focusRepo.getAllFocusSessionsFlow()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    val totalFocusSeconds: StateFlow<Long> = focusRepo.getTotalFocusSecondsFlow()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0L)
+
+    val completedSessionCount: StateFlow<Int> = focusRepo.getCompletedSessionCountFlow()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
+
+    fun openSetup(task: AppTask) {
+        FocusSessionManager.openSetup(task)
+    }
+
+    fun closeSetup() {
+        FocusSessionManager.closeSetup()
+    }
+
+    fun startFocus(task: AppTask, mode: String, durationMinutes: Int) {
+        FocusSessionManager.startFocus(context, task, mode, durationMinutes)
+    }
+
+    fun togglePause() {
+        FocusSessionManager.togglePause(context)
+    }
+
+    fun stopOrCancel(markAsCancelled: Boolean = true) {
+        FocusSessionManager.stopOrCancelFocus(context, markAsCancelled)
+    }
+
+    fun commitTaskDone(markTaskDone: Boolean = true) {
+        FocusSessionManager.commitCompletedTask(context, markTaskDone)
+    }
+
+    fun focusAgain() {
+        FocusSessionManager.restartSameTask(context)
+    }
+}
