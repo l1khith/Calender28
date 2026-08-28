@@ -152,4 +152,12 @@ class HabitRepositoryImpl(private val context: Context) : HabitRepository {
         )
         Unit
     }
+
+    override suspend fun getCurrentCycleProgress(habitId: String, cycleIndex: Long): Int = withContext(Dispatchers.IO) {
+        try {
+            habitEntryDao.getCurrentCycleProgress(habitId, cycleIndex)
+        } catch (e: Exception) {
+            0
+        }
+    }
 }

@@ -29,6 +29,7 @@ class FixedCalendarViewModel(application: Application) : AndroidViewModel(applic
     private val context = application.applicationContext
     private val taskRepository = TaskRepositoryImpl(context)
     private val habitRepository = HabitRepositoryImpl(context)
+    private val coinRepository = com.l1khith.calender28.repository.CoinRepositoryImpl(context)
 
     // Calendar navigation state
     private val _selectedDate = MutableStateFlow(FixedCalendarHelper.fromTimestamp(System.currentTimeMillis()))
@@ -71,6 +72,7 @@ class FixedCalendarViewModel(application: Application) : AndroidViewModel(applic
                     priority = task.priority
                 )
             }
+            coinRepository.rewardDailyLogin(currentSelDate.toString())
             loadState(currentSelDate)
         }
     }
@@ -167,8 +169,13 @@ class FixedCalendarViewModel(application: Application) : AndroidViewModel(applic
     fun toggleTaskCompletion(task: AppTask) {
         Log.d(TAG, "toggleTaskCompletion: Toggling taskId=${task.id}, currentCompleted=${task.completed}")
         val targetDate = _selectedDate.value
+        val isNowCompleting = !task.completed
         viewModelScope.launch(Dispatchers.Default) {
             taskRepository.toggleTaskCompletion(task)
+            if (isNowCompleting) {
+                val isRecurring = task.recurringParentId != null || task.isGenerated == 1
+                coinRepository.rewardTaskCompletion(isRecurring = isRecurring, streakDays = 1, taskTitle = task.title)
+            }
             loadState(targetDate)
         }
     }
@@ -245,8 +252,20 @@ class FixedCalendarViewModel(application: Application) : AndroidViewModel(applic
     fun toggleHabitDay(habitId: String, cycleIndex: Long, dayInCycle: Int, currentCompletedState: Boolean) {
         Log.d(TAG, "toggleHabitDay: habitId=$habitId, cycleIndex=$cycleIndex, dayInCycle=$dayInCycle, currentCompleted=$currentCompletedState")
         val targetDate = _selectedDate.value
+        val isNowCompleted = !currentCompletedState
         viewModelScope.launch(Dispatchers.Default) {
             habitRepository.toggleHabitDay(habitId, cycleIndex, dayInCycle, currentCompletedState)
+            if (isNowCompleted) {
+                val allHabits = habitRepository.getAllHabits()
+                val targetHabit = allHabits.find { it.id == habitId }
+                val habitName = targetHabit?.name ?: "Habit"
+                coinRepository.rewardPartialHabitProgress(habitName)
+
+                val progress = habitRepository.getCurrentCycleProgress(habitId, cycleIndex)
+                if (progress >= 28) {
+                    coinRepository.rewardHabitCycleComplete(habitName)
+                }
+            }
             loadState(targetDate)
         }
     }

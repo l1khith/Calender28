@@ -15,4 +15,5 @@ interface HabitRepository {
     ): Habit
     suspend fun deleteHabit(id: String)
     suspend fun toggleHabitDay(habitId: String, cycleIndex: Long, dayInCycle: Int, currentCompletedState: Boolean)
+    suspend fun getCurrentCycleProgress(habitId: String, cycleIndex: Long): Int
 }

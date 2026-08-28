@@ -16,9 +16,11 @@ import kotlinx.coroutines.runBlocking
         HabitEntity::class,
         HabitEntryEntity::class,
         ScheduledAlarmEntity::class,
-        FocusSessionEntity::class
+        FocusSessionEntity::class,
+        CoinBalanceEntity::class,
+        CoinTransactionEntity::class
     ],
-    version = 3,
+    version = 5,
     exportSchema = false
 )
 abstract class RoomTaskDatabase : RoomDatabase() {
@@ -28,6 +30,7 @@ abstract class RoomTaskDatabase : RoomDatabase() {
     abstract fun habitEntryDao(): HabitEntryDao
     abstract fun scheduledAlarmDao(): ScheduledAlarmDao
     abstract fun focusSessionDao(): FocusSessionDao
+    abstract fun coinDao(): CoinDao
 
     companion object {
         @Volatile
