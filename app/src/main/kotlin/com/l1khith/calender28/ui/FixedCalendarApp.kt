@@ -62,8 +62,18 @@ fun FixedCalendarApp(
 
     val context = androidx.compose.ui.platform.LocalContext.current
     val coroutineScope = rememberCoroutineScope()
+    val activity = remember(context) {
+        var ctx = context
+        while (ctx is android.content.ContextWrapper) {
+            if (ctx is android.app.Activity) return@remember ctx
+            ctx = ctx.baseContext
+        }
+        ctx as? android.app.Activity
+    }
+
     LaunchedEffect(Unit) {
         com.l1khith.calender28.billing.SubscriptionManager.initDataStore(context, coroutineScope)
+        com.l1khith.calender28.ads.InterstitialAdManager.loadAd(context)
     }
 
     val selectedDate by viewModel.selectedDate.collectAsState()
@@ -80,9 +90,13 @@ fun FixedCalendarApp(
     var showPaywallDialog by remember { mutableStateOf(false) }
     var showCustomerCenterDialog by remember { mutableStateOf(false) }
     var showExitDialog by remember { mutableStateOf(false) }
+    var showCoinStoreDialog by remember { mutableStateOf(false) }
     var showFocusStatsDialog by remember { mutableStateOf(false) }
     var showSecurityLockDialog by remember { mutableStateOf(false) }
+    var showCustomSkippableAd by remember { mutableStateOf(false) }
+    var navigationCount by remember { mutableIntStateOf(0) }
 
+    val coinViewModel: com.l1khith.calender28.viewmodel.CoinViewModel = androidx.lifecycle.viewmodel.compose.viewModel()
     val focusState by com.l1khith.calender28.service.FocusSessionManager.focusState.collectAsState()
     val focusRepo = remember(context) { com.l1khith.calender28.repository.FocusRepositoryImpl(context) }
     val allFocusSessions by focusRepo.getAllFocusSessionsFlow().collectAsState(initial = emptyList())
@@ -90,6 +104,7 @@ fun FixedCalendarApp(
     val completedFocusCount by focusRepo.getCompletedSessionCountFlow().collectAsState(initial = 0)
 
     val isProActive by com.l1khith.calender28.billing.SubscriptionManager.isProActive.collectAsState()
+    val coinBalance by coinViewModel.coinBalance.collectAsState()
 
     com.l1khith.calender28.utils.PlatformBackHandler(enabled = true) {
         if (isProActive) {
@@ -199,6 +214,26 @@ fun FixedCalendarApp(
 
     var selectedTab by remember { mutableStateOf(0) }
 
+    val onNavigateToTab: (Int) -> Unit = { targetTab ->
+        if (selectedTab != targetTab) {
+            selectedTab = targetTab
+            if (!isProActive) {
+                navigationCount++
+                if (navigationCount % com.l1khith.calender28.utils.Constants.INTERSTITIAL_NAV_FREQUENCY == 0) {
+                    if (activity != null && com.l1khith.calender28.ads.InterstitialAdManager.isAdLoaded()) {
+                        com.l1khith.calender28.ads.InterstitialAdManager.showAd(
+                            activity = activity,
+                            onAdDismissed = {},
+                            onAdUnavailable = { showCustomSkippableAd = true }
+                        )
+                    } else {
+                        showCustomSkippableAd = true
+                    }
+                }
+            }
+        }
+    }
+
     if (showAddTaskDialog) {
         CreateTaskScreen(
             task = taskToEdit,
@@ -295,6 +330,29 @@ fun FixedCalendarApp(
                             ).build()
                         }
 
+                        Surface(
+                            shape = RoundedCornerShape(20.dp),
+                            color = MatrixColors.SurfaceContainerHigh,
+                            border = BorderStroke(1.dp, MatrixColors.Primary.copy(alpha = 0.5f)),
+                            modifier = Modifier
+                                .padding(end = 8.dp)
+                                .clickable { showCoinStoreDialog = true }
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
+                            ) {
+                                Text(text = "🪙", fontSize = 13.sp)
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text(
+                                    text = "$coinBalance",
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 13.sp,
+                                    color = MatrixColors.TextHeader
+                                )
+                            }
+                        }
+
                         Box(
                             modifier = Modifier
                                 .padding(end = 12.dp)
@@ -356,7 +414,7 @@ fun FixedCalendarApp(
 
                 NavigationBarItem(
                     selected = selectedTab == 0,
-                    onClick = { selectedTab = 0 },
+                    onClick = { onNavigateToTab(0) },
                     icon = {
                         Icon(
                             imageVector = monthNavIcon,
@@ -374,7 +432,7 @@ fun FixedCalendarApp(
                 )
                 NavigationBarItem(
                     selected = selectedTab == 1,
-                    onClick = { selectedTab = 1 },
+                    onClick = { onNavigateToTab(1) },
                     icon = {
                         Icon(
                             imageVector = tasksNavIcon,
@@ -392,7 +450,7 @@ fun FixedCalendarApp(
                 )
                 NavigationBarItem(
                     selected = selectedTab == 2,
-                    onClick = { selectedTab = 2 },
+                    onClick = { onNavigateToTab(2) },
                     icon = {
                         Icon(
                             imageVector = habitNavIcon,
@@ -410,7 +468,7 @@ fun FixedCalendarApp(
                 )
                 NavigationBarItem(
                     selected = selectedTab == 3,
-                    onClick = { selectedTab = 3 },
+                    onClick = { onNavigateToTab(3) },
                     icon = {
                         Icon(
                             imageVector = profileNavIcon,
@@ -466,7 +524,7 @@ fun FixedCalendarApp(
                     onOpenNotifications = { launchNotificationPermission() },
                     onOpenFocusStats = { showFocusStatsDialog = true },
                     onOpenExportTasks = { showExportTasksDialog = true },
-                    onOpenMonthView = { selectedTab = 0 }
+                    onOpenMonthView = { onNavigateToTab(0) }
                 )
 
 
@@ -699,6 +757,25 @@ fun FixedCalendarApp(
         )
     }
 
+    if (showCoinStoreDialog) {
+        androidx.compose.ui.window.Dialog(
+            onDismissRequest = { showCoinStoreDialog = false },
+            properties = androidx.compose.ui.window.DialogProperties(
+                usePlatformDefaultWidth = false,
+                decorFitsSystemWindows = false
+            )
+        ) {
+            CoinStoreScreen(
+                coinViewModel = coinViewModel,
+                onBack = { showCoinStoreDialog = false },
+                onOpenPaywall = {
+                    showCoinStoreDialog = false
+                    showPaywallDialog = true
+                }
+            )
+        }
+    }
+
     if (showPaywallDialog) {
         SubscriptionPaywallDialog(
             onDismiss = { showPaywallDialog = false }
@@ -733,6 +810,16 @@ fun FixedCalendarApp(
     if (showSecurityLockDialog) {
         com.l1khith.calender28.security.SecurityLockDialog(
             onDismiss = { showSecurityLockDialog = false }
+        )
+    }
+
+    if (showCustomSkippableAd && !isProActive) {
+        CustomSkippableAdDialog(
+            onDismiss = { showCustomSkippableAd = false },
+            onOpenPaywall = {
+                showCustomSkippableAd = false
+                showPaywallDialog = true
+            }
         )
     }
 

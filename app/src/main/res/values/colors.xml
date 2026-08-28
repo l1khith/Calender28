@@ -1,0 +1,38 @@
+<resources>
+    <!-- Brand / Primary Accents -->
+    <color name="matrix_primary">#A5C8FF</color>
+    <color name="matrix_primary_container">#004786</color>
+    <color name="matrix_on_primary">#00315F</color>
+    <color name="matrix_on_primary_container">#D4E3FF</color>
+
+    <!-- Secondary / Gold Coin Accents -->
+    <color name="matrix_secondary">#F59E0B</color>
+    <color name="matrix_secondary_container">#3E2E00</color>
+    <color name="matrix_on_secondary">#432C00</color>
+
+    <!-- Tertiary / Green Success Accents -->
+    <color name="matrix_tertiary">#10B981</color>
+    <color name="matrix_tertiary_container">#005234</color>
+
+    <!-- Surface / Background Palette -->
+    <color name="matrix_surface">#0F172A</color>
+    <color name="matrix_surface_container">#1E293B</color>
+    <color name="matrix_surface_container_high">#334155</color>
+    <color name="matrix_surface_container_low">#0B1120</color>
+
+    <!-- Outlines & Dividers -->
+    <color name="matrix_outline">#475569</color>
+    <color name="matrix_outline_variant">#1E293B</color>
+
+    <!-- Typography Colors -->
+    <color name="matrix_text_header">#FFFFFF</color>
+    <color name="matrix_text_body">#E2E8F0</color>
+    <color name="matrix_text_secondary">#94A3B8</color>
+    <color name="matrix_text_disabled">#64748B</color>
+
+    <!-- Priority Quadrants -->
+    <color name="priority_q1_red">#EF4444</color>
+    <color name="priority_q2_blue">#3B82F6</color>
+    <color name="priority_q3_yellow">#EAB308</color>
+    <color name="priority_q4_gray">#6B7280</color>
+</resources>

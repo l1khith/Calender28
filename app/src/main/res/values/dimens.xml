@@ -1,0 +1,42 @@
+<resources>
+    <!-- Spacing & Padding -->
+    <dimen name="spacing_xxs">2dp</dimen>
+    <dimen name="spacing_xs">4dp</dimen>
+    <dimen name="spacing_sm">8dp</dimen>
+    <dimen name="spacing_md">12dp</dimen>
+    <dimen name="spacing_lg">16dp</dimen>
+    <dimen name="spacing_xl">20dp</dimen>
+    <dimen name="spacing_xxl">24dp</dimen>
+    <dimen name="spacing_xxxl">32dp</dimen>
+
+    <!-- Corner Radii -->
+    <dimen name="corner_radius_xs">4dp</dimen>
+    <dimen name="corner_radius_sm">8dp</dimen>
+    <dimen name="corner_radius_md">12dp</dimen>
+    <dimen name="corner_radius_lg">16dp</dimen>
+    <dimen name="corner_radius_xl">24dp</dimen>
+    <dimen name="corner_radius_full">999dp</dimen>
+
+    <!-- Icon Sizes -->
+    <dimen name="icon_size_xs">14dp</dimen>
+    <dimen name="icon_size_sm">18dp</dimen>
+    <dimen name="icon_size_md">24dp</dimen>
+    <dimen name="icon_size_lg">32dp</dimen>
+    <dimen name="icon_size_xl">48dp</dimen>
+
+    <!-- Button & Banner Heights -->
+    <dimen name="button_height_sm">34dp</dimen>
+    <dimen name="button_height_md">44dp</dimen>
+    <dimen name="button_height_lg">52dp</dimen>
+    <dimen name="banner_ad_height">50dp</dimen>
+
+    <!-- Typography Text Sizes -->
+    <dimen name="text_size_caption">10sp</dimen>
+    <dimen name="text_size_label">12sp</dimen>
+    <dimen name="text_size_body_sm">13sp</dimen>
+    <dimen name="text_size_body">14sp</dimen>
+    <dimen name="text_size_title_sm">16sp</dimen>
+    <dimen name="text_size_title">18sp</dimen>
+    <dimen name="text_size_header">22sp</dimen>
+    <dimen name="text_size_display">28sp</dimen>
+</resources>

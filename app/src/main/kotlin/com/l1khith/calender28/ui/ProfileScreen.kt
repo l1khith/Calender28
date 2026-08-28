@@ -69,64 +69,9 @@ fun ProfileScreen(
             .fillMaxSize()
             .background(MatrixColors.Surface)
             .padding(horizontal = 16.dp),
-        contentPadding = PaddingValues(bottom = 80.dp),
+        contentPadding = PaddingValues(top = 16.dp, bottom = 80.dp),
         verticalArrangement = Arrangement.spacedBy(20.dp)
     ) {
-        // User Header Section (Guest)
-        item {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = 16.dp, bottom = 8.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                Box(
-                    modifier = Modifier.size(96.dp),
-                    contentAlignment = Alignment.BottomEnd
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .clip(CircleShape)
-                            .border(2.dp, MatrixColors.Primary, CircleShape)
-                            .background(MatrixColors.SurfaceContainerHigh),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Person,
-                            contentDescription = "Guest Avatar",
-                            tint = MatrixColors.Primary,
-                            modifier = Modifier.size(48.dp)
-                        )
-                    }
-                    Box(
-                        modifier = Modifier
-                            .size(28.dp)
-                            .clip(CircleShape)
-                            .background(MatrixColors.SurfaceContainer)
-                            .border(1.dp, MatrixColors.OutlineVariant, CircleShape),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Edit,
-                            contentDescription = "Edit Profile",
-                            tint = MatrixColors.Primary,
-                            modifier = Modifier.size(14.dp)
-                        )
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(12.dp))
-
-                Text(
-                    text = "Guest",
-                    color = MatrixColors.TextHeader,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 20.sp
-                )
-            }
-        }
-
         // Section: Account Settings
         item {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {

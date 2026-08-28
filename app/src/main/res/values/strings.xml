@@ -1,3 +1,81 @@
 <resources>
+    <!-- App Metadata -->
     <string name="app_name">Calender28</string>
+    <string name="app_tagline">28-Day Fixed Calendar &amp; Matrix Productivity</string>
+    <string name="app_version_format">v%1$s (Build %2$d)</string>
+
+    <!-- Navigation Tabs -->
+    <string name="nav_month">Month</string>
+    <string name="nav_tasks">Tasks</string>
+    <string name="nav_habit">Habit</string>
+    <string name="nav_profile">Profile</string>
+
+    <!-- Matrix Quadrants -->
+    <string name="quadrant_urgent_important">Do First (Urgent &amp; Important)</string>
+    <string name="quadrant_important_not_urgent">Schedule (Important, Not Urgent)</string>
+    <string name="quadrant_urgent_not_important">Delegate (Urgent, Not Important)</string>
+    <string name="quadrant_neither">Eliminate (Neither)</string>
+
+    <!-- Coin & Rewards Store -->
+    <string name="coin_store_title">CalCoin Store &amp; Rewards</string>
+    <string name="coin_balance_label">Your Balance</string>
+    <string name="coin_balance_format">%1$d CalCoins</string>
+    <string name="unlock_pro_title">✨ Unlock Pro Lifetime</string>
+    <string name="redeem_pro_format">🪙 Redeem for %1$d CalCoins</string>
+    <string name="need_more_coins_format">🪙 Need %1$d Coins (%2$d / %3$d)</string>
+    <string name="pro_active_status">Pro is Active on this Device</string>
+    <string name="promo_code_title">🎁 Redeem Promo Code</string>
+    <string name="promo_code_hint">Enter code (e.g. SHIPATON2026)</string>
+    <string name="promo_code_redeem_btn">Redeem</string>
+    <string name="how_to_earn_title">💡 How to Earn CalCoins</string>
+    <string name="transaction_history_title">📜 Transaction History</string>
+    <string name="empty_transactions">No transactions yet. Complete habits &amp; tasks to earn!</string>
+
+    <!-- Full-Screen Interstitial Ads -->
+    <string name="ad_sponsored">AD • SPONSORED</string>
+    <string name="ad_skip_in_format">Skip in %1$ds</string>
+    <string name="ad_skip_button">Skip Ad ✕</string>
+    <string name="ad_continue_button">Continue</string>
+    <string name="ad_go_pro_button">Go Pro</string>
+
+    <!-- Paywall & Subscriptions -->
+    <string name="paywall_title">Matrix 28 Pro</string>
+    <string name="paywall_subtitle">Unleash Full Productivity &amp; Ad-Free Freedom</string>
+    <string name="perk_ad_free">100% Ad-Free Experience</string>
+    <string name="perk_unlimited_habits">Unlimited 28-Day Habit Trackers</string>
+    <string name="perk_all_themes">All 5 Dark Theme Palettes</string>
+    <string name="perk_full_export">Full ICS, CSV &amp; JSON Data Export</string>
+    <string name="perk_biometric_lock">Biometric &amp; Device App Lock</string>
+    <string name="purchase_lifetime">Unlock Lifetime Access</string>
+    <string name="restore_purchases">Restore Purchases</string>
+
+    <!-- Dialogs & Actions -->
+    <string name="dialog_exit_title">Exit App?</string>
+    <string name="dialog_exit_message">Are you sure you want to close Calender28?</string>
+    <string name="btn_cancel">Cancel</string>
+    <string name="btn_confirm">Confirm</string>
+    <string name="btn_save">Save</string>
+    <string name="btn_delete">Delete</string>
+    <string name="btn_edit">Edit</string>
+    <string name="btn_close">Close</string>
+
+    <!-- Focus Mode -->
+    <string name="focus_mode_title">Focus Mode</string>
+    <string name="focus_start_session">Start Focus Session</string>
+    <string name="focus_pause">Pause</string>
+    <string name="focus_resume">Resume</string>
+    <string name="focus_finish">Complete</string>
+    <string name="focus_stop">Stop</string>
+
+    <!-- Settings & Profile -->
+    <string name="settings_title">Settings &amp; Profile</string>
+    <string name="section_account">ACCOUNT SETTINGS</string>
+    <string name="section_appearance">APPEARANCE</string>
+    <string name="section_security">SECURITY &amp; PRIVACY</string>
+    <string name="section_data">DATA MANAGEMENT</string>
+    <string name="section_legal">LEGAL &amp; ABOUT</string>
+    <string name="privacy_policy_title">Privacy Policy</string>
+    <string name="privacy_policy_desc">Read how your on-device data is protected</string>
+    <string name="terms_of_service_title">Terms of Service</string>
+    <string name="terms_of_service_desc">Terms and conditions for using Calender28</string>
 </resources>

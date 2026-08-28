@@ -9,28 +9,33 @@ import android.provider.CalendarContract
 import android.util.Log
 import com.l1khith.calender28.data.TaskDatabase
 import com.l1khith.calender28.widget.WidgetUpdater
-import kotlin.concurrent.thread
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
 
 object CalendarContentObserver {
     private var observer: ContentObserver? = null
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     fun register(context: Context) {
         if (observer != null) return
+        val appContext = context.applicationContext
         try {
             val handler = Handler(Looper.getMainLooper())
             observer = object : ContentObserver(handler) {
                 override fun onChange(selfChange: Boolean, uri: Uri?) {
                     super.onChange(selfChange, uri)
                     Log.d("CalendarObserver", "System calendar update detected: $uri")
-                    thread {
+                    scope.launch {
                         try {
-                            val systemEvents = importSystemCalendarEvents(context)
+                            val systemEvents = importSystemCalendarEvents(appContext)
                             if (systemEvents.isNotEmpty()) {
-                                val db = TaskDatabase(context)
+                                val db = TaskDatabase(appContext)
                                 for (task in systemEvents) {
                                     db.insertTask(task)
                                 }
-                                WidgetUpdater.updateWidget(context)
+                                WidgetUpdater.updateWidget(appContext)
                             }
                         } catch (e: Exception) {
                             e.printStackTrace()
@@ -39,7 +44,7 @@ object CalendarContentObserver {
                 }
             }
 
-            context.contentResolver.registerContentObserver(
+            appContext.contentResolver.registerContentObserver(
                 CalendarContract.Events.CONTENT_URI,
                 true,
                 observer!!
