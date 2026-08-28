@@ -12,7 +12,7 @@ import com.google.android.gms.ads.AdView
 
 @Composable
 fun BannerAd(modifier: Modifier = Modifier) {
-    val configuredAdUnitId = System.getProperty("ADMOB_BANNER_UNIT_ID") ?: "ca-app-pub-3940256099942544/6300978111"
+    val configuredAdUnitId = System.getProperty("ADMOB_BANNER_UNIT_ID") ?: com.l1khith.calender28.utils.Constants.TEST_ADMOB_BANNER_ID
     AndroidView(
         modifier = modifier.fillMaxWidth().height(50.dp),
         factory = { context ->
