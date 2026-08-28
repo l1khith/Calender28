@@ -22,7 +22,10 @@ class MatrixApplication : Application() {
         } catch (_: Exception) {}
 
         SubscriptionManager.initDataStore(this, applicationScope)
-        SubscriptionManager.configure(this, "goog_sample_key")
+        val revenueCatApiKey = BuildConfig.REVENUECAT_API_KEY
+        if (revenueCatApiKey.isNotBlank()) {
+            SubscriptionManager.configure(this, revenueCatApiKey)
+        }
 
         com.l1khith.calender28.security.AppLockManager.init(this, applicationScope)
 

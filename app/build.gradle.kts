@@ -12,12 +12,23 @@ android {
     namespace = "com.l1khith.calender28"
     compileSdk = 37
 
+    val secretsPropertiesFile = rootProject.file("secrets.properties")
+    val secretsProperties = Properties()
+    if (secretsPropertiesFile.exists()) {
+        secretsProperties.load(FileInputStream(secretsPropertiesFile))
+    }
+    val revenueCatApiKey = secretsProperties.getProperty("REVENUECAT_API_KEY")
+        ?: System.getenv("REVENUECAT_API_KEY")
+        ?: ""
+
     defaultConfig {
         applicationId = "com.l1khith.calender28"
         minSdk = 24
         targetSdk = 37
         versionCode = 3
         versionName = "1.0.2"
+
+        buildConfigField("String", "REVENUECAT_API_KEY", "\"$revenueCatApiKey\"")
     }
 
     buildFeatures {
@@ -124,8 +135,8 @@ dependencies {
     implementation("androidx.biometric:biometric:1.1.0")
     implementation("com.google.android.gms:play-services-ads:24.2.0")
 
-    implementation("com.revenuecat.purchases:purchases:8.12.2")
-    implementation("com.revenuecat.purchases:purchases-ui:8.12.2")
+    implementation("com.revenuecat.purchases:purchases:10.16.2")
+    implementation("com.revenuecat.purchases:purchases-ui:10.16.2")
 
     testImplementation("junit:junit:4.13.2")
     testImplementation("org.mockito:mockito-core:5.12.0")
