@@ -1,8 +1,10 @@
 package com.l1khith.calender28.utils
 
+import androidx.compose.runtime.Immutable
 import com.l1khith.calender28.data.RecurrenceType
 import com.l1khith.calender28.data.RecurringTask
 
+@Immutable
 data class FixedDate(
     val year: Int,
     val month: Int, // 1 to 13 (Sol is 7)

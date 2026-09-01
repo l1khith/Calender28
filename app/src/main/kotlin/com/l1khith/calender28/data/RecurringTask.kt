@@ -1,11 +1,13 @@
 package com.l1khith.calender28.data
 
+import androidx.compose.runtime.Immutable
 import java.util.UUID
 
 enum class RecurrenceType {
     DAILY, WEEKDAYS, WEEKENDS, WEEKLY, MONTHLY, YEARLY
 }
 
+@Immutable
 data class RecurringTask(
     val id: String = UUID.randomUUID().toString(),
     val title: String,

@@ -1,7 +1,9 @@
 package com.l1khith.calender28.data
 
+import androidx.compose.runtime.Immutable
 import com.l1khith.calender28.utils.HabitCycleEngine
 
+@Immutable
 data class Habit(
     val id: String,
     val name: String,

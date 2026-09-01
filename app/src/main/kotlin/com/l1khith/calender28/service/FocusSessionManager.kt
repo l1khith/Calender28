@@ -20,8 +20,11 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
+import androidx.compose.runtime.Immutable
+
 private const val TAG = "FocusSessionManager"
 
+@Immutable
 sealed class FocusState {
     object Idle : FocusState()
     data class Setup(val task: AppTask) : FocusState()

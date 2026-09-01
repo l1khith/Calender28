@@ -1,5 +1,8 @@
 package com.l1khith.calender28.data
 
+import androidx.compose.runtime.Immutable
+
+@Immutable
 data class AppTask(
     val id: String,
     val title: String,

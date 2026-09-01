@@ -1,14 +1,17 @@
 package com.l1khith.calender28.data
 
+import androidx.compose.runtime.Immutable
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 
+@Immutable
 @Entity(tableName = "coin_balance")
 data class CoinBalanceEntity(
     @PrimaryKey val id: Int = 1,
     val balance: Int = 0
 )
 
+@Immutable
 @Entity(tableName = "coin_transactions")
 data class CoinTransactionEntity(
     @PrimaryKey val id: String,

@@ -1,5 +1,6 @@
 package com.l1khith.calender28.data
 
+import androidx.compose.runtime.Immutable
 import androidx.room.Entity
 import androidx.room.Index
 import androidx.room.PrimaryKey
@@ -7,6 +8,7 @@ import androidx.room.PrimaryKey
 /**
  * Domain model representing a Focus session.
  */
+@Immutable
 data class FocusSession(
     val id: Long = 0,
     val taskId: String,
