@@ -5,6 +5,7 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.l1khith.calender28.data.AppTask
 import com.l1khith.calender28.data.FocusSession
+import com.l1khith.calender28.repository.FocusRepository
 import com.l1khith.calender28.repository.FocusRepositoryImpl
 import com.l1khith.calender28.service.FocusSessionManager
 import com.l1khith.calender28.service.FocusState
@@ -12,10 +13,17 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
 
-class FocusViewModel(application: Application) : AndroidViewModel(application) {
+class FocusViewModel(
+    application: Application,
+    private val focusRepo: FocusRepository
+) : AndroidViewModel(application) {
+
+    constructor(application: Application) : this(
+        application,
+        FocusRepositoryImpl(application.applicationContext)
+    )
 
     private val context = application.applicationContext
-    private val focusRepo = FocusRepositoryImpl(context)
 
     val focusState: StateFlow<FocusState> = FocusSessionManager.focusState
 

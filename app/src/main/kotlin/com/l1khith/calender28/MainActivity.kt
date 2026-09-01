@@ -23,9 +23,11 @@ import com.l1khith.calender28.viewmodel.FixedCalendarViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
+import com.l1khith.calender28.viewmodel.AppViewModelProvider
+
 class MainActivity : FragmentActivity() {
 
-    private val viewModel: FixedCalendarViewModel by viewModels()
+    private val viewModel: FixedCalendarViewModel by viewModels { AppViewModelProvider.Factory }
     private var deepLinkIdState by mutableStateOf<String?>(null)
 
     override fun onCreate(savedInstanceState: Bundle?) {

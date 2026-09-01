@@ -22,14 +22,28 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
+import com.l1khith.calender28.repository.CoinRepository
+import com.l1khith.calender28.repository.CoinRepositoryImpl
+import com.l1khith.calender28.repository.HabitRepository
+import com.l1khith.calender28.repository.TaskRepository
+
 private const val TAG = "FixedCalendarVM"
 
-class FixedCalendarViewModel(application: Application) : AndroidViewModel(application) {
+class FixedCalendarViewModel(
+    application: Application,
+    private val taskRepository: TaskRepository,
+    private val habitRepository: HabitRepository,
+    private val coinRepository: CoinRepository
+) : AndroidViewModel(application) {
+
+    constructor(application: Application) : this(
+        application,
+        TaskRepositoryImpl(application.applicationContext),
+        HabitRepositoryImpl(application.applicationContext),
+        CoinRepositoryImpl(application.applicationContext)
+    )
 
     private val context = application.applicationContext
-    private val taskRepository = TaskRepositoryImpl(context)
-    private val habitRepository = HabitRepositoryImpl(context)
-    private val coinRepository = com.l1khith.calender28.repository.CoinRepositoryImpl(context)
 
     // Calendar navigation state
     private val _selectedDate = MutableStateFlow(FixedCalendarHelper.fromTimestamp(System.currentTimeMillis()))
