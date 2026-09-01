@@ -7,8 +7,8 @@ import android.content.Intent
 import android.os.Build
 import android.util.Log
 import com.l1khith.calender28.data.AppTask
-import com.l1khith.calender28.receiver.AlarmReceiver
-import com.l1khith.calender28.receiver.BootReceiver
+import com.l1khith.calender28.service.AlarmReceiver
+import com.l1khith.calender28.service.BootReceiver
 import java.util.Calendar
 
 private const val TAG = "AlarmScheduler"

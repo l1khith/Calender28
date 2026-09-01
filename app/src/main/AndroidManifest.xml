@@ -79,16 +79,6 @@
             </intent-filter>
         </receiver>
 
-        <!-- Legacy Package Receivers -->
-        <receiver android:name=".receiver.AlarmReceiver" android:exported="false" />
-        <receiver android:name=".receiver.BootReceiver" android:exported="true">
-            <intent-filter>
-                <action android:name="android.intent.action.BOOT_COMPLETED" />
-                <action android:name="android.intent.action.TIME_SET" />
-                <action android:name="android.intent.action.TIMEZONE_CHANGED" />
-            </intent-filter>
-        </receiver>
-
         <receiver android:name=".widget.TodayTaskWidgetReceiver" android:exported="true">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
