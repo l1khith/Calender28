@@ -20,3 +20,4 @@ secrets.properties
 calender28-key
 *.log
 app/release/
+.scratch/

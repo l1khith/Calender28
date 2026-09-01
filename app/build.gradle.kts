@@ -2,10 +2,10 @@ import java.util.Properties
 import java.io.FileInputStream
 
 plugins {
-    id("com.android.application")
-    id("org.jetbrains.kotlin.android")
-    id("org.jetbrains.kotlin.plugin.compose")
-    id("com.google.devtools.ksp")
+    alias(libs.plugins.android.application)
+    alias(libs.plugins.kotlin.android)
+    alias(libs.plugins.kotlin.compose)
+    alias(libs.plugins.ksp)
 }
 
 android {
@@ -92,62 +92,63 @@ kotlin {
 }
 
 dependencies {
-    val composeBom = platform("androidx.compose:compose-bom:2025.06.00")
+    val composeBom = platform(libs.androidx.compose.bom)
     implementation(composeBom)
     androidTestImplementation(composeBom)
 
-    implementation("androidx.compose.ui:ui")
-    implementation("androidx.compose.ui:ui-graphics")
-    implementation("androidx.compose.ui:ui-tooling-preview")
-    implementation("androidx.compose.material3:material3")
-    implementation("androidx.compose.material:material-icons-extended")
-    debugImplementation("androidx.compose.ui:ui-tooling")
-    debugImplementation("androidx.compose.ui:ui-test-manifest")
+    implementation(libs.androidx.compose.ui)
+    implementation(libs.androidx.compose.ui.graphics)
+    implementation(libs.androidx.compose.ui.tooling.preview)
+    implementation(libs.androidx.compose.material3)
+    implementation(libs.androidx.compose.material.icons.extended)
+    debugImplementation(libs.androidx.compose.ui.tooling)
+    debugImplementation(libs.androidx.compose.ui.test.manifest)
 
-    implementation("androidx.core:core-ktx:1.16.0")
-    implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.9.2")
-    implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.9.2")
-    implementation("androidx.activity:activity-compose:1.10.1")
-    implementation("androidx.navigation:navigation-compose:2.9.2")
+    implementation(libs.androidx.core.ktx)
+    implementation(libs.androidx.lifecycle.runtime.ktx)
+    implementation(libs.androidx.lifecycle.runtime.compose)
+    implementation(libs.androidx.lifecycle.viewmodel.compose)
+    implementation(libs.androidx.activity.compose)
+    implementation(libs.androidx.navigation.compose)
 
-    implementation("androidx.room:room-runtime:2.7.1")
-    implementation("androidx.room:room-ktx:2.7.1")
-    ksp("androidx.room:room-compiler:2.7.1")
+    implementation(libs.androidx.room.runtime)
+    implementation(libs.androidx.room.ktx)
+    ksp(libs.androidx.room.compiler)
 
-    implementation("androidx.work:work-runtime-ktx:2.10.0")
-    implementation("androidx.datastore:datastore-preferences:1.1.6")
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.10.2")
-    implementation("org.jetbrains.kotlinx:kotlinx-datetime:0.6.2")
-    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.8.1")
+    implementation(libs.androidx.work.runtime.ktx)
+    implementation(libs.androidx.datastore.preferences)
+    implementation(libs.kotlinx.coroutines.android)
+    implementation(libs.kotlinx.datetime)
+    implementation(libs.kotlinx.serialization.json)
 
-    implementation("io.ktor:ktor-client-android:3.1.3")
-    implementation("io.ktor:ktor-client-content-negotiation:3.1.3")
-    implementation("io.ktor:ktor-serialization-kotlinx-json:3.1.3")
+    implementation(libs.ktor.client.android)
+    implementation(libs.ktor.client.content.negotiation)
+    implementation(libs.ktor.serialization.kotlinx.json)
 
-    implementation("io.coil-kt:coil-compose:2.7.0")
-    implementation("io.coil-kt:coil-svg:2.7.0")
+    implementation(libs.coil.compose)
+    implementation(libs.coil.svg)
 
-    implementation("androidx.paging:paging-runtime:3.3.6")
-    implementation("androidx.paging:paging-compose:3.3.6")
+    implementation(libs.androidx.paging.runtime)
+    implementation(libs.androidx.paging.compose)
 
-    implementation("androidx.glance:glance-appwidget:1.1.1")
-    implementation("androidx.glance:glance-material3:1.1.1")
+    implementation(libs.androidx.glance.appwidget)
+    implementation(libs.androidx.glance.material3)
 
-    implementation("androidx.biometric:biometric:1.1.0")
-    implementation("com.google.android.gms:play-services-ads:24.2.0")
+    implementation(libs.androidx.biometric)
+    implementation(libs.play.services.ads)
 
-    implementation("com.revenuecat.purchases:purchases:10.16.2")
-    implementation("com.revenuecat.purchases:purchases-ui:10.16.2")
+    implementation(libs.revenuecat.purchases)
+    implementation(libs.revenuecat.purchases.ui)
 
-    testImplementation("junit:junit:4.13.2")
-    testImplementation("org.mockito:mockito-core:5.12.0")
-    testImplementation("org.mockito.kotlin:mockito-kotlin:5.4.0")
-    testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.10.2")
-    testImplementation("androidx.arch.core:core-testing:2.2.0")
+    testImplementation(libs.junit)
+    testImplementation(libs.mockito.core)
+    testImplementation(libs.mockito.kotlin)
+    testImplementation(libs.kotlinx.coroutines.test)
+    testImplementation(libs.androidx.arch.core.testing)
 
-    androidTestImplementation("androidx.test.ext:junit:1.2.1")
-    androidTestImplementation("androidx.test.espresso:espresso-core:3.6.1")
-    androidTestImplementation("androidx.compose.ui:ui-test-junit4")
-    androidTestImplementation("androidx.test:core-ktx:1.6.1")
-    androidTestImplementation("androidx.work:work-testing:2.10.0")
+    androidTestImplementation(libs.androidx.junit)
+    androidTestImplementation(libs.androidx.espresso.core)
+    androidTestImplementation(libs.androidx.compose.ui.test.junit4)
+    androidTestImplementation(libs.androidx.test.core.ktx)
+    androidTestImplementation(libs.androidx.work.testing)
 }
