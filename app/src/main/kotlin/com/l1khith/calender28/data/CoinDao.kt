@@ -24,7 +24,7 @@ interface CoinDao {
     @Query("SELECT * FROM coin_transactions ORDER BY timestamp DESC LIMIT :limit")
     suspend fun getRecentTransactions(limit: Int = 50): List<CoinTransactionEntity>
 
-    @Query("SELECT COUNT(*) FROM coin_transactions WHERE reason = 'DAILY_LOGIN' AND timestamp LIKE :datePrefix || '%'")
+    @Query("SELECT COUNT(*) FROM coin_transactions WHERE reason = 'DAILY_LOGIN' AND (timestamp LIKE :datePrefix || '%' OR note LIKE '%' || :datePrefix || '%')")
     suspend fun countDailyLoginRewardForDate(datePrefix: String): Int
 
     @Query("SELECT COUNT(*) FROM coin_transactions WHERE reason = 'PROMO_CODE' AND note = :promoCode")

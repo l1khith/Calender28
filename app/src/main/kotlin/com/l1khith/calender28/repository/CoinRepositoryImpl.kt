@@ -17,10 +17,14 @@ import java.util.Locale
 import java.util.UUID
 
 class CoinRepositoryImpl(
-    private val context: Context? = null,
-    private val coinDao: CoinDao = RoomTaskDatabase.getInstance(context!!).coinDao(),
-    private val userPrefsRepo: UserPreferencesRepository? = context?.let { UserPreferencesRepository.getInstance(it) }
+    private val coinDao: CoinDao,
+    private val userPrefsRepo: UserPreferencesRepository? = null
 ) : CoinRepository {
+
+    constructor(context: Context) : this(
+        coinDao = RoomTaskDatabase.getInstance(context.applicationContext).coinDao(),
+        userPrefsRepo = UserPreferencesRepository.getInstance(context.applicationContext)
+    )
 
     private val mutex = Mutex()
 

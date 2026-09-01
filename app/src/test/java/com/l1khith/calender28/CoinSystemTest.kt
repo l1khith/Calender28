@@ -42,7 +42,7 @@ class FakeCoinDao : CoinDao {
     }
 
     override suspend fun countDailyLoginRewardForDate(datePrefix: String): Int {
-        return transactions.count { it.reason == "DAILY_LOGIN" && it.timestamp.startsWith(datePrefix) }
+        return transactions.count { it.reason == "DAILY_LOGIN" && (it.timestamp.startsWith(datePrefix) || it.note?.contains(datePrefix) == true) }
     }
 
     override suspend fun countPromoCodeUsed(promoCode: String): Int {
@@ -70,7 +70,7 @@ class CoinSystemTest {
     @Before
     fun setUp() {
         fakeDao = FakeCoinDao()
-        repository = CoinRepositoryImpl(context = null, coinDao = fakeDao, userPrefsRepo = null)
+        repository = CoinRepositoryImpl(coinDao = fakeDao, userPrefsRepo = null)
     }
 
     @Test
