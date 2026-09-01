@@ -40,41 +40,19 @@ import com.l1khith.calender28.utils.currentTimeMillis
 import com.l1khith.calender28.viewmodel.FixedCalendarViewModel
 import android.util.Log
 
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+
 private const val TAG = "HabitScreen"
 
 @Composable
 fun HabitSection(
-    viewModel: FixedCalendarViewModel? = null,
+    viewModel: FixedCalendarViewModel,
     isProActive: Boolean,
-    onOpenPaywall: () -> Unit,
-    context: Context = androidx.compose.ui.platform.LocalContext.current,
-    database: TaskDatabase = remember(context) { TaskDatabase(context) }
+    onOpenPaywall: () -> Unit
 ) {
-    val viewModelHabits by (viewModel?.habits?.collectAsState() ?: remember { mutableStateOf(emptyList()) })
-    var localHabits by remember { mutableStateOf(emptyList<Habit>()) }
-
-    val habits = if (viewModel != null) viewModelHabits else localHabits
+    val habits by viewModel.habits.collectAsStateWithLifecycle()
     var selectedHabitId by remember { mutableStateOf<String?>(null) }
     var showCreateNewHabitScreen by remember { mutableStateOf(false) }
-
-    fun refreshHabits() {
-        Log.d(TAG, "refreshHabits: Refreshing habits list. Current count = ${habits.size}")
-        if (viewModel != null) {
-            viewModel.loadHabits()
-        } else {
-            try {
-                localHabits = database.getAllHabits()
-                Log.d(TAG, "refreshHabits: Loaded ${localHabits.size} habits directly from database")
-            } catch (e: Exception) {
-                Log.e(TAG, "refreshHabits: Error loading habits from DB", e)
-            }
-        }
-    }
-
-    LaunchedEffect(viewModel, habits.size) {
-        Log.d(TAG, "HabitSection LaunchedEffect: Total habits = ${habits.size}")
-        refreshHabits()
-    }
 
     val selectedHabit = habits.find { it.id == selectedHabitId }
 
@@ -89,12 +67,7 @@ fun HabitSection(
         }
 
         val isCompleted = habit.completedDays.contains(dayInCycle)
-        if (viewModel != null) {
-            viewModel.toggleHabitDay(habit.id, currentCyclePos.cycleIndex, dayInCycle, isCompleted)
-        } else {
-            database.upsertHabitEntry(habit.id, currentCyclePos.cycleIndex, dayInCycle, !isCompleted)
-            refreshHabits()
-        }
+        viewModel.toggleHabitDay(habit.id, currentCyclePos.cycleIndex, dayInCycle, isCompleted)
     }
 
     if (selectedHabit != null) {
@@ -109,20 +82,10 @@ fun HabitSection(
                     toggleDay(selectedHabit, dayIndex)
                 },
                 onUpdateHabit = { updated ->
-                    if (viewModel != null) {
-                        viewModel.updateHabit(updated)
-                    } else {
-                        database.updateHabit(updated)
-                        refreshHabits()
-                    }
+                    viewModel.updateHabit(updated)
                 },
                 onDeleteHabit = { habitId ->
-                    if (viewModel != null) {
-                        viewModel.deleteHabit(habitId)
-                    } else {
-                        database.deleteHabit(habitId)
-                        refreshHabits()
-                    }
+                    viewModel.deleteHabit(habitId)
                     selectedHabitId = null
                 }
             )
@@ -137,12 +100,7 @@ fun HabitSection(
             NewHabitScreen(
                 onDismiss = { showCreateNewHabitScreen = false },
                 onCreateHabit = { newHabit ->
-                    if (viewModel != null) {
-                        viewModel.insertHabit(newHabit)
-                    } else {
-                        database.insertHabit(newHabit)
-                        refreshHabits()
-                    }
+                    viewModel.insertHabit(newHabit)
                     showCreateNewHabitScreen = false
                     selectedHabitId = newHabit.id
                 }

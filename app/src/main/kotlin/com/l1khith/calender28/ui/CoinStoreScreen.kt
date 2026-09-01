@@ -35,6 +35,8 @@ import com.l1khith.calender28.viewmodel.CoinUiEvent
 import com.l1khith.calender28.viewmodel.CoinViewModel
 import kotlinx.coroutines.flow.collectLatest
 
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CoinStoreScreen(
@@ -42,10 +44,10 @@ fun CoinStoreScreen(
     onBack: () -> Unit,
     onOpenPaywall: () -> Unit
 ) {
-    val coinBalance by coinViewModel.coinBalance.collectAsState()
-    val transactions by coinViewModel.recentTransactions.collectAsState()
-    val isProActive by coinViewModel.isProActive.collectAsState()
-    val isPurchasing by coinViewModel.isPurchasing.collectAsState()
+    val coinBalance by coinViewModel.coinBalance.collectAsStateWithLifecycle()
+    val transactions by coinViewModel.recentTransactions.collectAsStateWithLifecycle()
+    val isProActive by coinViewModel.isProActive.collectAsStateWithLifecycle()
+    val isPurchasing by coinViewModel.isPurchasing.collectAsStateWithLifecycle()
 
     var promoInput by remember { mutableStateOf("") }
     val snackbarHostState = remember { SnackbarHostState() }

@@ -30,6 +30,8 @@ import com.l1khith.calender28.utils.FixedCalendarHelper
 import com.l1khith.calender28.utils.currentTimeMillis
 import com.l1khith.calender28.viewmodel.FixedCalendarViewModel
 
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+
 private const val TAG = "TasksScreen"
 
 @Composable
@@ -40,23 +42,21 @@ fun TasksScreen(
     onOpenPaywall: () -> Unit = {},
     onStartFocus: (AppTask) -> Unit = {}
 ) {
-    val allTasks by viewModel.allTasks.collectAsState()
+    val allTasks by viewModel.allTasks.collectAsStateWithLifecycle()
     var searchQuery by remember { mutableStateOf("") }
 
     val todayFixed = remember { FixedCalendarHelper.fromTimestamp(currentTimeMillis()) }
     val todayDateStr = todayFixed.toString()
 
-    LaunchedEffect(allTasks.size) {
-        Log.d(TAG, "TasksScreen composition: total allTasks count = ${allTasks.size}")
-    }
-
-    val filteredTasks = remember(allTasks, searchQuery) {
-        if (searchQuery.isBlank()) {
-            allTasks
-        } else {
-            allTasks.filter {
-                it.title.contains(searchQuery, ignoreCase = true) ||
-                        (it.description?.contains(searchQuery, ignoreCase = true) == true)
+    val filteredTasks by remember(allTasks, searchQuery) {
+        derivedStateOf {
+            if (searchQuery.isBlank()) {
+                allTasks
+            } else {
+                allTasks.filter {
+                    it.title.contains(searchQuery, ignoreCase = true) ||
+                            (it.description?.contains(searchQuery, ignoreCase = true) == true)
+                }
             }
         }
     }
@@ -91,35 +91,41 @@ fun TasksScreen(
         ).build()
     }
 
-    val urgentAndOverdue = remember(filteredTasks, todayDateStr) {
-        filteredTasks.filter { task ->
-            if (task.completed) return@filter false
-            if (task.isGenerated == 1) return@filter false
-            if (task.isReminder == 0) return@filter false
+    val urgentAndOverdue by remember(filteredTasks, todayDateStr) {
+        derivedStateOf {
+            filteredTasks.filter { task ->
+                if (task.completed) return@filter false
+                if (task.isGenerated == 1) return@filter false
+                if (task.isReminder == 0) return@filter false
 
-            val isOverdue = task.associatedDate < todayDateStr
-            if (isOverdue) {
-                val diffDays = FixedCalendarHelper.daysBetween(task.associatedDate, todayDateStr)
-                diffDays <= 7
-            } else {
-                task.isReminder == 1
+                val isOverdue = task.associatedDate < todayDateStr
+                if (isOverdue) {
+                    val diffDays = FixedCalendarHelper.daysBetween(task.associatedDate, todayDateStr)
+                    diffDays <= 7
+                } else {
+                    task.isReminder == 1
+                }
             }
         }
     }
 
-    val todaysFocus = remember(filteredTasks, todayDateStr) {
-        filteredTasks.filter { task ->
-            task.associatedDate == todayDateStr && (task.isReminder == 0 && task.priority < 3)
+    val todaysFocus by remember(filteredTasks, todayDateStr) {
+        derivedStateOf {
+            filteredTasks.filter { task ->
+                task.associatedDate == todayDateStr && (task.isReminder == 0 && task.priority < 3)
+            }
         }
     }
 
-    val upcomingTasksByDate = remember(filteredTasks, todayDateStr) {
-        filteredTasks.filter { task ->
-            if (task.completed) return@filter false
-            if (task.isGenerated == 1) return@filter false
-            val diffDays = FixedCalendarHelper.daysBetween(todayDateStr, task.associatedDate)
-            diffDays in 1..2
-        }.groupBy { it.associatedDate }
+    val upcomingTasksByDate by remember(filteredTasks, todayDateStr) {
+        derivedStateOf {
+            filteredTasks.filter { task ->
+                if (task.completed) return@filter false
+                if (task.isGenerated == 1) return@filter false
+                val diffDays = FixedCalendarHelper.daysBetween(todayDateStr, task.associatedDate)
+                diffDays in 1..2
+            }.groupBy { it.associatedDate }
+        }
     }
 
     Column(

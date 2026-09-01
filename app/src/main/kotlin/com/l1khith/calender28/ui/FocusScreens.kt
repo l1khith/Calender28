@@ -18,6 +18,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.l1khith.calender28.viewmodel.FocusViewModel
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -740,6 +742,23 @@ fun FocusCompletionOverlay(
 // ═══════════════════════════════════════════════════════════════════════════════
 // 4. FOCUS STATS & ANALYTICS DIALOG
 // ═══════════════════════════════════════════════════════════════════════════════
+
+@Composable
+fun FocusStatsDialog(
+    focusViewModel: FocusViewModel,
+    onDismiss: () -> Unit
+) {
+    val sessions by focusViewModel.allSessions.collectAsStateWithLifecycle()
+    val totalFocusSeconds by focusViewModel.totalFocusSeconds.collectAsStateWithLifecycle()
+    val completedCount by focusViewModel.completedSessionCount.collectAsStateWithLifecycle()
+
+    FocusStatsDialog(
+        sessions = sessions,
+        totalFocusSeconds = totalFocusSeconds,
+        completedCount = completedCount,
+        onDismiss = onDismiss
+    )
+}
 
 @Composable
 fun FocusStatsDialog(

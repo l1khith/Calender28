@@ -15,6 +15,10 @@ import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.l1khith.calender28.viewmodel.AppViewModelProvider
+import com.l1khith.calender28.viewmodel.CoinViewModel
+import com.l1khith.calender28.viewmodel.FocusViewModel
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -76,10 +80,10 @@ fun FixedCalendarApp(
         com.l1khith.calender28.ads.InterstitialAdManager.loadAd(context)
     }
 
-    val selectedDate by viewModel.selectedDate.collectAsState()
-    val tasks by viewModel.tasksForSelectedDay.collectAsState()
-    val activeDates by viewModel.datesWithActiveTasks.collectAsState()
-    val recurringTasks by viewModel.recurringTasks.collectAsState()
+    val selectedDate by viewModel.selectedDate.collectAsStateWithLifecycle()
+    val tasks by viewModel.tasksForSelectedDay.collectAsStateWithLifecycle()
+    val activeDates by viewModel.datesWithActiveTasks.collectAsStateWithLifecycle()
+    val recurringTasks by viewModel.recurringTasks.collectAsStateWithLifecycle()
 
     var showAddTaskDialog by remember { mutableStateOf(false) }
     var taskToEdit by remember { mutableStateOf<AppTask?>(null) }
@@ -96,15 +100,12 @@ fun FixedCalendarApp(
     var showCustomSkippableAd by remember { mutableStateOf(false) }
     var navigationCount by remember { mutableIntStateOf(0) }
 
-    val coinViewModel: com.l1khith.calender28.viewmodel.CoinViewModel = androidx.lifecycle.viewmodel.compose.viewModel()
-    val focusState by com.l1khith.calender28.service.FocusSessionManager.focusState.collectAsState()
-    val focusRepo = remember(context) { com.l1khith.calender28.repository.FocusRepositoryImpl(context) }
-    val allFocusSessions by focusRepo.getAllFocusSessionsFlow().collectAsState(initial = emptyList())
-    val totalFocusSeconds by focusRepo.getTotalFocusSecondsFlow().collectAsState(initial = 0L)
-    val completedFocusCount by focusRepo.getCompletedSessionCountFlow().collectAsState(initial = 0)
+    val coinViewModel: CoinViewModel = androidx.lifecycle.viewmodel.compose.viewModel(factory = AppViewModelProvider.Factory)
+    val focusViewModel: FocusViewModel = androidx.lifecycle.viewmodel.compose.viewModel(factory = AppViewModelProvider.Factory)
+    val focusState by com.l1khith.calender28.service.FocusSessionManager.focusState.collectAsStateWithLifecycle()
 
-    val isProActive by com.l1khith.calender28.billing.SubscriptionManager.isProActive.collectAsState()
-    val coinBalance by coinViewModel.coinBalance.collectAsState()
+    val isProActive by com.l1khith.calender28.billing.SubscriptionManager.isProActive.collectAsStateWithLifecycle()
+    val coinBalance by coinViewModel.coinBalance.collectAsStateWithLifecycle()
 
     com.l1khith.calender28.utils.PlatformBackHandler(enabled = true) {
         if (isProActive) {
@@ -800,9 +801,7 @@ fun FixedCalendarApp(
 
     if (showFocusStatsDialog) {
         FocusStatsDialog(
-            sessions = allFocusSessions,
-            totalFocusSeconds = totalFocusSeconds,
-            completedCount = completedFocusCount,
+            focusViewModel = focusViewModel,
             onDismiss = { showFocusStatsDialog = false }
         )
     }

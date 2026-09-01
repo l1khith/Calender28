@@ -36,6 +36,8 @@ import com.l1khith.calender28.utils.AppConfig
 import com.l1khith.calender28.utils.UrlLauncher
 import com.l1khith.calender28.utils.rememberSecurityLockLauncher
 
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+
 @Composable
 fun ProfileScreen(
     onOpenSubscription: () -> Unit,
@@ -46,9 +48,9 @@ fun ProfileScreen(
     onOpenExportTasks: () -> Unit = {},
     onOpenMonthView: () -> Unit
 ) {
-    val isProActive by SubscriptionManager.isProActive.collectAsState()
+    val isProActive by SubscriptionManager.isProActive.collectAsStateWithLifecycle()
     val coroutineScope = rememberCoroutineScope()
-    val currentTheme by ThemeManager.currentTheme.collectAsState()
+    val currentTheme by ThemeManager.currentTheme.collectAsStateWithLifecycle()
     var showThemeDialog by remember { mutableStateOf(false) }
 
     if (showThemeDialog) {
