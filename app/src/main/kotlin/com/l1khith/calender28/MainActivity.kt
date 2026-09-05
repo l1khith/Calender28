@@ -6,6 +6,7 @@ import android.util.Log
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
+import androidx.compose.animation.togetherWith
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -50,13 +51,30 @@ class MainActivity : FragmentActivity() {
         setContent {
             val deepLinkId = rememberSaveable { mutableStateOf(deepLinkIdState) }
             val isLocked by com.l1khith.calender28.security.AppLockManager.isLocked.collectAsState()
+            var showSplash by rememberSaveable { mutableStateOf(deepLinkIdState == null) }
 
             MatrixTheme {
-                FixedCalendarApp(
-                    viewModel = viewModel,
-                    initialTaskId = deepLinkId.value,
-                    onExitApp = { finish() }
-                )
+                androidx.compose.animation.AnimatedContent(
+                    targetState = showSplash,
+                    transitionSpec = {
+                        androidx.compose.animation.fadeIn(animationSpec = androidx.compose.animation.core.tween(300)) togetherWith
+                                androidx.compose.animation.fadeOut(animationSpec = androidx.compose.animation.core.tween(300))
+                    },
+                    label = "SplashTransition"
+                ) { isSplash ->
+                    if (isSplash) {
+                        com.l1khith.calender28.ui.MatrixSplashScreen(
+                            onEnterWorkspace = { showSplash = false },
+                            onExitApp = { finish() }
+                        )
+                    } else {
+                        FixedCalendarApp(
+                            viewModel = viewModel,
+                            initialTaskId = deepLinkId.value,
+                            onExitApp = { finish() }
+                        )
+                    }
+                }
 
                 if (isLocked) {
                     com.l1khith.calender28.security.AppLockOverlay(
