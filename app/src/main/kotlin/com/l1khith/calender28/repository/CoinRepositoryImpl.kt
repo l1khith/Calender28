@@ -84,11 +84,14 @@ class CoinRepositoryImpl(
         )
     }
 
-    override suspend fun rewardHabitCycleComplete(habitName: String): CoinRewardResult {
+    override suspend fun rewardHabitCycleComplete(habitId: String, cycleIndex: Long, habitName: String): CoinRewardResult? {
+        val noteKey = "cycle:$habitId:$cycleIndex"
+        if (coinDao.countHabitCycleReward(noteKey) > 0) return null
+
         val baseResult = executeTransaction(
             amount = TransactionReason.HABIT_CYCLE_COMPLETE.defaultAmount,
             reason = TransactionReason.HABIT_CYCLE_COMPLETE,
-            note = "Cycle completed for $habitName"
+            note = noteKey
         )
 
         // Check milestones: 10, 50, 100
@@ -116,58 +119,32 @@ class CoinRepositoryImpl(
         return baseResult
     }
 
-    override suspend fun rewardPartialHabitProgress(habitName: String): CoinRewardResult {
+    override suspend fun rewardPartialHabitProgress(habitId: String, cycleIndex: Long, dayInCycle: Int, habitName: String): CoinRewardResult? {
+        val noteKey = "habit_day:$habitId:$cycleIndex:$dayInCycle"
+        if (coinDao.countHabitDayReward(noteKey) > 0) return null
+
         return executeTransaction(
             amount = TransactionReason.PARTIAL_HABIT_PROGRESS.defaultAmount,
             reason = TransactionReason.PARTIAL_HABIT_PROGRESS,
-            note = "Logged day for $habitName"
+            note = noteKey
         )
     }
 
     override suspend fun rewardTaskCompletion(
+        taskId: String,
+        dateStr: String,
         isRecurring: Boolean,
-        streakDays: Int,
         taskTitle: String
     ): CoinRewardResult? {
-        if (!isRecurring) return null
+        val noteKey = "task_done:$taskId:$dateStr"
+        if (coinDao.countTaskCompletionReward(noteKey) > 0) return null
 
-        val baseResult = executeTransaction(
-            amount = TransactionReason.DAILY_TASK.defaultAmount,
-            reason = TransactionReason.DAILY_TASK,
-            note = "Completed recurring task: $taskTitle"
+        val reason = if (isRecurring) TransactionReason.DAILY_TASK else TransactionReason.TASK_COMPLETE
+        return executeTransaction(
+            amount = reason.defaultAmount,
+            reason = reason,
+            note = noteKey
         )
-
-        // Check streaks (7, 14, 30 days)
-        if (streakDays >= 30) {
-            val key = "${taskTitle}_streak_30"
-            if (coinDao.countStreakRewardGiven(TransactionReason.STREAK_30_DAY.name, key) == 0) {
-                executeTransaction(
-                    amount = TransactionReason.STREAK_30_DAY.defaultAmount,
-                    reason = TransactionReason.STREAK_30_DAY,
-                    note = key
-                )
-            }
-        } else if (streakDays >= 14) {
-            val key = "${taskTitle}_streak_14"
-            if (coinDao.countStreakRewardGiven(TransactionReason.STREAK_14_DAY.name, key) == 0) {
-                executeTransaction(
-                    amount = TransactionReason.STREAK_14_DAY.defaultAmount,
-                    reason = TransactionReason.STREAK_14_DAY,
-                    note = key
-                )
-            }
-        } else if (streakDays >= 7) {
-            val key = "${taskTitle}_streak_7"
-            if (coinDao.countStreakRewardGiven(TransactionReason.STREAK_7_DAY.name, key) == 0) {
-                executeTransaction(
-                    amount = TransactionReason.STREAK_7_DAY.defaultAmount,
-                    reason = TransactionReason.STREAK_7_DAY,
-                    note = key
-                )
-            }
-        }
-
-        return baseResult
     }
 
     override suspend fun redeemPromoCode(code: String): Result<CoinRewardResult> {
@@ -198,6 +175,10 @@ class CoinRepositoryImpl(
     }
 
     override suspend fun buyPremiumWithCoins(): Result<Unit> {
+        if (SubscriptionManager.isProActive.value) {
+            return Result.failure(IllegalStateException("Pro is already active on this device."))
+        }
+
         val currentBalance = getBalance()
         val requiredCoins = com.l1khith.calender28.utils.Constants.PREMIUM_UNLOCK_COIN_COST
         if (currentBalance < requiredCoins) {
@@ -214,6 +195,17 @@ class CoinRepositoryImpl(
         SubscriptionManager.setProActive(true)
 
         return Result.success(Unit)
+    }
+
+    override suspend fun rewardFocusSessionComplete(taskTitle: String, durationMinutes: Int): CoinRewardResult? {
+        val noteKey = "focus:${taskTitle}:${getCurrentIsoTimestamp().take(10)}"
+        if (coinDao.countFocusSessionReward(noteKey) > 0) return null
+
+        return executeTransaction(
+            amount = TransactionReason.FOCUS_SESSION.defaultAmount,
+            reason = TransactionReason.FOCUS_SESSION,
+            note = noteKey
+        )
     }
 
     override suspend fun addCustomCoins(amount: Int, reason: String, note: String?): CoinRewardResult {
