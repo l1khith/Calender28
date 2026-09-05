@@ -45,6 +45,7 @@ fun ProfileScreen(
     onOpenSecurity: () -> Unit = {},
     onOpenNotifications: () -> Unit = {},
     onOpenFocusStats: () -> Unit = {},
+    onOpenCoinStore: () -> Unit = {},
     onOpenExportTasks: () -> Unit = {},
     onOpenMonthView: () -> Unit
 ) {
@@ -220,6 +221,12 @@ fun ProfileScreen(
                             icon = Icons.Default.Timer,
                             title = "Focus Analytics & History",
                             onClick = onOpenFocusStats
+                        )
+                        HorizontalDivider(color = MatrixColors.OutlineVariant, thickness = 1.dp)
+                        ProfileSettingRow(
+                            icon = Icons.Default.MonetizationOn,
+                            title = "CalCoin Store & Rewards",
+                            onClick = onOpenCoinStore
                         )
                     }
                 }

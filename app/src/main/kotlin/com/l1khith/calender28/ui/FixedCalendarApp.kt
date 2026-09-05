@@ -524,6 +524,7 @@ fun FixedCalendarApp(
                     onOpenSecurity = { showSecurityLockDialog = true },
                     onOpenNotifications = { launchNotificationPermission() },
                     onOpenFocusStats = { showFocusStatsDialog = true },
+                    onOpenCoinStore = { showCoinStoreDialog = true },
                     onOpenExportTasks = { showExportTasksDialog = true },
                     onOpenMonthView = { onNavigateToTab(0) }
                 )

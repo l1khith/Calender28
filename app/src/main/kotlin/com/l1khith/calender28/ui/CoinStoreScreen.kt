@@ -455,9 +455,10 @@ private fun HowToEarnCard() {
             Spacer(modifier = Modifier.height(10.dp))
             EarnRuleRow("☀️ Daily App Open", "+1 coin")
             EarnRuleRow("📅 Log Day in Habit", "+1 coin")
-            EarnRuleRow("✅ Check Recurring Task", "+2 coins")
+            EarnRuleRow("✅ Complete Any Task", "+1 coin")
+            EarnRuleRow("🔁 Check Recurring Task", "+2 coins")
+            EarnRuleRow("🎯 Focus Session Complete", "+5 coins")
             EarnRuleRow("🏆 Complete Habit Cycle", "+10 coins")
-            EarnRuleRow("🔥 7-Day / 14-Day / 30-Day Streaks", "+50 / +100 / +200 coins")
             EarnRuleRow("🎯 10 / 50 / 100 Cycles Milestone", "+100 / +500 / +1000 coins")
         }
     }
@@ -510,8 +511,24 @@ private fun TransactionItemRow(tx: CoinTransactionEntity) {
                         color = MatrixColors.TextSecondary
                     )
                 }
+                // Convert Gregorian ISO timestamp to Fixed Calendar date for display
+                val displayDate = try {
+                    val isoDate = tx.timestamp.take(10) // "yyyy-MM-dd"
+                    val parts = isoDate.split("-")
+                    if (parts.size == 3) {
+                        val cal = java.util.Calendar.getInstance().apply {
+                            set(parts[0].toInt(), parts[1].toInt() - 1, parts[2].toInt())
+                        }
+                        val fixed = com.l1khith.calender28.utils.FixedCalendarHelper.fromTimestamp(cal.timeInMillis)
+                        fixed.toString()
+                    } else {
+                        tx.timestamp.take(10)
+                    }
+                } catch (_: Exception) {
+                    tx.timestamp.take(10)
+                }
                 Text(
-                    text = tx.timestamp.take(10),
+                    text = displayDate,
                     fontSize = 11.sp,
                     color = MatrixColors.TextSecondary.copy(alpha = 0.7f)
                 )
