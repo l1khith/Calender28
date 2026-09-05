@@ -60,6 +60,23 @@ class FakeCoinDao : CoinDao {
     override suspend fun countStreakRewardGiven(streakReason: String, streakKey: String): Int {
         return transactions.count { it.reason == streakReason && it.note == streakKey }
     }
+
+    // Idempotency queries
+    override suspend fun countHabitDayReward(noteKey: String): Int {
+        return transactions.count { it.reason == "PARTIAL_HABIT_PROGRESS" && it.note == noteKey }
+    }
+
+    override suspend fun countHabitCycleReward(noteKey: String): Int {
+        return transactions.count { it.reason == "HABIT_CYCLE_COMPLETE" && it.note == noteKey }
+    }
+
+    override suspend fun countTaskCompletionReward(noteKey: String): Int {
+        return transactions.count { (it.reason == "DAILY_TASK" || it.reason == "TASK_COMPLETE") && it.note == noteKey }
+    }
+
+    override suspend fun countFocusSessionReward(noteKey: String): Int {
+        return transactions.count { it.reason == "FOCUS_SESSION" && it.note == noteKey }
+    }
 }
 
 class CoinSystemTest {
@@ -101,13 +118,14 @@ class CoinSystemTest {
 
     @Test
     fun `test habit cycle completion awards 10 coins and milestone bonuses`() = runBlocking {
-        val result = repository.rewardHabitCycleComplete("Morning Workout")
-        assertEquals(10, result.coinsAwarded)
+        val result = repository.rewardHabitCycleComplete("habit1", 0L, "Morning Workout")
+        assertNotNull(result)
+        assertEquals(10, result?.coinsAwarded)
         assertEquals(10, repository.getBalance())
 
         // Complete 9 more cycles to hit 10 cycles milestone (+100 bonus)
         for (i in 2..10) {
-            repository.rewardHabitCycleComplete("Habit $i")
+            repository.rewardHabitCycleComplete("habit$i", i.toLong(), "Habit $i")
         }
 
         // 10 * 10 (base) + 100 (milestone) = 200
@@ -115,17 +133,105 @@ class CoinSystemTest {
     }
 
     @Test
-    fun `test recurring task completion and 7-day streak bonus`() = runBlocking {
-        val result = repository.rewardTaskCompletion(isRecurring = true, streakDays = 6, taskTitle = "Daily Standup")
+    fun `test recurring task completion awards 2 coins`() = runBlocking {
+        val result = repository.rewardTaskCompletion(
+            taskId = "task1",
+            dateStr = "2026-08-28",
+            isRecurring = true,
+            taskTitle = "Daily Standup"
+        )
         assertNotNull(result)
         assertEquals(2, result?.coinsAwarded)
         assertEquals(2, repository.getBalance())
+    }
 
-        // Day 7 streak bonus (+50)
-        val resultDay7 = repository.rewardTaskCompletion(isRecurring = true, streakDays = 7, taskTitle = "Daily Standup")
-        assertNotNull(resultDay7)
-        // 2 + 2 (base) + 50 (bonus) = 54
-        assertEquals(54, repository.getBalance())
+    @Test
+    fun `test one-off task completion awards 1 coin`() = runBlocking {
+        val result = repository.rewardTaskCompletion(
+            taskId = "task1",
+            dateStr = "2026-08-28",
+            isRecurring = false,
+            taskTitle = "Buy groceries"
+        )
+        assertNotNull(result)
+        assertEquals(1, result?.coinsAwarded)
+        assertEquals(1, repository.getBalance())
+    }
+
+    @Test
+    fun `test habit day toggle exploit prevented - no double reward`() = runBlocking {
+        val result1 = repository.rewardPartialHabitProgress("habit1", 0L, 5, "Morning Workout")
+        assertNotNull(result1)
+        assertEquals(1, result1?.coinsAwarded)
+        assertEquals(1, repository.getBalance())
+
+        // Toggle off and on again - same habit, cycle, day
+        val result2 = repository.rewardPartialHabitProgress("habit1", 0L, 5, "Morning Workout")
+        assertNull(result2)
+        assertEquals(1, repository.getBalance()) // Still 1, not 2
+
+        // Different day in same cycle - allowed
+        val result3 = repository.rewardPartialHabitProgress("habit1", 0L, 6, "Morning Workout")
+        assertNotNull(result3)
+        assertEquals(2, repository.getBalance())
+    }
+
+    @Test
+    fun `test habit cycle completion exploit prevented - no double reward`() = runBlocking {
+        val result1 = repository.rewardHabitCycleComplete("habit1", 0L, "Morning Workout")
+        assertNotNull(result1)
+        assertEquals(10, result1?.coinsAwarded)
+        assertEquals(10, repository.getBalance())
+
+        // Re-completing same cycle - blocked
+        val result2 = repository.rewardHabitCycleComplete("habit1", 0L, "Morning Workout")
+        assertNull(result2)
+        assertEquals(10, repository.getBalance()) // Still 10, not 20
+
+        // Different cycle - allowed
+        val result3 = repository.rewardHabitCycleComplete("habit1", 1L, "Morning Workout")
+        assertNotNull(result3)
+        assertEquals(20, repository.getBalance())
+    }
+
+    @Test
+    fun `test task toggle exploit prevented - no double reward`() = runBlocking {
+        val result1 = repository.rewardTaskCompletion(
+            taskId = "task1",
+            dateStr = "2026-08-28",
+            isRecurring = true,
+            taskTitle = "Daily Standup"
+        )
+        assertNotNull(result1)
+        assertEquals(2, result1?.coinsAwarded)
+
+        // Toggle off and on again - same task, same date
+        val result2 = repository.rewardTaskCompletion(
+            taskId = "task1",
+            dateStr = "2026-08-28",
+            isRecurring = true,
+            taskTitle = "Daily Standup"
+        )
+        assertNull(result2)
+        assertEquals(2, repository.getBalance()) // Still 2, not 4
+
+        // Same task, different date - allowed
+        val result3 = repository.rewardTaskCompletion(
+            taskId = "task1",
+            dateStr = "2026-08-29",
+            isRecurring = true,
+            taskTitle = "Daily Standup"
+        )
+        assertNotNull(result3)
+        assertEquals(4, repository.getBalance())
+    }
+
+    @Test
+    fun `test focus session rewards 5 coins`() = runBlocking {
+        val result = repository.rewardFocusSessionComplete("Study Session", 25)
+        assertNotNull(result)
+        assertEquals(5, result?.coinsAwarded)
+        assertEquals(5, repository.getBalance())
     }
 
     @Test
