@@ -32,7 +32,8 @@ object AppViewModelProvider {
             val app = matrixApplication()
             FocusViewModel(
                 application = app,
-                focusRepo = app.container.focusRepository
+                focusRepo = app.container.focusRepository,
+                coinRepository = app.container.coinRepository
             )
         }
     }

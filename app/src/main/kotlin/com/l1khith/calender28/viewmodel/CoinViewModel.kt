@@ -66,7 +66,7 @@ class CoinViewModel(
             _isPurchasing.value = false
             result.onSuccess {
                 _uiEvent.emit(CoinUiEvent.PremiumUnlocked)
-                _uiEvent.emit(CoinUiEvent.ShowMessage("🎉 Premium unlocked successfully with 500 CalCoins!"))
+                _uiEvent.emit(CoinUiEvent.ShowMessage("🎉 Premium unlocked successfully with 1,500 CalCoins!"))
             }.onFailure { error ->
                 _uiEvent.emit(CoinUiEvent.ShowMessage(error.message ?: "Could not unlock Premium", isError = true))
             }

@@ -86,7 +86,7 @@ class FixedCalendarViewModel(
                     priority = task.priority
                 )
             }
-            coinRepository.rewardDailyLogin(currentSelDate.toString())
+            coinRepository.rewardDailyLogin(FixedCalendarHelper.currentFixedDate().toString())
             loadState(currentSelDate)
         }
     }
@@ -188,7 +188,12 @@ class FixedCalendarViewModel(
             taskRepository.toggleTaskCompletion(task)
             if (isNowCompleting) {
                 val isRecurring = task.recurringParentId != null || task.isGenerated == 1
-                coinRepository.rewardTaskCompletion(isRecurring = isRecurring, streakDays = 1, taskTitle = task.title)
+                coinRepository.rewardTaskCompletion(
+                    taskId = task.id,
+                    dateStr = task.associatedDate,
+                    isRecurring = isRecurring,
+                    taskTitle = task.title
+                )
             }
             loadState(targetDate)
         }
@@ -273,11 +278,11 @@ class FixedCalendarViewModel(
                 val allHabits = habitRepository.getAllHabits()
                 val targetHabit = allHabits.find { it.id == habitId }
                 val habitName = targetHabit?.name ?: "Habit"
-                coinRepository.rewardPartialHabitProgress(habitName)
+                coinRepository.rewardPartialHabitProgress(habitId, cycleIndex, dayInCycle, habitName)
 
                 val progress = habitRepository.getCurrentCycleProgress(habitId, cycleIndex)
                 if (progress >= 28) {
-                    coinRepository.rewardHabitCycleComplete(habitName)
+                    coinRepository.rewardHabitCycleComplete(habitId, cycleIndex, habitName)
                 }
             }
             loadState(targetDate)

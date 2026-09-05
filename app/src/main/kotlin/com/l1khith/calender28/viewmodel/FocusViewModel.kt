@@ -5,6 +5,8 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.l1khith.calender28.data.AppTask
 import com.l1khith.calender28.data.FocusSession
+import com.l1khith.calender28.repository.CoinRepository
+import com.l1khith.calender28.repository.CoinRepositoryImpl
 import com.l1khith.calender28.repository.FocusRepository
 import com.l1khith.calender28.repository.FocusRepositoryImpl
 import com.l1khith.calender28.service.FocusSessionManager
@@ -12,15 +14,18 @@ import com.l1khith.calender28.service.FocusState
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
 
 class FocusViewModel(
     application: Application,
-    private val focusRepo: FocusRepository
+    private val focusRepo: FocusRepository,
+    private val coinRepository: CoinRepository
 ) : AndroidViewModel(application) {
 
     constructor(application: Application) : this(
         application,
-        FocusRepositoryImpl(application.applicationContext)
+        FocusRepositoryImpl(application.applicationContext),
+        CoinRepositoryImpl(application.applicationContext)
     )
 
     private val context = application.applicationContext
@@ -57,6 +62,15 @@ class FocusViewModel(
     }
 
     fun commitTaskDone(markTaskDone: Boolean = true) {
+        // Award coins for completing a focus session
+        val currentState = focusState.value
+        if (currentState is FocusState.Completed) {
+            val durationMinutes = (currentState.durationSeconds / 60).coerceAtLeast(1)
+            val taskTitle = currentState.task.title
+            viewModelScope.launch {
+                coinRepository.rewardFocusSessionComplete(taskTitle, durationMinutes)
+            }
+        }
         FocusSessionManager.commitCompletedTask(context, markTaskDone)
     }
 
