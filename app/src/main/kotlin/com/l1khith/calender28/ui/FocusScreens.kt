@@ -65,10 +65,11 @@ private val MOTIVATIONAL_QUOTES = listOf(
 fun FocusSetupDialog(
     task: AppTask,
     onDismiss: () -> Unit,
-    onStartFocus: (mode: String, durationMinutes: Int) -> Unit
+    onStartFocus: (mode: String, durationMinutes: Int, pinScreen: Boolean) -> Unit
 ) {
     var selectedMode by remember { mutableStateOf("timer") } // "timer" or "stopwatch"
     var durationMinutes by remember { mutableStateOf(25) }
+    var lockScreenWithPinning by remember { mutableStateOf(true) }
 
     val presetDurations = listOf(15, 25, 30, 45, 60)
 
@@ -327,12 +328,63 @@ fun FocusSetupDialog(
                     }
                 }
 
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // Screen Pinning Toggle
+                Surface(
+                    shape = MatrixShapes.Md,
+                    color = if (lockScreenWithPinning) MatrixColors.Primary.copy(alpha = 0.12f) else MatrixColors.SurfaceContainerHigh,
+                    border = BorderStroke(
+                        1.dp,
+                        if (lockScreenWithPinning) MatrixColors.Primary.copy(alpha = 0.5f) else MatrixColors.OutlineVariant.copy(alpha = 0.3f)
+                    ),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { lockScreenWithPinning = !lockScreenWithPinning }
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Text("🔒", fontSize = 20.sp)
+                            Spacer(modifier = Modifier.width(10.dp))
+                            Column {
+                                Text(
+                                    text = "Deep Focus Lock (Screen Pinning)",
+                                    color = MatrixColors.TextHeader,
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 13.sp
+                                )
+                                Spacer(modifier = Modifier.height(2.dp))
+                                Text(
+                                    text = if (lockScreenWithPinning) "Pins app to screen • Exiting forfeits +5 CalCoins" else "Standard mode • No screen pinning",
+                                    color = MatrixColors.TextSecondary,
+                                    fontSize = 11.sp
+                                )
+                            }
+                        }
+                        Switch(
+                            checked = lockScreenWithPinning,
+                            onCheckedChange = { lockScreenWithPinning = it },
+                            colors = SwitchDefaults.colors(
+                                checkedThumbColor = MatrixColors.Primary,
+                                checkedTrackColor = MatrixColors.PrimaryContainer
+                            )
+                        )
+                    }
+                }
+
                 Spacer(modifier = Modifier.height(20.dp))
 
                 // Primary Start Button
                 Button(
                     onClick = {
-                        onStartFocus(selectedMode, durationMinutes)
+                        onStartFocus(selectedMode, durationMinutes, lockScreenWithPinning)
                         onDismiss()
                     },
                     modifier = Modifier
@@ -372,10 +424,36 @@ fun FocusActiveOverlay(
 ) {
     // Keep Screen ON during active focus
     val currentView = LocalView.current
+    val context = LocalContext.current
+    val activity = context as? Activity
+    var showBreakFocusDialog by remember { mutableStateOf(false) }
+
     DisposableEffect(Unit) {
         currentView.keepScreenOn = true
         onDispose {
             currentView.keepScreenOn = false
+        }
+    }
+
+    // Screen Pinning lifecycle: pin screen upon entering active focus, unpin when leaving
+    DisposableEffect(activeState.isScreenPinned) {
+        if (activeState.isScreenPinned && activity != null) {
+            com.l1khith.calender28.utils.ScreenPinningHelper.startPinning(activity)
+        }
+        onDispose {
+            if (activeState.isScreenPinned && activity != null) {
+                com.l1khith.calender28.utils.ScreenPinningHelper.stopPinning(activity)
+            }
+        }
+    }
+
+    // Detect if user unpinned during active session
+    LaunchedEffect(activeState.elapsedSeconds) {
+        if (activeState.isScreenPinned && activeState.elapsedSeconds > 3) {
+            if (!com.l1khith.calender28.utils.ScreenPinningHelper.isPinned(context)) {
+                // Focus broken by user unpinning the app!
+                onCancel()
+            }
         }
     }
 
@@ -419,7 +497,7 @@ fun FocusActiveOverlay(
                 color = Color(0xFF1E1E1E),
                 modifier = Modifier
                     .size(38.dp)
-                    .clickable { onCancel() }
+                    .clickable { showBreakFocusDialog = true }
             ) {
                 Box(contentAlignment = Alignment.Center) {
                     Icon(
@@ -431,18 +509,45 @@ fun FocusActiveOverlay(
                 }
             }
 
-            Surface(
-                shape = CircleShape,
-                color = if (activeState.isPaused) Color(0xFFEAB308).copy(alpha = 0.2f) else Color(0xFF10B981).copy(alpha = 0.2f),
-                border = BorderStroke(1.dp, if (activeState.isPaused) Color(0xFFEAB308) else Color(0xFF10B981))
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                Text(
-                    text = if (activeState.isPaused) "PAUSED" else "LIVE",
-                    color = if (activeState.isPaused) Color(0xFFEAB308) else Color(0xFF10B981),
-                    fontSize = 11.sp,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
-                )
+                if (activeState.isScreenPinned) {
+                    Surface(
+                        shape = CircleShape,
+                        color = Color(0xFF3B82F6).copy(alpha = 0.2f),
+                        border = BorderStroke(1.dp, Color(0xFF3B82F6))
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
+                        ) {
+                            Text("🔒", fontSize = 10.sp)
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text(
+                                text = "PINNED",
+                                color = Color(0xFF60A5FA),
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                    }
+                }
+
+                Surface(
+                    shape = CircleShape,
+                    color = if (activeState.isPaused) Color(0xFFEAB308).copy(alpha = 0.2f) else Color(0xFF10B981).copy(alpha = 0.2f),
+                    border = BorderStroke(1.dp, if (activeState.isPaused) Color(0xFFEAB308) else Color(0xFF10B981))
+                ) {
+                    Text(
+                        text = if (activeState.isPaused) "PAUSED" else "LIVE",
+                        color = if (activeState.isPaused) Color(0xFFEAB308) else Color(0xFF10B981),
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
+                    )
+                }
             }
         }
 
@@ -503,6 +608,31 @@ fun FocusActiveOverlay(
                 )
             }
 
+            if (activeState.isScreenPinned) {
+                Spacer(modifier = Modifier.height(18.dp))
+                Surface(
+                    shape = MatrixShapes.Md,
+                    color = Color(0xFF1E293B).copy(alpha = 0.7f),
+                    border = BorderStroke(1.dp, Color(0xFF334155)),
+                    modifier = Modifier.fillMaxWidth(0.85f)
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Center
+                    ) {
+                        Text("🔒", fontSize = 13.sp)
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(
+                            text = "Screen Pinned • Exiting forfeits +5 CalCoins",
+                            color = Color(0xFF94A3B8),
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Medium
+                        )
+                    }
+                }
+            }
+
             Spacer(modifier = Modifier.height(36.dp))
 
             // Controls: Pause/Resume & Stop/Finish
@@ -529,7 +659,12 @@ fun FocusActiveOverlay(
 
                 // Stop / Finish Button
                 Button(
-                    onClick = onStop,
+                    onClick = {
+                        if (activity != null) {
+                            com.l1khith.calender28.utils.ScreenPinningHelper.stopPinning(activity)
+                        }
+                        onStop()
+                    },
                     colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFDC2626)),
                     shape = MatrixShapes.Lg,
                     contentPadding = PaddingValues(horizontal = 24.dp, vertical = 14.dp)
@@ -576,6 +711,53 @@ fun FocusActiveOverlay(
                 }
             }
         }
+    }
+
+    if (showBreakFocusDialog) {
+        AlertDialog(
+            onDismissRequest = { showBreakFocusDialog = false },
+            icon = { Text("⚠️", fontSize = 28.sp) },
+            title = {
+                Text(
+                    text = "Break Focus Session?",
+                    color = MatrixColors.TextHeader,
+                    fontWeight = FontWeight.Bold
+                )
+            },
+            text = {
+                Text(
+                    text = if (activeState.isScreenPinned) {
+                        "Screen pinning will be stopped. Exiting will cancel this session and forfeit your +5 CalCoins reward."
+                    } else {
+                        "Are you sure you want to stop early? No CalCoins will be awarded."
+                    },
+                    color = MatrixColors.TextSecondary,
+                    fontSize = 14.sp
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        showBreakFocusDialog = false
+                        if (activity != null) {
+                            com.l1khith.calender28.utils.ScreenPinningHelper.stopPinning(activity)
+                        }
+                        onCancel()
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFDC2626)),
+                    shape = MatrixShapes.Md
+                ) {
+                    Text("Break Focus", color = Color.White, fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showBreakFocusDialog = false }) {
+                    Text("Stay Focused", color = MatrixColors.Primary)
+                }
+            },
+            containerColor = MatrixColors.SurfaceContainer,
+            shape = MatrixShapes.Lg
+        )
     }
 }
 

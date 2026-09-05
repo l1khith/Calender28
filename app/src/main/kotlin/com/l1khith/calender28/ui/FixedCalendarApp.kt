@@ -829,8 +829,8 @@ fun FixedCalendarApp(
             FocusSetupDialog(
                 task = state.task,
                 onDismiss = { com.l1khith.calender28.service.FocusSessionManager.closeSetup() },
-                onStartFocus = { mode, duration ->
-                    com.l1khith.calender28.service.FocusSessionManager.startFocus(context, state.task, mode, duration)
+                onStartFocus = { mode, duration, pinScreen ->
+                    com.l1khith.calender28.service.FocusSessionManager.startFocus(context, state.task, mode, duration, pinScreen)
                 }
             )
         }
