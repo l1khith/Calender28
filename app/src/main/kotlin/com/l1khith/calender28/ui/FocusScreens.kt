@@ -107,7 +107,12 @@ fun FocusSetupDialog(
                     modifier = Modifier.size(54.dp)
                 ) {
                     Box(contentAlignment = Alignment.Center) {
-                        Text("🎯", fontSize = 24.sp)
+                        Icon(
+                            imageVector = AppIcons.Stopwatch,
+                            contentDescription = null,
+                            tint = MatrixColors.Primary,
+                            modifier = Modifier.size(26.dp)
+                        )
                     }
                 }
 
@@ -134,13 +139,25 @@ fun FocusSetupDialog(
                         modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
-                        Text(
-                            text = "📝 ${task.title}",
-                            color = MatrixColors.TextHeader,
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 15.sp,
-                            maxLines = 1
-                        )
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.TaskAlt,
+                                contentDescription = null,
+                                tint = MatrixColors.Primary,
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(
+                                text = task.title,
+                                color = MatrixColors.TextHeader,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 15.sp,
+                                maxLines = 1
+                            )
+                        }
                         if (!task.description.isNullOrBlank()) {
                             Spacer(modifier = Modifier.height(2.dp))
                             Text(
@@ -375,7 +392,12 @@ fun FocusSetupDialog(
                             verticalAlignment = Alignment.CenterVertically,
                             modifier = Modifier.weight(1f)
                         ) {
-                            Text("🔒", fontSize = 20.sp)
+                            Icon(
+                                imageVector = Icons.Default.Lock,
+                                contentDescription = null,
+                                tint = if (lockScreenWithPinning) MatrixColors.Primary else MatrixColors.TextSecondary,
+                                modifier = Modifier.size(20.dp)
+                            )
                             Spacer(modifier = Modifier.width(10.dp))
                             Column {
                                 Text(
@@ -415,14 +437,29 @@ fun FocusSetupDialog(
                         .fillMaxWidth()
                         .height(50.dp),
                     shape = MatrixShapes.Lg,
-                    colors = ButtonDefaults.buttonColors(containerColor = MatrixColors.Primary)
-                ) {
-                    Text(
-                        text = "▶️ START FOCUS SESSION",
-                        color = Color.Black,
-                        fontWeight = FontWeight.Black,
-                        fontSize = 15.sp
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MatrixColors.Primary,
+                        contentColor = Color.Black
                     )
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.PlayArrow,
+                            contentDescription = null,
+                            tint = Color.Black,
+                            modifier = Modifier.size(20.dp)
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(
+                            text = "START FOCUS SESSION",
+                            color = Color.Black,
+                            fontWeight = FontWeight.Black,
+                            fontSize = 15.sp
+                        )
+                    }
                 }
 
                 Spacer(modifier = Modifier.height(8.dp))
@@ -505,7 +542,7 @@ fun FocusActiveOverlay(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color(0xFF000000))
+            .background(MatrixColors.Surface)
             .padding(24.dp)
     ) {
         // Top Bar: Dismiss / Exit Icon
@@ -518,7 +555,8 @@ fun FocusActiveOverlay(
         ) {
             Surface(
                 shape = CircleShape,
-                color = Color(0xFF1E1E1E),
+                color = MatrixColors.SurfaceContainerHigh,
+                border = BorderStroke(1.dp, MatrixColors.OutlineVariant.copy(alpha = 0.5f)),
                 modifier = Modifier
                     .size(38.dp)
                     .clickable { showBreakFocusDialog = true }
@@ -527,7 +565,7 @@ fun FocusActiveOverlay(
                     Icon(
                         imageVector = Icons.Default.Close,
                         contentDescription = "Exit Focus",
-                        tint = Color.White.copy(alpha = 0.7f),
+                        tint = MatrixColors.TextSecondary,
                         modifier = Modifier.size(20.dp)
                     )
                 }
@@ -540,18 +578,23 @@ fun FocusActiveOverlay(
                 if (activeState.isScreenPinned) {
                     Surface(
                         shape = CircleShape,
-                        color = Color(0xFF3B82F6).copy(alpha = 0.2f),
-                        border = BorderStroke(1.dp, Color(0xFF3B82F6))
+                        color = MatrixColors.Primary.copy(alpha = 0.15f),
+                        border = BorderStroke(1.dp, MatrixColors.Primary.copy(alpha = 0.5f))
                     ) {
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
                             modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
                         ) {
-                            Text("🔒", fontSize = 10.sp)
+                            Icon(
+                                imageVector = Icons.Default.Lock,
+                                contentDescription = null,
+                                tint = MatrixColors.Primary,
+                                modifier = Modifier.size(12.dp)
+                            )
                             Spacer(modifier = Modifier.width(4.dp))
                             Text(
                                 text = "PINNED",
-                                color = Color(0xFF60A5FA),
+                                color = MatrixColors.Primary,
                                 fontSize = 11.sp,
                                 fontWeight = FontWeight.Bold
                             )
@@ -561,12 +604,12 @@ fun FocusActiveOverlay(
 
                 Surface(
                     shape = CircleShape,
-                    color = if (activeState.isPaused) Color(0xFFEAB308).copy(alpha = 0.2f) else Color(0xFF10B981).copy(alpha = 0.2f),
-                    border = BorderStroke(1.dp, if (activeState.isPaused) Color(0xFFEAB308) else Color(0xFF10B981))
+                    color = if (activeState.isPaused) MatrixColors.Secondary.copy(alpha = 0.15f) else MatrixColors.Primary.copy(alpha = 0.15f),
+                    border = BorderStroke(1.dp, if (activeState.isPaused) MatrixColors.Secondary.copy(alpha = 0.5f) else MatrixColors.Primary.copy(alpha = 0.5f))
                 ) {
                     Text(
                         text = if (activeState.isPaused) "PAUSED" else "LIVE",
-                        color = if (activeState.isPaused) Color(0xFFEAB308) else Color(0xFF10B981),
+                        color = if (activeState.isPaused) MatrixColors.Secondary else MatrixColors.Primary,
                         fontSize = 11.sp,
                         fontWeight = FontWeight.Bold,
                         modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
@@ -585,7 +628,7 @@ fun FocusActiveOverlay(
             // Task Name
             Text(
                 text = activeState.task.title,
-                color = Color.White.copy(alpha = 0.9f),
+                color = MatrixColors.TextHeader,
                 fontWeight = FontWeight.Bold,
                 fontSize = 20.sp,
                 textAlign = TextAlign.Center,
@@ -602,7 +645,7 @@ fun FocusActiveOverlay(
                 Icon(
                     imageVector = AppIcons.Stopwatch,
                     contentDescription = null,
-                    tint = Color(0xFF94A3B8),
+                    tint = MatrixColors.TextSecondary,
                     modifier = Modifier.size(13.dp)
                 )
                 Spacer(modifier = Modifier.width(6.dp))
@@ -612,7 +655,7 @@ fun FocusActiveOverlay(
                     } else {
                         "Stopwatch Mode"
                     },
-                    color = Color(0xFF94A3B8),
+                    color = MatrixColors.TextSecondary,
                     fontSize = 13.sp,
                     fontWeight = FontWeight.Medium
                 )
@@ -623,7 +666,7 @@ fun FocusActiveOverlay(
             // Big Digital Timer Display
             Text(
                 text = activeState.formattedTime,
-                color = if (activeState.isPaused) Color.White.copy(alpha = pauseAlpha) else Color.White,
+                color = if (activeState.isPaused) MatrixColors.TextHeader.copy(alpha = pauseAlpha) else MatrixColors.TextHeader,
                 fontSize = 68.sp,
                 fontWeight = FontWeight.Black,
                 fontFamily = FontFamily.Monospace,
@@ -639,8 +682,8 @@ fun FocusActiveOverlay(
                         .fillMaxWidth(0.75f)
                         .height(6.dp)
                         .clip(CircleShape),
-                    color = Color(0xFF3B82F6),
-                    trackColor = Color(0xFF1E293B),
+                    color = MatrixColors.Primary,
+                    trackColor = MatrixColors.SurfaceContainerHigh,
                 )
             }
 
@@ -648,8 +691,8 @@ fun FocusActiveOverlay(
                 Spacer(modifier = Modifier.height(18.dp))
                 Surface(
                     shape = MatrixShapes.Md,
-                    color = Color(0xFF1E293B).copy(alpha = 0.7f),
-                    border = BorderStroke(1.dp, Color(0xFF334155)),
+                    color = MatrixColors.SurfaceContainerHigh,
+                    border = BorderStroke(1.dp, MatrixColors.OutlineVariant.copy(alpha = 0.5f)),
                     modifier = Modifier.fillMaxWidth(0.85f)
                 ) {
                     Row(
@@ -657,11 +700,16 @@ fun FocusActiveOverlay(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.Center
                     ) {
-                        Text("🔒", fontSize = 13.sp)
+                        Icon(
+                            imageVector = Icons.Default.Lock,
+                            contentDescription = null,
+                            tint = MatrixColors.Primary,
+                            modifier = Modifier.size(14.dp)
+                        )
                         Spacer(modifier = Modifier.width(6.dp))
                         Text(
                             text = "Screen Pinned • Exiting forfeits +5 CalCoins",
-                            color = Color(0xFF94A3B8),
+                            color = MatrixColors.TextSecondary,
                             fontSize = 11.sp,
                             fontWeight = FontWeight.Medium
                         )
@@ -677,20 +725,59 @@ fun FocusActiveOverlay(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 // Pause / Resume Button
-                Button(
-                    onClick = onTogglePause,
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = if (activeState.isPaused) Color(0xFF10B981) else Color(0xFF334155)
-                    ),
-                    shape = MatrixShapes.Lg,
-                    contentPadding = PaddingValues(horizontal = 24.dp, vertical = 14.dp)
-                ) {
-                    Text(
-                        text = if (activeState.isPaused) "▶️ RESUME" else "⏸️ PAUSE",
-                        color = Color.White,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 14.sp
-                    )
+                if (activeState.isPaused) {
+                    Button(
+                        onClick = onTogglePause,
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MatrixColors.Primary,
+                            contentColor = Color.Black
+                        ),
+                        shape = MatrixShapes.Lg,
+                        contentPadding = PaddingValues(horizontal = 24.dp, vertical = 14.dp)
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                imageVector = Icons.Default.PlayArrow,
+                                contentDescription = null,
+                                tint = Color.Black,
+                                modifier = Modifier.size(18.dp)
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(
+                                text = "RESUME",
+                                color = Color.Black,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 14.sp
+                            )
+                        }
+                    }
+                } else {
+                    OutlinedButton(
+                        onClick = onTogglePause,
+                        border = BorderStroke(1.5.dp, MatrixColors.OutlineVariant),
+                        colors = ButtonDefaults.outlinedButtonColors(
+                            containerColor = MatrixColors.SurfaceContainerHigh,
+                            contentColor = MatrixColors.TextHeader
+                        ),
+                        shape = MatrixShapes.Lg,
+                        contentPadding = PaddingValues(horizontal = 24.dp, vertical = 14.dp)
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                imageVector = Icons.Default.Pause,
+                                contentDescription = null,
+                                tint = MatrixColors.TextHeader,
+                                modifier = Modifier.size(18.dp)
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(
+                                text = "PAUSE",
+                                color = MatrixColors.TextHeader,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 14.sp
+                            )
+                        }
+                    }
                 }
 
                 // Stop / Finish Button
@@ -701,16 +788,28 @@ fun FocusActiveOverlay(
                         }
                         onStop()
                     },
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFDC2626)),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MatrixColors.ErrorContainer,
+                        contentColor = MatrixColors.OnErrorContainer
+                    ),
                     shape = MatrixShapes.Lg,
                     contentPadding = PaddingValues(horizontal = 24.dp, vertical = 14.dp)
                 ) {
-                    Text(
-                        text = "⏹️ FINISH",
-                        color = Color.White,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 14.sp
-                    )
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            imageVector = Icons.Default.Stop,
+                            contentDescription = null,
+                            tint = MatrixColors.OnErrorContainer,
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(
+                            text = "FINISH",
+                            color = MatrixColors.OnErrorContainer,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 14.sp
+                        )
+                    }
                 }
             }
         }
@@ -726,8 +825,8 @@ fun FocusActiveOverlay(
         ) {
             Surface(
                 shape = MatrixShapes.Md,
-                color = Color(0xFF111827),
-                border = BorderStroke(1.dp, Color(0xFF1F2937)),
+                color = MatrixColors.SurfaceContainerLow,
+                border = BorderStroke(1.dp, MatrixColors.OutlineVariant.copy(alpha = 0.5f)),
                 modifier = Modifier.fillMaxWidth(0.9f)
             ) {
                 Row(
@@ -735,11 +834,16 @@ fun FocusActiveOverlay(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.Center
                 ) {
-                    Text("💡", fontSize = 14.sp)
+                    Icon(
+                        imageVector = Icons.Default.FormatQuote,
+                        contentDescription = null,
+                        tint = MatrixColors.Secondary,
+                        modifier = Modifier.size(16.dp)
+                    )
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
                         text = "\"$currentQuote\"",
-                        color = Color(0xFFCBD5E1),
+                        color = MatrixColors.TextSecondary,
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Medium,
                         textAlign = TextAlign.Center
@@ -752,7 +856,14 @@ fun FocusActiveOverlay(
     if (showBreakFocusDialog) {
         AlertDialog(
             onDismissRequest = { showBreakFocusDialog = false },
-            icon = { Text("⚠️", fontSize = 28.sp) },
+            icon = {
+                Icon(
+                    imageVector = Icons.Default.WarningAmber,
+                    contentDescription = null,
+                    tint = MatrixColors.Secondary,
+                    modifier = Modifier.size(28.dp)
+                )
+            },
             title = {
                 Text(
                     text = "Break Focus Session?",
@@ -780,10 +891,13 @@ fun FocusActiveOverlay(
                         }
                         onCancel()
                     },
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFDC2626)),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MatrixColors.ErrorContainer,
+                        contentColor = MatrixColors.OnErrorContainer
+                    ),
                     shape = MatrixShapes.Md
                 ) {
-                    Text("Break Focus", color = Color.White, fontWeight = FontWeight.Bold)
+                    Text("Break Focus", color = MatrixColors.OnErrorContainer, fontWeight = FontWeight.Bold)
                 }
             },
             dismissButton = {
@@ -816,7 +930,7 @@ fun FocusCompletionOverlay(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color(0xFF000000).copy(alpha = 0.95f))
+            .background(MatrixColors.Surface.copy(alpha = 0.96f))
             .padding(24.dp),
         contentAlignment = Alignment.Center
     ) {
@@ -826,7 +940,7 @@ fun FocusCompletionOverlay(
                 .scale(scaleAnim.value),
             shape = MatrixShapes.Xl,
             colors = CardDefaults.cardColors(containerColor = MatrixColors.SurfaceContainer),
-            border = BorderStroke(2.dp, Color(0xFF10B981).copy(alpha = 0.6f))
+            border = BorderStroke(1.5.dp, MatrixColors.Primary.copy(alpha = 0.6f))
         ) {
             Column(
                 modifier = Modifier
@@ -834,23 +948,37 @@ fun FocusCompletionOverlay(
                     .padding(24.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                // Celebration Emojis
-                Text("🎉 ✨ 🏆", fontSize = 36.sp)
+                // Celebration Icon
+                Surface(
+                    shape = CircleShape,
+                    color = MatrixColors.Primary.copy(alpha = 0.15f),
+                    border = BorderStroke(1.5.dp, MatrixColors.Primary.copy(alpha = 0.5f)),
+                    modifier = Modifier.size(64.dp)
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Icon(
+                            imageVector = Icons.Default.CheckCircle,
+                            contentDescription = null,
+                            tint = MatrixColors.Primary,
+                            modifier = Modifier.size(36.dp)
+                        )
+                    }
+                }
 
-                Spacer(modifier = Modifier.height(10.dp))
+                Spacer(modifier = Modifier.height(14.dp))
 
                 Text(
-                    text = "CONGRATULATIONS!",
-                    color = Color(0xFF10B981),
+                    text = "SESSION COMPLETE",
+                    color = MatrixColors.TextHeader,
                     fontWeight = FontWeight.Black,
-                    fontSize = 22.sp,
+                    fontSize = 20.sp,
                     letterSpacing = 1.sp
                 )
 
                 Spacer(modifier = Modifier.height(6.dp))
 
                 Text(
-                    text = "You completed your focus session!",
+                    text = "Great job! You stayed focused.",
                     color = MatrixColors.TextSecondary,
                     fontSize = 14.sp
                 )
@@ -868,13 +996,26 @@ fun FocusCompletionOverlay(
                         modifier = Modifier.padding(16.dp),
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
-                        Text(
-                            text = "📝 ${completedState.task.title}",
-                            color = MatrixColors.TextHeader,
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 17.sp,
-                            textAlign = TextAlign.Center
-                        )
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.TaskAlt,
+                                contentDescription = null,
+                                tint = MatrixColors.Primary,
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(
+                                text = completedState.task.title,
+                                color = MatrixColors.TextHeader,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 16.sp,
+                                textAlign = TextAlign.Center,
+                                maxLines = 2
+                            )
+                        }
 
                         Spacer(modifier = Modifier.height(10.dp))
 
@@ -934,14 +1075,29 @@ fun FocusCompletionOverlay(
                         .fillMaxWidth()
                         .height(50.dp),
                     shape = MatrixShapes.Lg,
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF10B981))
-                ) {
-                    Text(
-                        text = "✅ MARK TASK COMPLETE",
-                        color = Color.Black,
-                        fontWeight = FontWeight.Black,
-                        fontSize = 14.sp
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MatrixColors.Primary,
+                        contentColor = Color.Black
                     )
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Check,
+                            contentDescription = null,
+                            tint = Color.Black,
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = "MARK TASK COMPLETE",
+                            color = Color.Black,
+                            fontWeight = FontWeight.Black,
+                            fontSize = 14.sp
+                        )
+                    }
                 }
 
                 Spacer(modifier = Modifier.height(10.dp))
@@ -953,14 +1109,29 @@ fun FocusCompletionOverlay(
                         .fillMaxWidth()
                         .height(46.dp),
                     shape = MatrixShapes.Lg,
-                    border = BorderStroke(1.dp, MatrixColors.Primary)
-                ) {
-                    Text(
-                        text = "🔄 FOCUS AGAIN",
-                        color = MatrixColors.Primary,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 13.sp
+                    border = BorderStroke(1.dp, MatrixColors.Primary),
+                    colors = ButtonDefaults.outlinedButtonColors(
+                        contentColor = MatrixColors.Primary
                     )
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Refresh,
+                            contentDescription = null,
+                            tint = MatrixColors.Primary,
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = "FOCUS AGAIN",
+                            color = MatrixColors.Primary,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 13.sp
+                        )
+                    }
                 }
 
                 Spacer(modifier = Modifier.height(8.dp))
@@ -1035,7 +1206,12 @@ fun FocusStatsDialog(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text("📊", fontSize = 20.sp)
+                        Icon(
+                            imageVector = Icons.Default.BarChart,
+                            contentDescription = null,
+                            tint = MatrixColors.Primary,
+                            modifier = Modifier.size(22.dp)
+                        )
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
                             text = "FOCUS ANALYTICS",
