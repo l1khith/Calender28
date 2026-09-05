@@ -34,7 +34,8 @@ sealed class FocusState {
         val targetDurationSeconds: Int,
         val elapsedSeconds: Int,
         val isPaused: Boolean,
-        val startedAtMs: Long
+        val startedAtMs: Long,
+        val isScreenPinned: Boolean = false
     ) : FocusState() {
         val remainingSeconds: Int
             get() = (targetDurationSeconds - elapsedSeconds).coerceAtLeast(0)
@@ -99,7 +100,7 @@ object FocusSessionManager {
         }
     }
 
-    fun startFocus(context: Context, task: AppTask, mode: String, durationMinutes: Int = 25) {
+    fun startFocus(context: Context, task: AppTask, mode: String, durationMinutes: Int = 25, pinScreen: Boolean = false) {
         val targetSeconds = if (mode == "timer") durationMinutes * 60 else 0
         sessionStartTimeMs = System.currentTimeMillis()
         lastResumeTimestampMs = sessionStartTimeMs
@@ -111,7 +112,8 @@ object FocusSessionManager {
             targetDurationSeconds = targetSeconds,
             elapsedSeconds = 0,
             isPaused = false,
-            startedAtMs = sessionStartTimeMs
+            startedAtMs = sessionStartTimeMs,
+            isScreenPinned = pinScreen
         )
 
         vibrate(context, 100)

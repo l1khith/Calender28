@@ -49,8 +49,8 @@ class FocusViewModel(
         FocusSessionManager.closeSetup()
     }
 
-    fun startFocus(task: AppTask, mode: String, durationMinutes: Int) {
-        FocusSessionManager.startFocus(context, task, mode, durationMinutes)
+    fun startFocus(task: AppTask, mode: String, durationMinutes: Int, pinScreen: Boolean = false) {
+        FocusSessionManager.startFocus(context, task, mode, durationMinutes, pinScreen)
     }
 
     fun togglePause() {
