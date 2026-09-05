@@ -32,6 +32,8 @@ enum class TransactionReason(val displayName: String, val defaultAmount: Int) {
     MILESTONE_10_CYCLES("10 Habit Cycles Milestone", com.l1khith.calender28.utils.Constants.REWARD_MILESTONE_10_CYCLES),
     MILESTONE_50_CYCLES("50 Habit Cycles Milestone", com.l1khith.calender28.utils.Constants.REWARD_MILESTONE_50_CYCLES),
     MILESTONE_100_CYCLES("100 Habit Cycles Milestone", com.l1khith.calender28.utils.Constants.REWARD_MILESTONE_100_CYCLES),
+    TASK_COMPLETE("Task Completed", com.l1khith.calender28.utils.Constants.REWARD_TASK_COMPLETE),
+    FOCUS_SESSION("Focus Session Completed", com.l1khith.calender28.utils.Constants.REWARD_FOCUS_SESSION),
     PREMIUM_PURCHASE("Premium Unlock", -com.l1khith.calender28.utils.Constants.PREMIUM_UNLOCK_COIN_COST),
     PROMO_CODE("Promo Code Bonus", 0);
 

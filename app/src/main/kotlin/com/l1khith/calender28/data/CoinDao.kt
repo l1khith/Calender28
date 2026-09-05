@@ -38,4 +38,20 @@ interface CoinDao {
 
     @Query("SELECT COUNT(*) FROM coin_transactions WHERE reason = :streakReason AND note = :streakKey")
     suspend fun countStreakRewardGiven(streakReason: String, streakKey: String): Int
+
+    // Idempotency: prevent double-rewarding a specific habit day toggle
+    @Query("SELECT COUNT(*) FROM coin_transactions WHERE reason = 'PARTIAL_HABIT_PROGRESS' AND note = :noteKey")
+    suspend fun countHabitDayReward(noteKey: String): Int
+
+    // Idempotency: prevent double-rewarding a specific habit cycle completion
+    @Query("SELECT COUNT(*) FROM coin_transactions WHERE reason = 'HABIT_CYCLE_COMPLETE' AND note = :noteKey")
+    suspend fun countHabitCycleReward(noteKey: String): Int
+
+    // Idempotency: prevent double-rewarding a task completion on a specific date
+    @Query("SELECT COUNT(*) FROM coin_transactions WHERE (reason = 'DAILY_TASK' OR reason = 'TASK_COMPLETE') AND note = :noteKey")
+    suspend fun countTaskCompletionReward(noteKey: String): Int
+
+    // Idempotency: prevent double-rewarding a focus session
+    @Query("SELECT COUNT(*) FROM coin_transactions WHERE reason = 'FOCUS_SESSION' AND note = :noteKey")
+    suspend fun countFocusSessionReward(noteKey: String): Int
 }

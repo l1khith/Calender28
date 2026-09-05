@@ -25,6 +25,8 @@ object Constants {
     const val REWARD_HABIT_DAY_LOG = 1
     const val REWARD_RECURRING_TASK = 2
     const val REWARD_HABIT_CYCLE_COMPLETE = 10
+    const val REWARD_TASK_COMPLETE = 1
+    const val REWARD_FOCUS_SESSION = 5
 
     // Streak Bonuses
     const val REWARD_STREAK_7_DAY = 50
