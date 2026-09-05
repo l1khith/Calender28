@@ -846,10 +846,11 @@ fun FixedCalendarApp(
             FocusCompletionOverlay(
                 completedState = state,
                 onDone = { markTaskDone ->
-                    com.l1khith.calender28.service.FocusSessionManager.commitCompletedTask(context, markTaskDone)
+                    focusViewModel.commitTaskDone(markTaskDone)
+                    viewModel.refresh()
                 },
                 onAgain = {
-                    com.l1khith.calender28.service.FocusSessionManager.restartSameTask(context)
+                    focusViewModel.focusAgain()
                 }
             )
         }

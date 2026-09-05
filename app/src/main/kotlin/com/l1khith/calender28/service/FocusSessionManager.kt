@@ -91,6 +91,7 @@ object FocusSessionManager {
 
     fun openSetup(task: AppTask) {
         if (_focusState.value is FocusState.Active) return
+        if (task.completed) return
         _focusState.value = FocusState.Setup(task)
     }
 
@@ -101,6 +102,7 @@ object FocusSessionManager {
     }
 
     fun startFocus(context: Context, task: AppTask, mode: String, durationMinutes: Int = 25, pinScreen: Boolean = false) {
+        if (task.completed) return
         val targetSeconds = if (mode == "timer") durationMinutes * 60 else 0
         sessionStartTimeMs = System.currentTimeMillis()
         lastResumeTimestampMs = sessionStartTimeMs
@@ -198,6 +200,7 @@ object FocusSessionManager {
         val completedState = _focusState.value as? FocusState.Completed ?: return
         val taskRepo = TaskRepositoryImpl(context.applicationContext)
         val focusRepo = FocusRepositoryImpl(context.applicationContext)
+        val coinRepo = com.l1khith.calender28.repository.CoinRepositoryImpl(context.applicationContext)
 
         scope.launch(Dispatchers.IO) {
             val now = System.currentTimeMillis()
@@ -214,8 +217,19 @@ object FocusSessionManager {
                 )
             )
 
-            if (markTaskDone) {
-                taskRepo.toggleTaskCompletion(completedState.task)
+            // Reward focus session coins
+            val durationMinutes = (completedState.durationSeconds / 60).coerceAtLeast(1)
+            coinRepo.rewardFocusSessionComplete(completedState.task.title, durationMinutes)
+
+            if (markTaskDone && !completedState.task.completed) {
+                val updatedTask = taskRepo.toggleTaskCompletion(completedState.task)
+                val isRecurring = updatedTask.recurringParentId != null || updatedTask.isGenerated == 1
+                coinRepo.rewardTaskCompletion(
+                    taskId = updatedTask.id,
+                    dateStr = updatedTask.associatedDate,
+                    isRecurring = isRecurring,
+                    taskTitle = updatedTask.title
+                )
             }
         }
 
@@ -224,6 +238,10 @@ object FocusSessionManager {
 
     fun restartSameTask(context: Context) {
         val completedState = _focusState.value as? FocusState.Completed ?: return
+        if (completedState.task.completed) {
+            _focusState.value = FocusState.Idle
+            return
+        }
         val durationMins = (completedState.durationSeconds / 60).coerceAtLeast(15)
         startFocus(context, completedState.task, completedState.mode, durationMins)
     }

@@ -62,15 +62,6 @@ class FocusViewModel(
     }
 
     fun commitTaskDone(markTaskDone: Boolean = true) {
-        // Award coins for completing a focus session
-        val currentState = focusState.value
-        if (currentState is FocusState.Completed) {
-            val durationMinutes = (currentState.durationSeconds / 60).coerceAtLeast(1)
-            val taskTitle = currentState.task.title
-            viewModelScope.launch {
-                coinRepository.rewardFocusSessionComplete(taskTitle, durationMinutes)
-            }
-        }
         FocusSessionManager.commitCompletedTask(context, markTaskDone)
     }
 

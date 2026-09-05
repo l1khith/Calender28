@@ -14,10 +14,12 @@ import com.l1khith.calender28.utils.CalendarSyncHelper
 import com.l1khith.calender28.utils.FixedCalendarHelper
 import com.l1khith.calender28.utils.FixedDate
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -49,9 +51,13 @@ class FixedCalendarViewModel(
     private val _selectedDate = MutableStateFlow(FixedCalendarHelper.fromTimestamp(System.currentTimeMillis()))
     val selectedDate: StateFlow<FixedDate> = _selectedDate.asStateFlow()
 
-    // Task list and indicator state
-    private val _tasksForSelectedDay = MutableStateFlow<List<AppTask>>(emptyList())
-    val tasksForSelectedDay: StateFlow<List<AppTask>> = _tasksForSelectedDay.asStateFlow()
+    // Task list and indicator state - reactively observing Room database for selected date
+    @OptIn(ExperimentalCoroutinesApi::class)
+    val tasksForSelectedDay: StateFlow<List<AppTask>> = _selectedDate
+        .flatMapLatest { date ->
+            taskRepository.getTasksForDateFlow(date.toString())
+        }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     val datesWithActiveTasks: StateFlow<Set<String>> = taskRepository.getDatesWithActiveTasksFlow()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptySet())
@@ -293,19 +299,14 @@ class FixedCalendarViewModel(
 
     private suspend fun loadState(date: FixedDate) {
         val dateStr = date.toString()
-        Log.d(TAG, "loadState: Loading tasks for date=$dateStr")
-        val tasksForDay = taskRepository.getTasksForDate(dateStr)
-
-        withContext(Dispatchers.Main) {
-            _tasksForSelectedDay.value = tasksForDay
-            Log.d(TAG, "loadState: Loaded ${tasksForDay.size} tasks for date=$dateStr")
-        }
+        Log.d(TAG, "loadState: Refreshed tasks for date=$dateStr")
     }
 
     fun refresh() {
         val date = _selectedDate.value
         Log.d(TAG, "refresh: Refreshing state for date=$date")
         viewModelScope.launch(Dispatchers.Default) {
+            taskRepository.catchUpRollover(date)
             loadState(date)
         }
     }
