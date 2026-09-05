@@ -77,6 +77,14 @@ class MainActivity : FragmentActivity() {
     override fun onPause() {
         super.onPause()
         com.l1khith.calender28.security.AppLockManager.onActivityPaused()
+
+        // If an active focus session had screen pinning enabled and the user navigated away,
+        // break focus so no reward is given!
+        val currentFocus = com.l1khith.calender28.service.FocusSessionManager.focusState.value
+        if (currentFocus is com.l1khith.calender28.service.FocusState.Active && currentFocus.isScreenPinned) {
+            com.l1khith.calender28.utils.ScreenPinningHelper.stopPinning(this)
+            com.l1khith.calender28.service.FocusSessionManager.stopOrCancelFocus(this, markAsCancelled = true)
+        }
     }
 
     override fun onNewIntent(intent: Intent) {
