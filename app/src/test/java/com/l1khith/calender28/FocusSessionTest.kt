@@ -127,4 +127,40 @@ class FocusSessionTest {
         )
         assertEquals("25m 30s", completedLong.formattedDuration)
     }
+
+    @Test
+    fun `test openSetup ignores already completed tasks`() {
+        val completedTask = AppTask(
+            id = "done1",
+            title = "Finished Task",
+            associatedDate = "2026-08-20",
+            isCompleted = 1
+        )
+        assertTrue(completedTask.completed)
+
+        com.l1khith.calender28.service.FocusSessionManager.closeSetup()
+        com.l1khith.calender28.service.FocusSessionManager.openSetup(completedTask)
+
+        // Must remain Idle, not enter Setup state
+        assertTrue(com.l1khith.calender28.service.FocusSessionManager.focusState.value is FocusState.Idle)
+    }
+
+    @Test
+    fun `test openSetup allows incomplete tasks`() {
+        val pendingTask = AppTask(
+            id = "pending1",
+            title = "Pending Task",
+            associatedDate = "2026-08-20",
+            isCompleted = 0
+        )
+        assertFalse(pendingTask.completed)
+
+        com.l1khith.calender28.service.FocusSessionManager.closeSetup()
+        com.l1khith.calender28.service.FocusSessionManager.openSetup(pendingTask)
+
+        val state = com.l1khith.calender28.service.FocusSessionManager.focusState.value
+        assertTrue(state is FocusState.Setup)
+        assertEquals("pending1", (state as FocusState.Setup).task.id)
+        com.l1khith.calender28.service.FocusSessionManager.closeSetup()
+    }
 }

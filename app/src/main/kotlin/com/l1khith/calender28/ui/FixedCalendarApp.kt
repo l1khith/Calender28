@@ -264,7 +264,9 @@ fun FixedCalendarApp(
                 showAddTaskDialog = false
             },
             onStartFocus = { task ->
-                com.l1khith.calender28.service.FocusSessionManager.openSetup(task)
+                if (!task.completed) {
+                    com.l1khith.calender28.service.FocusSessionManager.openSetup(task)
+                }
             }
         )
     }
@@ -508,7 +510,9 @@ fun FixedCalendarApp(
                     isProActive = isProActive,
                     onOpenPaywall = { showPaywallDialog = true },
                     onStartFocus = { task ->
-                        com.l1khith.calender28.service.FocusSessionManager.openSetup(task)
+                        if (!task.completed) {
+                            com.l1khith.calender28.service.FocusSessionManager.openSetup(task)
+                        }
                     }
                 )
 
@@ -666,7 +670,9 @@ fun FixedCalendarApp(
                         },
                         onDelete = { viewModel.deleteTask(it) },
                         onStartFocus = { task ->
-                            com.l1khith.calender28.service.FocusSessionManager.openSetup(task)
+                            if (!task.completed) {
+                                com.l1khith.calender28.service.FocusSessionManager.openSetup(task)
+                            }
                         },
                         primaryColor = primaryAccent,
                         orangeColor = secondaryAccent,
@@ -1339,7 +1345,7 @@ fun AgendaList(
         if (recurring.isNotEmpty()) {
             item {
                 Text(
-                    text = "🔄 RECURRING PLANS",
+                    text = "RECURRING PLANS",
                     color = Color(0xFF10B981),
                     fontWeight = FontWeight.Bold,
                     fontSize = 12.sp,
@@ -1557,14 +1563,16 @@ fun ReminderItem(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
-                        Icon(
-                            imageVector = AppIcons.Stopwatch,
-                            contentDescription = "Start Focus",
-                            tint = Color(0xFFA1A1AA),
-                            modifier = Modifier
-                                .size(14.dp)
-                                .clickable { onStartFocus(task) }
-                        )
+                        if (!task.completed) {
+                            Icon(
+                                imageVector = AppIcons.Stopwatch,
+                                contentDescription = "Start Focus",
+                                tint = Color(0xFFA1A1AA),
+                                modifier = Modifier
+                                    .size(14.dp)
+                                    .clickable { onStartFocus(task) }
+                            )
+                        }
                         Icon(
                             imageVector = editIcon,
                             contentDescription = "Edit",
@@ -1777,15 +1785,17 @@ fun TodoItem(
                 }
 
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(
-                        imageVector = AppIcons.Stopwatch,
-                        contentDescription = "Start Focus",
-                        tint = Color(0xFFA1A1AA),
-                        modifier = Modifier
-                            .padding(end = 8.dp)
-                            .size(14.dp)
-                            .clickable { onStartFocus(task) }
-                    )
+                    if (!task.completed) {
+                        Icon(
+                            imageVector = AppIcons.Stopwatch,
+                            contentDescription = "Start Focus",
+                            tint = Color(0xFFA1A1AA),
+                            modifier = Modifier
+                                .padding(end = 8.dp)
+                                .size(14.dp)
+                                .clickable { onStartFocus(task) }
+                        )
+                    }
 
                     Surface(
                         shape = MatrixShapes.Xl,

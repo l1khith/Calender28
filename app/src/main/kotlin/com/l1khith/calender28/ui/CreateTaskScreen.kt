@@ -538,8 +538,8 @@ fun CreateTaskScreen(
                 }
             }
 
-            // Focus Mode Quick Access (For existing tasks)
-            if (task != null && onStartFocus != null) {
+            // Focus Mode Quick Access (For existing incomplete tasks)
+            if (task != null && !task.completed && onStartFocus != null) {
                 item {
                     Card(
                         shape = MatrixShapes.Lg,
@@ -555,7 +555,12 @@ fun CreateTaskScreen(
                                 modifier = Modifier.fillMaxWidth(),
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
-                                Text("🎯", fontSize = 18.sp)
+                                Icon(
+                                    imageVector = AppIcons.Stopwatch,
+                                    contentDescription = null,
+                                    tint = MatrixColors.Primary,
+                                    modifier = Modifier.size(18.dp)
+                                )
                                 Spacer(modifier = Modifier.width(8.dp))
                                 Column {
                                     Text(
@@ -580,7 +585,7 @@ fun CreateTaskScreen(
                                     modifier = Modifier.fillMaxWidth()
                                 ) {
                                     Text(
-                                        text = "⭐ Previously focused: ${task.formattedFocusDuration} (${task.focusCount} sessions)",
+                                        text = "Previously focused: ${task.formattedFocusDuration} (${task.focusCount} sessions)",
                                         color = MatrixColors.Primary,
                                         fontSize = 11.sp,
                                         fontWeight = FontWeight.Medium,

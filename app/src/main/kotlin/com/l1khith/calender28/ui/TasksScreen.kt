@@ -462,7 +462,7 @@ fun UrgentTaskCard(
                 if (task.hasEverFocused) {
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
-                        text = "⭐ Focused: ${task.formattedFocusDuration}",
+                        text = "Focused: ${task.formattedFocusDuration}",
                         color = MatrixColors.Primary,
                         fontSize = 11.sp,
                         fontWeight = FontWeight.Medium
@@ -471,16 +471,18 @@ fun UrgentTaskCard(
             }
 
             Row(verticalAlignment = Alignment.CenterVertically) {
-                IconButton(
-                    onClick = onStartFocus,
-                    modifier = Modifier.size(28.dp)
-                ) {
-                    Icon(
-                        imageVector = AppIcons.Stopwatch,
-                        contentDescription = "Start Focus",
-                        tint = MatrixColors.TextSecondary,
-                        modifier = Modifier.size(16.dp)
-                    )
+                if (!task.completed) {
+                    IconButton(
+                        onClick = onStartFocus,
+                        modifier = Modifier.size(28.dp)
+                    ) {
+                        Icon(
+                            imageVector = AppIcons.Stopwatch,
+                            contentDescription = "Start Focus",
+                            tint = MatrixColors.TextSecondary,
+                            modifier = Modifier.size(16.dp)
+                        )
+                    }
                 }
 
                 IconButton(
@@ -586,7 +588,7 @@ fun FocusTaskCard(
                 if (task.hasEverFocused) {
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
-                        text = "⭐ Focused: ${task.formattedFocusDuration}",
+                        text = "Focused: ${task.formattedFocusDuration}",
                         color = MatrixColors.Primary,
                         fontSize = 11.sp,
                         fontWeight = FontWeight.Medium
@@ -595,16 +597,18 @@ fun FocusTaskCard(
             }
 
             Row(verticalAlignment = Alignment.CenterVertically) {
-                IconButton(
-                    onClick = onStartFocus,
-                    modifier = Modifier.size(28.dp)
-                ) {
-                    Icon(
-                        imageVector = AppIcons.Stopwatch,
-                        contentDescription = "Start Focus",
-                        tint = MatrixColors.TextSecondary,
-                        modifier = Modifier.size(16.dp)
-                    )
+                if (!task.completed) {
+                    IconButton(
+                        onClick = onStartFocus,
+                        modifier = Modifier.size(28.dp)
+                    ) {
+                        Icon(
+                            imageVector = AppIcons.Stopwatch,
+                            contentDescription = "Start Focus",
+                            tint = MatrixColors.TextSecondary,
+                            modifier = Modifier.size(16.dp)
+                        )
+                    }
                 }
 
                 IconButton(
@@ -689,7 +693,7 @@ fun UpcomingTaskCard(
 
                 if (task.hasEverFocused) {
                     Text(
-                        text = "⭐ Focused: ${task.formattedFocusDuration}",
+                        text = "Focused: ${task.formattedFocusDuration}",
                         color = MatrixColors.Primary,
                         fontSize = 10.sp,
                         fontWeight = FontWeight.Medium
@@ -698,16 +702,18 @@ fun UpcomingTaskCard(
             }
 
             Row(verticalAlignment = Alignment.CenterVertically) {
-                IconButton(
-                    onClick = onStartFocus,
-                    modifier = Modifier.size(26.dp)
-                ) {
-                    Icon(
-                        imageVector = AppIcons.Stopwatch,
-                        contentDescription = "Start Focus",
-                        tint = MatrixColors.TextSecondary,
-                        modifier = Modifier.size(14.dp)
-                    )
+                if (!task.completed) {
+                    IconButton(
+                        onClick = onStartFocus,
+                        modifier = Modifier.size(26.dp)
+                    ) {
+                        Icon(
+                            imageVector = AppIcons.Stopwatch,
+                            contentDescription = "Start Focus",
+                            tint = MatrixColors.TextSecondary,
+                            modifier = Modifier.size(14.dp)
+                        )
+                    }
                 }
 
                 IconButton(

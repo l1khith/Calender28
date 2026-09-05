@@ -1102,39 +1102,41 @@ fun FocusCompletionOverlay(
 
                 Spacer(modifier = Modifier.height(10.dp))
 
-                // AGAIN Button
-                OutlinedButton(
-                    onClick = onAgain,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(46.dp),
-                    shape = MatrixShapes.Lg,
-                    border = BorderStroke(1.dp, MatrixColors.Primary),
-                    colors = ButtonDefaults.outlinedButtonColors(
-                        contentColor = MatrixColors.Primary
-                    )
-                ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.Center
+                // AGAIN Button (only if task is not already completed)
+                if (!completedState.task.completed) {
+                    OutlinedButton(
+                        onClick = onAgain,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(46.dp),
+                        shape = MatrixShapes.Lg,
+                        border = BorderStroke(1.dp, MatrixColors.Primary),
+                        colors = ButtonDefaults.outlinedButtonColors(
+                            contentColor = MatrixColors.Primary
+                        )
                     ) {
-                        Icon(
-                            imageVector = Icons.Default.Refresh,
-                            contentDescription = null,
-                            tint = MatrixColors.Primary,
-                            modifier = Modifier.size(16.dp)
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            text = "FOCUS AGAIN",
-                            color = MatrixColors.Primary,
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 13.sp
-                        )
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Refresh,
+                                contentDescription = null,
+                                tint = MatrixColors.Primary,
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = "FOCUS AGAIN",
+                                color = MatrixColors.Primary,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 13.sp
+                            )
+                        }
                     }
-                }
 
-                Spacer(modifier = Modifier.height(8.dp))
+                    Spacer(modifier = Modifier.height(8.dp))
+                }
 
                 TextButton(onClick = { onDone(false) }) {
                     Text(
