@@ -24,6 +24,7 @@ import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.l1khith.calender28.data.AppTask
+import com.l1khith.calender28.ui.theme.AppIcons
 import com.l1khith.calender28.ui.theme.MatrixColors
 import com.l1khith.calender28.ui.theme.MatrixShapes
 import com.l1khith.calender28.utils.FixedCalendarHelper
@@ -474,7 +475,12 @@ fun UrgentTaskCard(
                     onClick = onStartFocus,
                     modifier = Modifier.size(28.dp)
                 ) {
-                    Text("⏱️", fontSize = 14.sp)
+                    Icon(
+                        imageVector = AppIcons.Stopwatch,
+                        contentDescription = "Start Focus",
+                        tint = MatrixColors.TextSecondary,
+                        modifier = Modifier.size(16.dp)
+                    )
                 }
 
                 IconButton(
@@ -593,7 +599,12 @@ fun FocusTaskCard(
                     onClick = onStartFocus,
                     modifier = Modifier.size(28.dp)
                 ) {
-                    Text("⏱️", fontSize = 14.sp)
+                    Icon(
+                        imageVector = AppIcons.Stopwatch,
+                        contentDescription = "Start Focus",
+                        tint = MatrixColors.TextSecondary,
+                        modifier = Modifier.size(16.dp)
+                    )
                 }
 
                 IconButton(
@@ -691,7 +702,12 @@ fun UpcomingTaskCard(
                     onClick = onStartFocus,
                     modifier = Modifier.size(26.dp)
                 ) {
-                    Text("⏱️", fontSize = 12.sp)
+                    Icon(
+                        imageVector = AppIcons.Stopwatch,
+                        contentDescription = "Start Focus",
+                        tint = MatrixColors.TextSecondary,
+                        modifier = Modifier.size(14.dp)
+                    )
                 }
 
                 IconButton(

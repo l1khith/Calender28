@@ -1556,10 +1556,13 @@ fun ReminderItem(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
-                        Text(
-                            text = "⏱️",
-                            fontSize = 13.sp,
-                            modifier = Modifier.clickable { onStartFocus(task) }
+                        Icon(
+                            imageVector = AppIcons.Stopwatch,
+                            contentDescription = "Start Focus",
+                            tint = Color(0xFFA1A1AA),
+                            modifier = Modifier
+                                .size(14.dp)
+                                .clickable { onStartFocus(task) }
                         )
                         Icon(
                             imageVector = editIcon,
@@ -1773,11 +1776,13 @@ fun TodoItem(
                 }
 
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(
-                        text = "⏱️",
-                        fontSize = 14.sp,
+                    Icon(
+                        imageVector = AppIcons.Stopwatch,
+                        contentDescription = "Start Focus",
+                        tint = Color(0xFFA1A1AA),
                         modifier = Modifier
                             .padding(end = 8.dp)
+                            .size(14.dp)
                             .clickable { onStartFocus(task) }
                     )
 

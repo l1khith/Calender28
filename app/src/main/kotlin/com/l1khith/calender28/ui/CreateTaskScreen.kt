@@ -22,6 +22,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.l1khith.calender28.data.AppTask
 import com.l1khith.calender28.data.RecurrenceType
+import com.l1khith.calender28.ui.theme.AppIcons
 import com.l1khith.calender28.ui.theme.MatrixColors
 import com.l1khith.calender28.ui.theme.MatrixShapes
 import com.l1khith.calender28.utils.PlatformTimePicker
@@ -601,12 +602,24 @@ fun CreateTaskScreen(
                                 shape = MatrixShapes.Md,
                                 colors = ButtonDefaults.buttonColors(containerColor = MatrixColors.Primary)
                             ) {
-                                Text(
-                                    text = "⏱️ START FOCUS SESSION",
-                                    color = Color.Black,
-                                    fontWeight = FontWeight.Black,
-                                    fontSize = 13.sp
-                                )
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.Center
+                                ) {
+                                    Icon(
+                                        imageVector = AppIcons.Stopwatch,
+                                        contentDescription = null,
+                                        tint = Color.Black,
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text(
+                                        text = "START FOCUS SESSION",
+                                        color = Color.Black,
+                                        fontWeight = FontWeight.Black,
+                                        fontSize = 13.sp
+                                    )
+                                }
                             }
                         }
                     }
