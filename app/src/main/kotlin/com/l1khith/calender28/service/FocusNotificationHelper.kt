@@ -9,6 +9,7 @@ import android.content.Intent
 import android.os.Build
 import androidx.core.app.NotificationCompat
 import com.l1khith.calender28.MainActivity
+import com.l1khith.calender28.R
 
 object FocusNotificationHelper {
 
@@ -76,17 +77,17 @@ object FocusNotificationHelper {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
-        val title = if (isPaused) "⏸️ Focus Mode (Paused)" else "⏱️ Focus Mode"
+        val title = if (isPaused) "Focus Mode (Paused)" else "Focus Mode"
         val subtitle = if (isTimerMode) {
-            "📝 $taskTitle • $timeFormatted remaining"
+            "$taskTitle • $timeFormatted remaining"
         } else {
-            "📝 $taskTitle • $timeFormatted elapsed"
+            "$taskTitle • $timeFormatted elapsed"
         }
 
-        val toggleActionTitle = if (isPaused) "▶️ Resume" else "⏸️ Pause"
+        val toggleActionTitle = if (isPaused) "Resume" else "Pause"
 
         return NotificationCompat.Builder(context, CHANNEL_FOCUS)
-            .setSmallIcon(android.R.drawable.ic_dialog_info)
+            .setSmallIcon(R.drawable.ic_stopwatch)
             .setContentTitle(title)
             .setContentText(subtitle)
             .setContentIntent(openAppPending)

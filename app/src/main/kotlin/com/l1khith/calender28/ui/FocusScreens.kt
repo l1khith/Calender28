@@ -40,6 +40,7 @@ import com.l1khith.calender28.data.AppTask
 import com.l1khith.calender28.data.FocusSession
 import com.l1khith.calender28.service.FocusSessionManager
 import com.l1khith.calender28.service.FocusState
+import com.l1khith.calender28.ui.theme.AppIcons
 import com.l1khith.calender28.ui.theme.MatrixColors
 import com.l1khith.calender28.ui.theme.MatrixShapes
 import java.text.SimpleDateFormat
@@ -176,8 +177,15 @@ fun FocusSetupDialog(
                             horizontalArrangement = Arrangement.Center,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
+                            Icon(
+                                imageVector = AppIcons.Stopwatch,
+                                contentDescription = null,
+                                tint = if (selectedMode == "timer") Color.Black else MatrixColors.TextSecondary,
+                                modifier = Modifier.size(14.dp)
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
                             Text(
-                                text = "⏱️ TIMER",
+                                text = "TIMER",
                                 color = if (selectedMode == "timer") Color.Black else MatrixColors.TextSecondary,
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 13.sp
@@ -198,8 +206,15 @@ fun FocusSetupDialog(
                             horizontalArrangement = Arrangement.Center,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
+                            Icon(
+                                imageVector = AppIcons.Stopwatch,
+                                contentDescription = null,
+                                tint = if (selectedMode == "stopwatch") Color.Black else MatrixColors.TextSecondary,
+                                modifier = Modifier.size(14.dp)
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
                             Text(
-                                text = "⏲️ STOPWATCH",
+                                text = "STOPWATCH",
                                 color = if (selectedMode == "stopwatch") Color.Black else MatrixColors.TextSecondary,
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 13.sp
@@ -297,12 +312,21 @@ fun FocusSetupDialog(
 
                         Spacer(modifier = Modifier.height(12.dp))
 
-                        Text(
-                            text = "⏱️ Estimated finish: $estimatedCompletionTime",
-                            color = MatrixColors.Secondary,
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.Medium
-                        )
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                imageVector = AppIcons.Stopwatch,
+                                contentDescription = null,
+                                tint = MatrixColors.Secondary,
+                                modifier = Modifier.size(13.dp)
+                            )
+                            Spacer(modifier = Modifier.width(5.dp))
+                            Text(
+                                text = "Estimated finish: $estimatedCompletionTime",
+                                color = MatrixColors.Secondary,
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Medium
+                            )
+                        }
                     }
                 } else {
                     // Stopwatch Info
@@ -571,16 +595,28 @@ fun FocusActiveOverlay(
             Spacer(modifier = Modifier.height(4.dp))
 
             // Mode subtitle
-            Text(
-                text = if (activeState.mode == "timer") {
-                    "⏱️ Timer • ${activeState.targetDurationSeconds / 60} min"
-                } else {
-                    "⏲️ Stopwatch Mode"
-                },
-                color = Color(0xFF94A3B8),
-                fontSize = 13.sp,
-                fontWeight = FontWeight.Medium
-            )
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.Center
+            ) {
+                Icon(
+                    imageVector = AppIcons.Stopwatch,
+                    contentDescription = null,
+                    tint = Color(0xFF94A3B8),
+                    modifier = Modifier.size(13.dp)
+                )
+                Spacer(modifier = Modifier.width(6.dp))
+                Text(
+                    text = if (activeState.mode == "timer") {
+                        "Timer • ${activeState.targetDurationSeconds / 60} min"
+                    } else {
+                        "Stopwatch Mode"
+                    },
+                    color = Color(0xFF94A3B8),
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Medium
+                )
+            }
 
             Spacer(modifier = Modifier.height(28.dp))
 
@@ -850,21 +886,41 @@ fun FocusCompletionOverlay(
                                 shape = MatrixShapes.Sm,
                                 color = MatrixColors.Primary.copy(alpha = 0.15f)
                             ) {
-                                Text(
-                                    text = if (completedState.mode == "timer") "⏱️ Timer Mode" else "⏲️ Stopwatch",
-                                    color = MatrixColors.Primary,
-                                    fontWeight = FontWeight.SemiBold,
-                                    fontSize = 12.sp,
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
                                     modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
-                                )
+                                ) {
+                                    Icon(
+                                        imageVector = AppIcons.Stopwatch,
+                                        contentDescription = null,
+                                        tint = MatrixColors.Primary,
+                                        modifier = Modifier.size(12.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Text(
+                                        text = if (completedState.mode == "timer") "Timer Mode" else "Stopwatch",
+                                        color = MatrixColors.Primary,
+                                        fontWeight = FontWeight.SemiBold,
+                                        fontSize = 12.sp
+                                    )
+                                }
                             }
 
-                            Text(
-                                text = "⏱️ ${completedState.formattedDuration}",
-                                color = MatrixColors.Secondary,
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 14.sp
-                            )
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(
+                                    imageVector = AppIcons.Stopwatch,
+                                    contentDescription = null,
+                                    tint = MatrixColors.Secondary,
+                                    modifier = Modifier.size(13.dp)
+                                )
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text(
+                                    text = completedState.formattedDuration,
+                                    color = MatrixColors.Secondary,
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 14.sp
+                                )
+                            }
                         }
                     }
                 }
@@ -1076,11 +1132,20 @@ fun FocusStatsDialog(
                                             fontSize = 13.sp,
                                             maxLines = 1
                                         )
-                                        Text(
-                                            text = if (session.mode == "timer") "⏱️ Timer" else "⏲️ Stopwatch",
-                                            color = MatrixColors.TextSecondary,
-                                            fontSize = 11.sp
-                                        )
+                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                            Icon(
+                                                imageVector = AppIcons.Stopwatch,
+                                                contentDescription = null,
+                                                tint = MatrixColors.TextSecondary,
+                                                modifier = Modifier.size(11.dp)
+                                            )
+                                            Spacer(modifier = Modifier.width(4.dp))
+                                            Text(
+                                                text = if (session.mode == "timer") "Timer" else "Stopwatch",
+                                                color = MatrixColors.TextSecondary,
+                                                fontSize = 11.sp
+                                            )
+                                        }
                                     }
 
                                     Text(
