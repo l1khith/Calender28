@@ -29,6 +29,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.l1khith.calender28.data.CoinTransactionEntity
 import com.l1khith.calender28.data.TransactionReason
+import com.l1khith.calender28.ui.theme.AppIcons
 import com.l1khith.calender28.ui.theme.MatrixColors
 import com.l1khith.calender28.ui.theme.MatrixShapes
 import com.l1khith.calender28.viewmodel.CoinUiEvent
@@ -64,13 +65,13 @@ fun CoinStoreScreen(
                 }
                 is CoinUiEvent.CoinsEarned -> {
                     snackbarHostState.showSnackbar(
-                        message = "🎉 ${event.message}",
+                        message = event.message,
                         duration = SnackbarDuration.Short
                     )
                 }
                 is CoinUiEvent.PremiumUnlocked -> {
                     snackbarHostState.showSnackbar(
-                        message = "✨ Congratulations! Pro is now active!",
+                        message = "Congratulations! Pro is now active!",
                         duration = SnackbarDuration.Long
                     )
                 }
@@ -84,8 +85,15 @@ fun CoinStoreScreen(
             TopAppBar(
                 title = {
                     Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            imageVector = AppIcons.Coin,
+                            contentDescription = null,
+                            tint = Color.Unspecified,
+                            modifier = Modifier.size(24.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
                         Text(
-                            text = "🪙 CalCoin Store",
+                            text = "CalCoin Store",
                             fontWeight = FontWeight.Bold,
                             color = MatrixColors.TextHeader,
                             fontSize = 20.sp
@@ -154,13 +162,24 @@ fun CoinStoreScreen(
 
             // 5. Transaction Ledger Header
             item {
-                Text(
-                    text = "📜 Transaction Ledger",
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 18.sp,
-                    color = MatrixColors.TextHeader,
-                    modifier = Modifier.padding(top = 8.dp)
-                )
+                Row(
+                    modifier = Modifier.padding(top = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.ReceiptLong,
+                        contentDescription = null,
+                        tint = MatrixColors.TextSecondary,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(
+                        text = "Transaction Ledger",
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 18.sp,
+                        color = MatrixColors.TextHeader
+                    )
+                }
             }
 
             // 6. Transactions List
@@ -209,11 +228,13 @@ private fun BalanceCard(balance: Int) {
                 )
                 Spacer(modifier = Modifier.height(6.dp))
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(
-                        text = "🪙",
-                        fontSize = 32.sp
+                    Icon(
+                        imageVector = AppIcons.Coin,
+                        contentDescription = null,
+                        tint = Color.Unspecified,
+                        modifier = Modifier.size(38.dp)
                     )
-                    Spacer(modifier = Modifier.width(8.dp))
+                    Spacer(modifier = Modifier.width(10.dp))
                     Text(
                         text = "$balance",
                         fontSize = 36.sp,
@@ -266,7 +287,7 @@ private fun PremiumUnlockCard(
                 )
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(
-                    text = "✨ Unlock Pro Lifetime",
+                    text = "Unlock Pro",
                     fontWeight = FontWeight.Bold,
                     fontSize = 18.sp,
                     color = MatrixColors.TextHeader
@@ -331,10 +352,22 @@ private fun PremiumUnlockCard(
                         )
                         Spacer(modifier = Modifier.width(8.dp))
                     }
-                    Text(
-                        text = if (coinBalance >= 1500) "🪙 Redeem for 1,500 CalCoins" else "🪙 Need 1,500 Coins ($coinBalance / 1,500)",
-                        fontWeight = FontWeight.Bold
-                    )
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Center
+                    ) {
+                        Icon(
+                            imageVector = if (coinBalance >= 1500) Icons.Default.MonetizationOn else Icons.Default.Lock,
+                            contentDescription = null,
+                            tint = Color.Black,
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(
+                            text = if (coinBalance >= 1500) "Redeem for 1,500 CalCoins" else "Need 1,500 Coins ($coinBalance / 1,500)",
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
                 }
 
                 Spacer(modifier = Modifier.height(8.dp))
@@ -348,10 +381,7 @@ private fun PremiumUnlockCard(
                         contentColor = MatrixColors.TextHeader
                     )
                 ) {
-                    Text(
-                        text = "Or Subscribe via Google Play",
-                        fontSize = 13.sp
-                    )
+                    Text("Or Try Testing Track Free")
                 }
             }
         }
@@ -390,12 +420,21 @@ private fun PromoCodeCard(
         colors = CardDefaults.cardColors(containerColor = MatrixColors.SurfaceContainer)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
-            Text(
-                text = "🎁 Redeem Promo Code",
-                fontWeight = FontWeight.Bold,
-                fontSize = 16.sp,
-                color = MatrixColors.TextHeader
-            )
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    imageVector = Icons.Default.CardGiftcard,
+                    contentDescription = null,
+                    tint = MatrixColors.Primary,
+                    modifier = Modifier.size(18.dp)
+                )
+                Spacer(modifier = Modifier.width(6.dp))
+                Text(
+                    text = "Redeem Promo Code",
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 16.sp,
+                    color = MatrixColors.TextHeader
+                )
+            }
             Spacer(modifier = Modifier.height(10.dp))
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -446,20 +485,29 @@ private fun HowToEarnCard() {
         colors = CardDefaults.cardColors(containerColor = MatrixColors.SurfaceContainerLow)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
-            Text(
-                text = "💡 How to Earn CalCoins",
-                fontWeight = FontWeight.Bold,
-                fontSize = 15.sp,
-                color = MatrixColors.TextHeader
-            )
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    imageVector = Icons.Default.Info,
+                    contentDescription = null,
+                    tint = MatrixColors.Primary,
+                    modifier = Modifier.size(18.dp)
+                )
+                Spacer(modifier = Modifier.width(6.dp))
+                Text(
+                    text = "How to Earn CalCoins",
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 15.sp,
+                    color = MatrixColors.TextHeader
+                )
+            }
             Spacer(modifier = Modifier.height(10.dp))
-            EarnRuleRow("☀️ Daily App Open", "+1 coin")
-            EarnRuleRow("📅 Log Day in Habit", "+1 coin")
-            EarnRuleRow("✅ Complete Any Task", "+1 coin")
-            EarnRuleRow("🔁 Check Recurring Task", "+2 coins")
-            EarnRuleRow("🎯 Focus Session Complete", "+5 coins")
-            EarnRuleRow("🏆 Complete Habit Cycle", "+10 coins")
-            EarnRuleRow("🎯 10 / 50 / 100 Cycles Milestone", "+100 / +500 / +1000 coins")
+            EarnRuleRow("Daily App Open", "+1 coin")
+            EarnRuleRow("Log Day in Habit", "+1 coin")
+            EarnRuleRow("Complete Any Task", "+1 coin")
+            EarnRuleRow("Check Recurring Task", "+2 coins")
+            EarnRuleRow("Focus Session Complete", "+5 coins")
+            EarnRuleRow("Complete Habit Cycle", "+10 coins")
+            EarnRuleRow("10 / 50 / 100 Cycles Milestone", "+100 / +500 / +1000 coins")
         }
     }
 }

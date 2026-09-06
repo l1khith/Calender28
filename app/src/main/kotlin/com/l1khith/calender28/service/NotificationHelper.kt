@@ -173,7 +173,7 @@ class NotificationHelper(private val context: Context) {
 
         val builder = NotificationCompat.Builder(context, CHANNEL_HABIT_REMINDERS)
             .setSmallIcon(android.R.drawable.btn_star_big_on)
-            .setContentTitle("⭐ ${habit.name}")
+            .setContentTitle(habit.name)
             .setContentText("Time to build your streak! (${habit.completedCount}/28 Days)")
             .setPriority(NotificationCompat.PRIORITY_DEFAULT)
             .setAutoCancel(true)

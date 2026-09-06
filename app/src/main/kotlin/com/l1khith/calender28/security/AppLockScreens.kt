@@ -308,8 +308,15 @@ fun SecurityLockDialog(
                         modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
+                        Icon(
+                            imageVector = if (isAppLockEnabled) Icons.Default.Shield else Icons.Default.WarningAmber,
+                            contentDescription = null,
+                            tint = if (isAppLockEnabled) Color(0xFF10B981) else Color(0xFFF59E0B),
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
                         Text(
-                            text = if (isAppLockEnabled) "🛡️ Status: Protected" else "⚠️ Status: Not Protected",
+                            text = if (isAppLockEnabled) "Status: Protected" else "Status: Not Protected",
                             color = if (isAppLockEnabled) Color(0xFF10B981) else MatrixColors.TextSecondary,
                             fontWeight = FontWeight.SemiBold,
                             fontSize = 12.sp
@@ -330,12 +337,21 @@ fun SecurityLockDialog(
                         shape = MatrixShapes.Md,
                         border = BorderStroke(1.dp, MatrixColors.Primary)
                     ) {
-                        Text(
-                            text = "🔒 Lock & Test Now",
-                            color = MatrixColors.Primary,
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 13.sp
-                        )
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                imageVector = Icons.Default.Lock,
+                                contentDescription = null,
+                                tint = MatrixColors.Primary,
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(
+                                text = "Lock & Test Now",
+                                color = MatrixColors.Primary,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 13.sp
+                            )
+                        }
                     }
                 }
 

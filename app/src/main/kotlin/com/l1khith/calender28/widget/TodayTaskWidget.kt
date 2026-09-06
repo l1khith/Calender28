@@ -103,7 +103,7 @@ class TodayTaskWidget : GlanceAppWidget() {
         provideContent {
             GlanceWidgetContent(
                 context = context,
-                dateTitle = if (today.isYearDay) "Sol Day 🌴" else if (today.isLeapDay) "Leap Day 🌟" else "${monthName.take(3)} ${today.day}",
+                dateTitle = if (today.isYearDay) "Sol Day" else if (today.isLeapDay) "Leap Day" else "${monthName.take(3)} ${today.day}",
                 subtitleText = "$dayOfWeek • Month ${today.month}",
                 cycleInfo = if (today.isYearDay) "Sol Leave Day" else "Day ${today.day} of 28",
                 completedCount = completedCount,

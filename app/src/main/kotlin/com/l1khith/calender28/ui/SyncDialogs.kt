@@ -8,7 +8,10 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.FileDownload
+import androidx.compose.material.icons.filled.FolderOpen
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Save
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -220,12 +223,21 @@ fun IcsImportDialog(
                         contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp),
                         modifier = Modifier.height(32.dp)
                     ) {
-                        Text(
-                            text = "📁 Pick File",
-                            color = primaryAccent,
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 12.sp
-                        )
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                imageVector = Icons.Default.FolderOpen,
+                                contentDescription = null,
+                                tint = primaryAccent,
+                                modifier = Modifier.size(14.dp)
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(
+                                text = "Pick File",
+                                color = primaryAccent,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 12.sp
+                            )
+                        }
                     }
                 }
 
@@ -287,7 +299,14 @@ fun ExportTasksDialog(
         onDismissRequest = onDismiss,
         title = {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text("📁 Export Matrix Tasks", color = MatrixColors.TextHeader, fontWeight = FontWeight.Bold, fontSize = 18.sp)
+                Icon(
+                    imageVector = Icons.Default.FileDownload,
+                    contentDescription = null,
+                    tint = MatrixColors.Primary,
+                    modifier = Modifier.size(20.dp)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text("Export Matrix Tasks", color = MatrixColors.TextHeader, fontWeight = FontWeight.Bold, fontSize = 18.sp)
             }
         },
         text = {
@@ -360,12 +379,23 @@ fun ExportTasksDialog(
                     color = MatrixColors.SurfaceContainer,
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Text(
-                        text = "💾 Saved to: Downloads/Calender28/",
-                        color = MatrixColors.TextSecondary,
-                        fontSize = 11.sp,
-                        modifier = Modifier.padding(8.dp)
-                    )
+                    Row(
+                        modifier = Modifier.padding(8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Save,
+                            contentDescription = null,
+                            tint = MatrixColors.TextSecondary,
+                            modifier = Modifier.size(14.dp)
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(
+                            text = "Saved to: Downloads/Calender28/",
+                            color = MatrixColors.TextSecondary,
+                            fontSize = 11.sp
+                        )
+                    }
                 }
             }
         },

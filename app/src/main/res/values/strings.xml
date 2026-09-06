@@ -20,7 +20,7 @@
     <string name="coin_store_title">CalCoin Store &amp; Rewards</string>
     <string name="coin_balance_label">Your Balance</string>
     <string name="coin_balance_format">%1$d CalCoins</string>
-    <string name="unlock_pro_title">✨ Unlock Pro Lifetime</string>
+    <string name="unlock_pro_title">✨ Unlock Pro</string>
     <string name="redeem_pro_format">🪙 Redeem for %1$d CalCoins</string>
     <string name="need_more_coins_format">🪙 Need %1$d Coins (%2$d / %3$d)</string>
     <string name="pro_active_status">Pro is Active on this Device</string>
@@ -46,7 +46,7 @@
     <string name="perk_all_themes">All 5 Dark Theme Palettes</string>
     <string name="perk_full_export">Full ICS, CSV &amp; JSON Data Export</string>
     <string name="perk_biometric_lock">Biometric &amp; Device App Lock</string>
-    <string name="purchase_lifetime">Unlock Lifetime Access</string>
+    <string name="purchase_lifetime">Unlock Pro Access</string>
     <string name="restore_purchases">Restore Purchases</string>
 
     <!-- Dialogs & Actions -->

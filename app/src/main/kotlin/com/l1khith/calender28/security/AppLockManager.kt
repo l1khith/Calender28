@@ -210,7 +210,7 @@ object AppLockManager {
                     launch(Dispatchers.Main) {
                         PlatformUtils.showToast(
                             activity,
-                            if (enable) "🛡️ App Lock Enabled" else "App Lock Disabled"
+                            if (enable) "App Lock Enabled" else "App Lock Disabled"
                         )
                         onComplete(true)
                     }

@@ -102,7 +102,7 @@ object FocusNotificationHelper {
             )
             .addAction(
                 android.R.drawable.ic_menu_close_clear_cancel,
-                "⏹️ Stop",
+                "Stop",
                 stopActionPending
             )
             .build()
@@ -124,7 +124,7 @@ object FocusNotificationHelper {
 
         val notification = NotificationCompat.Builder(context, CHANNEL_FOCUS)
             .setSmallIcon(android.R.drawable.btn_star_big_on)
-            .setContentTitle("🎉 Focus Session Completed!")
+            .setContentTitle("Focus Session Completed!")
             .setContentText("You focused on '$taskTitle' for $durationFormatted.")
             .setContentIntent(openAppPending)
             .setAutoCancel(true)

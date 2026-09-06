@@ -14,9 +14,12 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.EmojiEvents
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.Whatshot
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -238,12 +241,21 @@ fun HabitSection(
                                     }
                                 }
                                 Spacer(modifier = Modifier.height(4.dp))
-                                Text(
-                                    text = "🔥 ${habit.streak} Day Streak • ${habit.progressPercent}% Complete (${habit.completedCount}/28 Days)",
-                                    color = MatrixColors.Secondary,
-                                    fontSize = 13.sp,
-                                    fontWeight = FontWeight.Medium
-                                )
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(
+                                        imageVector = AppIcons.Fire,
+                                        contentDescription = "Streak",
+                                        tint = Color.Unspecified,
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Text(
+                                        text = "${habit.streak} Day Streak • ${habit.progressPercent}% Complete (${habit.completedCount}/28 Days)",
+                                        color = MatrixColors.Secondary,
+                                        fontSize = 13.sp,
+                                        fontWeight = FontWeight.Medium
+                                    )
+                                }
                             }
                             Icon(
                                 imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
@@ -292,12 +304,21 @@ fun HabitSection(
                                                 .clickable(enabled = !isFuture) { toggleDay(habit, dayNum) },
                                             contentAlignment = Alignment.Center
                                         ) {
-                                            Text(
-                                                text = if (isDone) "✓" else "$dayNum",
-                                                color = if (isDone) Color.White else if (isFuture) MatrixColors.TextSecondary.copy(alpha = 0.3f) else MatrixColors.TextHeader,
-                                                fontSize = 11.sp,
-                                                fontWeight = if (isToday || isDone) FontWeight.Bold else FontWeight.Normal
-                                            )
+                                            if (isDone) {
+                                                Icon(
+                                                    imageVector = Icons.Default.Check,
+                                                    contentDescription = "Completed",
+                                                    tint = Color.White,
+                                                    modifier = Modifier.size(14.dp)
+                                                )
+                                            } else {
+                                                Text(
+                                                    text = "$dayNum",
+                                                    color = if (isFuture) MatrixColors.TextSecondary.copy(alpha = 0.3f) else MatrixColors.TextHeader,
+                                                    fontSize = 11.sp,
+                                                    fontWeight = if (isToday) FontWeight.Bold else FontWeight.Normal
+                                                )
+                                            }
                                         }
                                     }
                                 }
@@ -728,7 +749,12 @@ fun HabitDetailScreen(
                     ) {
                         Column(modifier = Modifier.padding(14.dp)) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
-                                Text("🔥", fontSize = 12.sp)
+                                Icon(
+                                    imageVector = AppIcons.Fire,
+                                    contentDescription = null,
+                                    tint = Color.Unspecified,
+                                    modifier = Modifier.size(15.dp)
+                                )
                                 Spacer(modifier = Modifier.width(4.dp))
                                 Text("CURRENT STREAK", color = MatrixColors.TextSecondary, fontSize = 10.sp, fontWeight = FontWeight.Bold)
                             }
@@ -745,7 +771,12 @@ fun HabitDetailScreen(
                     ) {
                         Column(modifier = Modifier.padding(14.dp)) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
-                                Text("✓", color = Color(0xFF10B981), fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                                Icon(
+                                    imageVector = Icons.Default.Check,
+                                    contentDescription = null,
+                                    tint = Color(0xFF10B981),
+                                    modifier = Modifier.size(14.dp)
+                                )
                                 Spacer(modifier = Modifier.width(4.dp))
                                 Text("CONSISTENCY", color = MatrixColors.TextSecondary, fontSize = 10.sp, fontWeight = FontWeight.Bold)
                             }
@@ -766,7 +797,12 @@ fun HabitDetailScreen(
                 ) {
                     Column(modifier = Modifier.padding(14.dp)) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text("🏆", fontSize = 12.sp)
+                            Icon(
+                                imageVector = Icons.Default.EmojiEvents,
+                                contentDescription = null,
+                                tint = MatrixColors.Secondary,
+                                modifier = Modifier.size(14.dp)
+                            )
                             Spacer(modifier = Modifier.width(6.dp))
                             Text("LONGEST STREAK", color = MatrixColors.TextSecondary, fontSize = 10.sp, fontWeight = FontWeight.Bold)
                         }
@@ -848,12 +884,21 @@ fun HabitDetailScreen(
                                                     ),
                                                 contentAlignment = Alignment.Center
                                             ) {
-                                                Text(
-                                                    text = if (isDone) "✓" else "$dayIndex",
-                                                    color = if (isDone) Color.White else if (isFuture) MatrixColors.TextSecondary.copy(alpha = 0.35f) else MatrixColors.TextHeader,
-                                                    fontSize = 10.sp,
-                                                    fontWeight = if (isToday || isDone) FontWeight.Bold else FontWeight.Normal
-                                                )
+                                                if (isDone) {
+                                                    Icon(
+                                                        imageVector = Icons.Default.Check,
+                                                        contentDescription = "Completed",
+                                                        tint = Color.White,
+                                                        modifier = Modifier.size(13.dp)
+                                                    )
+                                                } else {
+                                                    Text(
+                                                        text = "$dayIndex",
+                                                        color = if (isFuture) MatrixColors.TextSecondary.copy(alpha = 0.35f) else MatrixColors.TextHeader,
+                                                        fontSize = 10.sp,
+                                                        fontWeight = if (isToday) FontWeight.Bold else FontWeight.Normal
+                                                    )
+                                                }
                                             }
                                         }
                                     }

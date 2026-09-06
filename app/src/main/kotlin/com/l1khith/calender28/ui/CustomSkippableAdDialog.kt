@@ -126,11 +126,11 @@ fun CustomSkippableAdDialog(
                                 .background(Color(0xFF1E293B)),
                             contentAlignment = Alignment.Center
                         ) {
-                            Text(
-                                text = "ℹ",
-                                color = Color(0xFF94A3B8),
-                                fontSize = 12.sp,
-                                fontWeight = FontWeight.Bold
+                            Icon(
+                                imageVector = Icons.Default.Info,
+                                contentDescription = "Ad Info",
+                                tint = Color(0xFF94A3B8),
+                                modifier = Modifier.size(14.dp)
                             )
                         }
                     }
@@ -212,8 +212,8 @@ fun CustomSkippableAdDialog(
                                 )
                                 InterstitialFeatureRow(
                                     icon = Icons.Default.Stars,
-                                    title = "Matrix 28 Pro Lifetime",
-                                    desc = "100% Ad-free experience forever."
+                                    title = "Matrix 28 Pro",
+                                    desc = "100% Ad-free experience."
                                 )
                             }
 
@@ -282,8 +282,15 @@ fun CustomSkippableAdDialog(
                                     overflow = TextOverflow.Ellipsis
                                 )
                                 Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(
+                                        imageVector = Icons.Default.Star,
+                                        contentDescription = "Rating",
+                                        tint = Color(0xFFF59E0B),
+                                        modifier = Modifier.size(13.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(3.dp))
                                     Text(
-                                        text = "★ 4.9",
+                                        text = "4.9",
                                         color = Color(0xFFF59E0B),
                                         fontSize = 12.sp,
                                         fontWeight = FontWeight.Bold
