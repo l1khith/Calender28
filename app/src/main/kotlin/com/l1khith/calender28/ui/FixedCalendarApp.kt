@@ -1,6 +1,7 @@
 package com.l1khith.calender28.ui
 
 import androidx.compose.animation.*
+import androidx.compose.animation.core.*
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -26,6 +27,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.StrokeJoin
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.vector.PathParser
 import androidx.compose.ui.text.font.FontWeight
@@ -39,6 +41,7 @@ import com.l1khith.calender28.data.AppTask
 import com.l1khith.calender28.utils.FixedCalendarHelper
 import com.l1khith.calender28.utils.FixedDate
 import com.l1khith.calender28.utils.PlatformTimePicker
+import com.l1khith.calender28.utils.SoundEffectHelper
 import com.l1khith.calender28.utils.currentTimeMillis
 import com.l1khith.calender28.viewmodel.FixedCalendarViewModel
 import com.l1khith.calender28.utils.rememberCalendarPermissionLauncher
@@ -77,7 +80,10 @@ fun FixedCalendarApp(
 
     LaunchedEffect(Unit) {
         com.l1khith.calender28.billing.SubscriptionManager.initDataStore(context, coroutineScope)
-        com.l1khith.calender28.ads.InterstitialAdManager.loadAd(context)
+        kotlinx.coroutines.delay(600)
+        if (!com.l1khith.calender28.billing.SubscriptionManager.isProActive.value) {
+            com.l1khith.calender28.ads.InterstitialAdManager.loadAd(context)
+        }
     }
 
     val selectedDate by viewModel.selectedDate.collectAsStateWithLifecycle()
@@ -106,6 +112,8 @@ fun FixedCalendarApp(
 
     val isProActive by com.l1khith.calender28.billing.SubscriptionManager.isProActive.collectAsStateWithLifecycle()
     val coinBalance by coinViewModel.coinBalance.collectAsStateWithLifecycle()
+    val overallStreak by viewModel.overallStreak.collectAsStateWithLifecycle()
+    var showStreakInfoDialog by remember { mutableStateOf(false) }
 
     com.l1khith.calender28.utils.PlatformBackHandler(enabled = true) {
         if (isProActive) {
@@ -333,19 +341,104 @@ fun FixedCalendarApp(
                             ).build()
                         }
 
+                        // Flame wiggle / flicker animation
+                        val flameTransition = rememberInfiniteTransition(label = "flame_wiggle")
+                        val flameRotation by flameTransition.animateFloat(
+                            initialValue = -8f,
+                            targetValue = 8f,
+                            animationSpec = infiniteRepeatable(
+                                animation = tween(durationMillis = 180, easing = LinearEasing),
+                                repeatMode = RepeatMode.Reverse
+                            ),
+                            label = "flame_rot"
+                        )
+                        val flameScale by flameTransition.animateFloat(
+                            initialValue = 0.92f,
+                            targetValue = 1.12f,
+                            animationSpec = infiniteRepeatable(
+                                animation = tween(durationMillis = 240, easing = FastOutSlowInEasing),
+                                repeatMode = RepeatMode.Reverse
+                            ),
+                            label = "flame_scale"
+                        )
+
+                        // Overall Streak Chip (to the left of Coins)
+                        Surface(
+                            shape = RoundedCornerShape(20.dp),
+                            color = MatrixColors.SurfaceContainerHigh,
+                            border = BorderStroke(1.dp, Color(0xFFF97316).copy(alpha = 0.5f)),
+                            modifier = Modifier
+                                .padding(end = 6.dp)
+                                .clickable {
+                                    SoundEffectHelper.playFireSound(context)
+                                    showStreakInfoDialog = true
+                                }
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
+                            ) {
+                                Icon(
+                                    imageVector = AppIcons.Fire,
+                                    contentDescription = "Streak",
+                                    tint = Color.Unspecified,
+                                    modifier = Modifier
+                                        .size(16.dp)
+                                        .graphicsLayer(
+                                            rotationZ = flameRotation,
+                                            scaleX = flameScale,
+                                            scaleY = flameScale
+                                        )
+                                )
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text(
+                                    text = "$overallStreak",
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 13.sp,
+                                    color = MatrixColors.TextHeader
+                                )
+                            }
+                        }
+
+                        // Coin 3D Y-axis flip animation
+                        val coinFlipTransition = rememberInfiniteTransition(label = "coin_flip")
+                        val coinRotationY by coinFlipTransition.animateFloat(
+                            initialValue = 0f,
+                            targetValue = 360f,
+                            animationSpec = infiniteRepeatable(
+                                animation = tween(durationMillis = 1800, easing = LinearEasing),
+                                repeatMode = RepeatMode.Restart
+                            ),
+                            label = "coin_rot_y"
+                        )
+
+                        // CalCoins Chip
                         Surface(
                             shape = RoundedCornerShape(20.dp),
                             color = MatrixColors.SurfaceContainerHigh,
                             border = BorderStroke(1.dp, MatrixColors.Primary.copy(alpha = 0.5f)),
                             modifier = Modifier
                                 .padding(end = 8.dp)
-                                .clickable { showCoinStoreDialog = true }
+                                .clickable {
+                                    SoundEffectHelper.playCoinSound(context)
+                                    showCoinStoreDialog = true
+                                }
                         ) {
                             Row(
                                 verticalAlignment = Alignment.CenterVertically,
                                 modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
                             ) {
-                                Text(text = "🪙", fontSize = 13.sp)
+                                Icon(
+                                    imageVector = AppIcons.Coin,
+                                    contentDescription = "Coins",
+                                    tint = Color.Unspecified,
+                                    modifier = Modifier
+                                        .size(16.dp)
+                                        .graphicsLayer(
+                                            rotationY = coinRotationY,
+                                            cameraDistance = 12f * androidx.compose.ui.platform.LocalDensity.current.density
+                                        )
+                                )
                                 Spacer(modifier = Modifier.width(4.dp))
                                 Text(
                                     text = "$coinBalance",
@@ -380,9 +473,13 @@ fun FixedCalendarApp(
                     )
                 )
 
-                HorizontalDivider(
-                    color = Color(0xFF424754),
-                    thickness = 1.dp
+                AnimatedSparkDivider(
+                    baseColor = Color(0xFF424754),
+                    sparkColor = MatrixColors.Primary,
+                    glowColor = MatrixColors.Secondary,
+                    height = 1.dp,
+                    reverseDirection = true,
+                    durationMillis = 4000
                 )
             }
 
@@ -408,7 +505,14 @@ fun FixedCalendarApp(
                 if (!isProActive) {
                     BannerAd(modifier = Modifier.fillMaxWidth())
                 }
-                HorizontalDivider(color = MatrixColors.OutlineVariant, thickness = 1.dp)
+                AnimatedSparkDivider(
+                    baseColor = MatrixColors.OutlineVariant,
+                    sparkColor = MatrixColors.Primary,
+                    glowColor = MatrixColors.Secondary,
+                    height = 1.dp,
+                    reverseDirection = false,
+                    durationMillis = 4000
+                )
                 NavigationBar(
                     containerColor = MatrixColors.Surface,
                     contentColor = MatrixColors.OnSurface,
@@ -784,6 +888,69 @@ fun FixedCalendarApp(
         }
     }
 
+    if (showStreakInfoDialog) {
+        AlertDialog(
+            onDismissRequest = { showStreakInfoDialog = false },
+            icon = {
+                Icon(
+                    imageVector = AppIcons.Fire,
+                    contentDescription = null,
+                    tint = Color.Unspecified,
+                    modifier = Modifier.size(36.dp)
+                )
+            },
+            title = {
+                Text(
+                    text = "$overallStreak Day Streak",
+                    fontWeight = FontWeight.Bold,
+                    color = MatrixColors.TextHeader,
+                    textAlign = TextAlign.Center
+                )
+            },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(
+                        text = "Build your streak by completing at least one recurring task or habit each day!",
+                        color = MatrixColors.TextSecondary,
+                        fontSize = 14.sp
+                    )
+                    Surface(
+                        shape = MatrixShapes.Md,
+                        color = MatrixColors.SurfaceContainerHigh,
+                        border = BorderStroke(1.dp, MatrixColors.Secondary.copy(alpha = 0.4f)),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(10.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                imageVector = AppIcons.Coin,
+                                contentDescription = null,
+                                tint = Color.Unspecified,
+                                modifier = Modifier.size(20.dp)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = "Reach a 1,000-day streak to unlock a massive reward of +1,000 CalCoins!",
+                                color = MatrixColors.TextHeader,
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showStreakInfoDialog = false }) {
+                    Text("Got it!", color = MatrixColors.Primary, fontWeight = FontWeight.Bold)
+                }
+            },
+            containerColor = MatrixColors.SurfaceContainer,
+            shape = MatrixShapes.Lg
+        )
+    }
+
     if (showPaywallDialog) {
         SubscriptionPaywallDialog(
             onDismiss = { showPaywallDialog = false }
@@ -1150,7 +1317,7 @@ fun SpecialDayCard(
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
-                    text = "🌟 $label",
+                    text = label,
                     color = if (isSelected) Color.White else textColor,
                     fontWeight = FontWeight.Bold,
                     fontSize = 13.sp
@@ -1161,7 +1328,7 @@ fun SpecialDayCard(
                     color = if (isSelected) Color.White.copy(alpha = 0.2f) else Color(0xFF1E293B)
                 ) {
                     Text(
-                        text = "🌴 LEAVE DAY",
+                        text = "LEAVE DAY",
                         color = if (isSelected) Color.White else Color(0xFF60A5FA),
                         fontWeight = FontWeight.Bold,
                         fontSize = 10.sp,
@@ -1616,7 +1783,7 @@ fun ReminderItem(
                 if (task.hasEverFocused) {
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
-                        text = "⭐ Focused: ${task.formattedFocusDuration}",
+                        text = "Focused: ${task.formattedFocusDuration}",
                         color = MatrixColors.Primary,
                         fontSize = 11.sp,
                         fontWeight = FontWeight.Medium
@@ -1741,7 +1908,7 @@ fun TodoItem(
                                     modifier = Modifier.padding(end = 6.dp)
                                 ) {
                                     Text(
-                                        text = "🔄 Recurring",
+                                        text = "Recurring",
                                         color = MatrixColors.Tertiary,
                                         fontWeight = FontWeight.Bold,
                                         fontSize = 10.sp,
@@ -1769,7 +1936,7 @@ fun TodoItem(
                         if (task.hasEverFocused) {
                             Spacer(modifier = Modifier.height(3.dp))
                             Text(
-                                text = "⭐ Focused: ${task.formattedFocusDuration}",
+                                text = "Focused: ${task.formattedFocusDuration}",
                                 color = MatrixColors.Primary,
                                 fontSize = 11.sp,
                                 fontWeight = FontWeight.Medium
@@ -1853,6 +2020,93 @@ fun EmptyState(textColor: Color) {
                 color = textColor.copy(alpha = 0.7f),
                 fontSize = 12.sp
             )
+        }
+    }
+}
+
+/**
+ * A divider line with an animated electric/neon spark traveling continuously across it.
+ * [reverseDirection] controls whether the spark travels left-to-right or right-to-left.
+ * [durationMillis] controls the travel speed (larger = slower).
+ */
+@Composable
+fun AnimatedSparkDivider(
+    modifier: Modifier = Modifier,
+    baseColor: Color = Color(0xFF424754),
+    sparkColor: Color = MatrixColors.Primary,
+    glowColor: Color = MatrixColors.Secondary,
+    height: androidx.compose.ui.unit.Dp = 1.dp,
+    reverseDirection: Boolean = false,
+    durationMillis: Int = 4200
+) {
+    val transition = rememberInfiniteTransition(label = "spark_divider_transition_${if (reverseDirection) "rev" else "fwd"}")
+    val initial = if (reverseDirection) 1.15f else -0.15f
+    val target = if (reverseDirection) -0.15f else 1.15f
+
+    val progress by transition.animateFloat(
+        initialValue = initial,
+        targetValue = target,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = durationMillis, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "spark_progress"
+    )
+
+    androidx.compose.foundation.Canvas(
+        modifier = modifier
+            .fillMaxWidth()
+            .height(height)
+    ) {
+        val width = size.width
+        val y = size.height / 2f
+
+        // 1. Base subtle divider track
+        drawLine(
+            color = baseColor,
+            start = androidx.compose.ui.geometry.Offset(0f, y),
+            end = androidx.compose.ui.geometry.Offset(width, y),
+            strokeWidth = size.height
+        )
+
+        // 2. Animated travelling spark head & tail beam (smaller size: 12% width)
+        val sparkCenterX = progress * width
+        val sparkLength = width * 0.12f
+
+        val startX = (sparkCenterX - sparkLength / 2f).coerceAtLeast(0f)
+        val endX = (sparkCenterX + sparkLength / 2f).coerceAtMost(width)
+
+        if (endX > startX) {
+            val sparkBrush = androidx.compose.ui.graphics.Brush.horizontalGradient(
+                colors = listOf(
+                    Color.Transparent,
+                    glowColor.copy(alpha = 0.4f),
+                    sparkColor,
+                    Color.White,
+                    sparkColor,
+                    glowColor.copy(alpha = 0.4f),
+                    Color.Transparent
+                ),
+                startX = sparkCenterX - sparkLength / 2f,
+                endX = sparkCenterX + sparkLength / 2f
+            )
+
+            // Outer glow line
+            drawLine(
+                brush = sparkBrush,
+                start = androidx.compose.ui.geometry.Offset(startX, y),
+                end = androidx.compose.ui.geometry.Offset(endX, y),
+                strokeWidth = size.height * 2f
+            )
+
+            // Bright inner core point
+            if (sparkCenterX in 0f..width) {
+                drawCircle(
+                    color = Color.White,
+                    radius = size.height * 1.2f,
+                    center = androidx.compose.ui.geometry.Offset(sparkCenterX, y)
+                )
+            }
         }
     }
 }

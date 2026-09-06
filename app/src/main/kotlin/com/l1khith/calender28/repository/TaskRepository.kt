@@ -29,6 +29,8 @@ interface TaskRepository {
         priority: Int
     ): AppTask
 
+    suspend fun importSystemCalendarTasks(tasks: List<AppTask>)
+
     suspend fun updateTask(task: AppTask)
     suspend fun deleteTask(taskId: String, recurringParentId: String?)
     suspend fun toggleTaskCompletion(task: AppTask): AppTask

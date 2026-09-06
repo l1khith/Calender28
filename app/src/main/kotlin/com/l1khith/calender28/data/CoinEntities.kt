@@ -29,6 +29,7 @@ enum class TransactionReason(val displayName: String, val defaultAmount: Int) {
     STREAK_7_DAY("7-Day Streak Bonus", com.l1khith.calender28.utils.Constants.REWARD_STREAK_7_DAY),
     STREAK_14_DAY("14-Day Streak Bonus", com.l1khith.calender28.utils.Constants.REWARD_STREAK_14_DAY),
     STREAK_30_DAY("30-Day Streak Bonus", com.l1khith.calender28.utils.Constants.REWARD_STREAK_30_DAY),
+    STREAK_1000_DAY("1,000-Day Streak Milestone", com.l1khith.calender28.utils.Constants.REWARD_STREAK_1000_DAY),
     MILESTONE_10_CYCLES("10 Habit Cycles Milestone", com.l1khith.calender28.utils.Constants.REWARD_MILESTONE_10_CYCLES),
     MILESTONE_50_CYCLES("50 Habit Cycles Milestone", com.l1khith.calender28.utils.Constants.REWARD_MILESTONE_50_CYCLES),
     MILESTONE_100_CYCLES("100 Habit Cycles Milestone", com.l1khith.calender28.utils.Constants.REWARD_MILESTONE_100_CYCLES),

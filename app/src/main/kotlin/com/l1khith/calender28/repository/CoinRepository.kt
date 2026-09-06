@@ -20,6 +20,7 @@ interface CoinRepository {
     suspend fun rewardPartialHabitProgress(habitId: String, cycleIndex: Long, dayInCycle: Int, habitName: String): CoinRewardResult?
     suspend fun rewardTaskCompletion(taskId: String, dateStr: String, isRecurring: Boolean, taskTitle: String): CoinRewardResult?
     suspend fun rewardFocusSessionComplete(taskTitle: String, durationMinutes: Int): CoinRewardResult?
+    suspend fun rewardStreakMilestone(streakCount: Int): CoinRewardResult?
     suspend fun redeemPromoCode(code: String): Result<CoinRewardResult>
     suspend fun buyPremiumWithCoins(): Result<Unit>
     suspend fun addCustomCoins(amount: Int, reason: String, note: String? = null): CoinRewardResult

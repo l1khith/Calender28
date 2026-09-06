@@ -32,6 +32,7 @@ object Constants {
     const val REWARD_STREAK_7_DAY = 50
     const val REWARD_STREAK_14_DAY = 100
     const val REWARD_STREAK_30_DAY = 200
+    const val REWARD_STREAK_1000_DAY = 1000
 
     // Habit Cycle Milestones
     const val REWARD_MILESTONE_10_CYCLES = 100

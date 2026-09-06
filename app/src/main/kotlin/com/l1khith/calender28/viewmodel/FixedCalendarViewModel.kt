@@ -28,6 +28,8 @@ import com.l1khith.calender28.repository.CoinRepository
 import com.l1khith.calender28.repository.CoinRepositoryImpl
 import com.l1khith.calender28.repository.HabitRepository
 import com.l1khith.calender28.repository.TaskRepository
+import com.l1khith.calender28.utils.OverallStreakManager
+import kotlinx.coroutines.flow.combine
 
 private const val TAG = "FixedCalendarVM"
 
@@ -75,22 +77,21 @@ class FixedCalendarViewModel(
     val habits: StateFlow<List<Habit>> = habitRepository.getAllHabitsFlow()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
+    // Overall Streak state (tracks consecutive daily completion across recurring tasks & habits)
+    val overallStreak: StateFlow<Int> = combine(allTasks, habits) { tasks, habitList ->
+        val streak = OverallStreakManager.computeOverallStreak(tasks, habitList)
+        OverallStreakManager.saveCachedStreak(context, streak)
+        streak
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), OverallStreakManager.getCachedStreak(context))
+
     init {
         Log.d(TAG, "init: Initializing FixedCalendarViewModel with selected date ${_selectedDate.value}")
         val currentSelDate = _selectedDate.value
-        viewModelScope.launch(Dispatchers.Default) {
+        viewModelScope.launch(Dispatchers.IO) {
             taskRepository.catchUpRollover(currentSelDate)
             val systemEvents = CalendarSyncHelper.importSystemCalendarEvents(context)
-            for (task in systemEvents) {
-                taskRepository.saveTask(
-                    id = task.id,
-                    title = task.title,
-                    description = task.description,
-                    associatedDate = FixedCalendarHelper.parseDateStr(task.associatedDate) ?: currentSelDate,
-                    isReminder = task.reminder,
-                    reminderTime = task.reminderTime,
-                    priority = task.priority
-                )
+            if (systemEvents.isNotEmpty()) {
+                taskRepository.importSystemCalendarTasks(systemEvents)
             }
             coinRepository.rewardDailyLogin(FixedCalendarHelper.currentFixedDate().toString())
             loadState(currentSelDate)
@@ -200,6 +201,7 @@ class FixedCalendarViewModel(
                     isRecurring = isRecurring,
                     taskTitle = task.title
                 )
+                coinRepository.rewardStreakMilestone(overallStreak.value)
             }
             loadState(targetDate)
         }
@@ -290,6 +292,7 @@ class FixedCalendarViewModel(
                 if (progress >= 28) {
                     coinRepository.rewardHabitCycleComplete(habitId, cycleIndex, habitName)
                 }
+                coinRepository.rewardStreakMilestone(overallStreak.value)
             }
             loadState(targetDate)
         }
@@ -345,21 +348,17 @@ class FixedCalendarViewModel(
     fun importSystemCalendar() {
         Log.d(TAG, "importSystemCalendar: Importing system calendar events")
         val targetDate = _selectedDate.value
-        viewModelScope.launch(Dispatchers.Default) {
-            val events = CalendarSyncHelper.importSystemCalendarEvents(context)
-            Log.d(TAG, "importSystemCalendar: Found ${events.size} system calendar events")
-            for (task in events) {
-                taskRepository.saveTask(
-                    id = task.id,
-                    title = task.title,
-                    description = task.description,
-                    associatedDate = FixedCalendarHelper.parseDateStr(task.associatedDate) ?: targetDate,
-                    isReminder = task.reminder,
-                    reminderTime = task.reminderTime,
-                    priority = task.priority
-                )
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val events = CalendarSyncHelper.importSystemCalendarEvents(context)
+                Log.d(TAG, "importSystemCalendar: Found ${events.size} system calendar events")
+                if (events.isNotEmpty()) {
+                    taskRepository.importSystemCalendarTasks(events)
+                }
+                loadState(targetDate)
+            } catch (e: Exception) {
+                Log.e(TAG, "importSystemCalendar: Failed to import", e)
             }
-            loadState(targetDate)
         }
     }
 
@@ -412,15 +411,15 @@ class FixedCalendarViewModel(
 
                 withContext(Dispatchers.Main) {
                     if (uri != null) {
-                        onResult(true, fileName, "📁 Exported ${filteredTasks.size} tasks to Downloads/Calender28/$fileName")
+                        onResult(true, fileName, "Exported ${filteredTasks.size} tasks to Downloads/Calender28/$fileName")
                     } else {
-                        onResult(false, fileName, "❌ Failed to save file to Downloads folder")
+                        onResult(false, fileName, "Failed to save file to Downloads folder")
                     }
                 }
             } catch (e: Exception) {
                 Log.e(TAG, "Export failed", e)
                 withContext(Dispatchers.Main) {
-                    onResult(false, "", "❌ Export error: ${e.localizedMessage}")
+                    onResult(false, "", "Export error: ${e.localizedMessage}")
                 }
             }
         }

@@ -147,6 +147,13 @@ class TaskRepositoryImpl(private val context: Context) : TaskRepository {
         task
     }
 
+    override suspend fun importSystemCalendarTasks(tasks: List<AppTask>): Unit = withContext(Dispatchers.IO) {
+        if (tasks.isEmpty()) return@withContext
+        Log.d(TAG, "importSystemCalendarTasks: Batch inserting ${tasks.size} system calendar events")
+        val entities = tasks.map { it.toEntity() }
+        taskDao.insertTasks(entities)
+    }
+
     override suspend fun updateTask(task: AppTask): Unit = withContext(Dispatchers.IO) {
         Log.d(TAG, "updateTask: Updating taskId=${task.id}")
         taskDao.updateTask(task.toEntity())

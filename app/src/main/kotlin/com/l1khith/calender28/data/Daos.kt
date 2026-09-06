@@ -36,6 +36,9 @@ interface TaskDao {
     suspend fun insertTask(task: AppTaskEntity): Long
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertTasks(tasks: List<AppTaskEntity>): List<Long>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
     fun insertTaskSync(task: AppTaskEntity): Long
 
     @Update

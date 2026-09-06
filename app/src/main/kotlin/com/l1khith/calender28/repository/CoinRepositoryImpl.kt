@@ -60,9 +60,9 @@ class CoinRepositoryImpl(
         coinDao.insertTransaction(tx)
 
         val message = if (amount >= 0) {
-            "🪙 +$amount CalCoins: ${reason.displayName}"
+            "+$amount CalCoins: ${reason.displayName}"
         } else {
-            "🪙 $amount CalCoins: ${reason.displayName}"
+            "$amount CalCoins: ${reason.displayName}"
         }
 
         CoinRewardResult(
@@ -147,6 +147,20 @@ class CoinRepositoryImpl(
         )
     }
 
+    override suspend fun rewardStreakMilestone(streakCount: Int): CoinRewardResult? {
+        if (streakCount >= 1000) {
+            val noteKey = "streak_milestone_1000"
+            if (coinDao.countStreakRewardGiven(TransactionReason.STREAK_1000_DAY.name, noteKey) == 0) {
+                return executeTransaction(
+                    amount = TransactionReason.STREAK_1000_DAY.defaultAmount,
+                    reason = TransactionReason.STREAK_1000_DAY,
+                    note = noteKey
+                )
+            }
+        }
+        return null
+    }
+
     override suspend fun redeemPromoCode(code: String): Result<CoinRewardResult> {
         val cleanCode = code.trim().uppercase()
         if (cleanCode.isBlank()) {
@@ -179,22 +193,32 @@ class CoinRepositoryImpl(
             return Result.failure(IllegalStateException("Pro is already active on this device."))
         }
 
-        val currentBalance = getBalance()
         val requiredCoins = com.l1khith.calender28.utils.Constants.PREMIUM_UNLOCK_COIN_COST
-        if (currentBalance < requiredCoins) {
-            return Result.failure(IllegalStateException("Insufficient CalCoins. You need $requiredCoins CalCoins to unlock Premium."))
+
+        // Check balance AND deduct inside the same mutex lock to prevent race conditions
+        return mutex.withLock {
+            val currentBalance = coinDao.getCoinBalance()?.balance ?: 0
+            if (currentBalance < requiredCoins) {
+                return@withLock Result.failure(IllegalStateException("Insufficient CalCoins. You need $requiredCoins CalCoins to unlock Premium."))
+            }
+
+            val newBalance = (currentBalance - requiredCoins).coerceAtLeast(0)
+            coinDao.insertOrUpdateBalance(CoinBalanceEntity(id = 1, balance = newBalance))
+
+            val tx = CoinTransactionEntity(
+                id = java.util.UUID.randomUUID().toString(),
+                amount = -requiredCoins,
+                reason = TransactionReason.PREMIUM_PURCHASE.name,
+                timestamp = getCurrentIsoTimestamp(),
+                note = "Unlocked Premium with $requiredCoins CalCoins"
+            )
+            coinDao.insertTransaction(tx)
+
+            userPrefsRepo?.updateIsProUser(true)
+            SubscriptionManager.setProActive(true)
+
+            Result.success(Unit)
         }
-
-        executeTransaction(
-            amount = -requiredCoins,
-            reason = TransactionReason.PREMIUM_PURCHASE,
-            note = "Unlocked Premium with $requiredCoins CalCoins"
-        )
-
-        userPrefsRepo?.updateIsProUser(true)
-        SubscriptionManager.setProActive(true)
-
-        return Result.success(Unit)
     }
 
     override suspend fun rewardFocusSessionComplete(taskTitle: String, durationMinutes: Int): CoinRewardResult? {
