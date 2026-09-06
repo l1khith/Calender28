@@ -9,20 +9,16 @@ import androidx.activity.viewModels
 import androidx.compose.animation.togetherWith
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.fragment.app.FragmentActivity
-import androidx.lifecycle.lifecycleScope
-import com.google.android.gms.ads.MobileAds
 import com.l1khith.calender28.ui.FixedCalendarApp
 import com.l1khith.calender28.ui.theme.MatrixTheme
 import com.l1khith.calender28.viewmodel.FixedCalendarViewModel
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
 
 import com.l1khith.calender28.viewmodel.AppViewModelProvider
 
@@ -34,23 +30,13 @@ class MainActivity : FragmentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        lifecycleScope.launch(Dispatchers.IO) {
-            try {
-                MobileAds.initialize(applicationContext) { status ->
-                    Log.d("MainActivity", "AdMob initialized: ${status.adapterStatusMap}")
-                }
-            } catch (e: Exception) {
-                Log.e("MainActivity", "AdMob initialization error", e)
-            }
-        }
-
         enableEdgeToEdge()
 
         deepLinkIdState = intent?.getStringExtra("selected_task_id")
 
         setContent {
             val deepLinkId = rememberSaveable { mutableStateOf(deepLinkIdState) }
-            val isLocked by com.l1khith.calender28.security.AppLockManager.isLocked.collectAsState()
+            val isLocked by com.l1khith.calender28.security.AppLockManager.isLocked.collectAsStateWithLifecycle()
             var showSplash by rememberSaveable { mutableStateOf(deepLinkIdState == null) }
 
             MatrixTheme {

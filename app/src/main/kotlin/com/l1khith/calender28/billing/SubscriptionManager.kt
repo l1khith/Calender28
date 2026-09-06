@@ -18,6 +18,7 @@ import com.revenuecat.purchases.interfaces.UpdatedCustomerInfoListener
 import com.revenuecat.purchases.models.StoreTransaction
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -39,14 +40,17 @@ object SubscriptionManager {
     val offerings: StateFlow<Offerings?> = _offerings.asStateFlow()
 
     private var isConfigured = false
+    private var isDataStoreInitialized = false
     private var devTapCount = 0
     private var lastDevTapTime = 0L
 
     private fun getRepo(context: Context): UserPreferencesRepository {
-        return UserPreferencesRepository.getInstance(context)
+        return UserPreferencesRepository.getInstance(context.applicationContext)
     }
 
     fun initDataStore(context: Context, scope: CoroutineScope) {
+        if (isDataStoreInitialized) return
+        isDataStoreInitialized = true
         try {
             val repo = getRepo(context)
             scope.launch(Dispatchers.Default) {
@@ -55,6 +59,7 @@ object SubscriptionManager {
                 }
             }
         } catch (e: Exception) {
+            isDataStoreInitialized = false
             e.printStackTrace()
         }
     }
@@ -127,13 +132,16 @@ object SubscriptionManager {
         }
     }
 
+    // Stable scope for background work that outlives individual callbacks
+    private val persistenceScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+
     private fun checkEntitlements(customerInfo: CustomerInfo, entitlementId: String, context: Context) {
         val hasPro = customerInfo.entitlements[entitlementId]?.isActive == true ||
                      customerInfo.entitlements["premium"]?.isActive == true
 
         if (hasPro) {
             _isProActive.value = true
-            CoroutineScope(Dispatchers.IO).launch {
+            persistenceScope.launch {
                 try {
                     getRepo(context).updateIsProUser(true)
                 } catch (_: Exception) {}

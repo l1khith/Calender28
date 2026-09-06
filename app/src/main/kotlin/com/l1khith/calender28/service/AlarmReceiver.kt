@@ -4,6 +4,7 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.util.Log
+import com.l1khith.calender28.data.RoomTaskDatabase
 import com.l1khith.calender28.data.TaskDatabase
 import com.l1khith.calender28.utils.FixedCalendarHelper
 import com.l1khith.calender28.utils.HabitCycleEngine
@@ -40,14 +41,15 @@ class AlarmReceiver : BroadcastReceiver() {
 
                 Log.d(TAG, "onReceive: Triggered alarm for itemId=$itemId, itemType=$itemType, title=$title")
 
-                val db = TaskDatabase(context)
+                val db = TaskDatabase(context) // Used for habit lookup (getAllHabits enriches with cycle data)
+                val roomDb = RoomTaskDatabase.getInstance(context)
                 val notificationHelper = NotificationHelper(context)
                 val scheduler = AlarmScheduler(context)
 
                 when (itemType) {
                     AlarmScheduler.TYPE_TASK -> {
                         // Handles both normal tasks AND generated recurring task instances
-                        val task = db.getAllTasks().find { it.id == itemId }
+                        val task = roomDb.taskDao().getTaskById(itemId)?.toAppTask()
                         if (task != null) {
                             if (!task.completed) {
                                 Log.d(TAG, "Showing task reminder for id=$itemId title='${task.title}'")

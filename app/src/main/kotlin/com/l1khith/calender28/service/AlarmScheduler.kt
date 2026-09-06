@@ -128,9 +128,20 @@ class AlarmScheduler(private val context: Context) {
             try {
                 val db = TaskDatabase(context)
                 val alarms = db.getScheduledAlarmDao().getAlarmsForItem(itemId)
+                // Cancel PendingIntents directly without calling cancelAlarm() to avoid
+                // nested runBlocking deadlock (cancelAlarm -> deleteAlarmRecord -> runBlocking)
                 alarms.forEach { alarm ->
-                    cancelAlarm(alarm.alarm_id)
+                    val intent = Intent(context, AlarmReceiver::class.java)
+                    val pendingIntent = PendingIntent.getBroadcast(
+                        context, alarm.alarm_id, intent,
+                        PendingIntent.FLAG_NO_CREATE or PendingIntent.FLAG_IMMUTABLE
+                    )
+                    pendingIntent?.let {
+                        alarmManager.cancel(it)
+                        it.cancel()
+                    }
                 }
+                // Bulk delete all alarm records for this item (avoids per-item runBlocking)
                 db.getScheduledAlarmDao().deleteAlarmsForItem(itemId)
             } catch (e: Exception) {
                 Log.e(TAG, "Error cancelling alarms for $itemId", e)

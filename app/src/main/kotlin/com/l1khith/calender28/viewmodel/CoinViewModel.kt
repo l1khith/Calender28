@@ -62,13 +62,16 @@ class CoinViewModel(
         if (_isPurchasing.value) return
         _isPurchasing.value = true
         viewModelScope.launch {
-            val result = coinRepository.buyPremiumWithCoins()
-            _isPurchasing.value = false
-            result.onSuccess {
-                _uiEvent.emit(CoinUiEvent.PremiumUnlocked)
-                _uiEvent.emit(CoinUiEvent.ShowMessage("🎉 Premium unlocked successfully with 1,500 CalCoins!"))
-            }.onFailure { error ->
-                _uiEvent.emit(CoinUiEvent.ShowMessage(error.message ?: "Could not unlock Premium", isError = true))
+            try {
+                val result = coinRepository.buyPremiumWithCoins()
+                result.onSuccess {
+                    _uiEvent.emit(CoinUiEvent.PremiumUnlocked)
+                    _uiEvent.emit(CoinUiEvent.ShowMessage("🎉 Premium unlocked successfully with 1,500 CalCoins!"))
+                }.onFailure { error ->
+                    _uiEvent.emit(CoinUiEvent.ShowMessage(error.message ?: "Could not unlock Premium", isError = true))
+                }
+            } finally {
+                _isPurchasing.value = false
             }
         }
     }

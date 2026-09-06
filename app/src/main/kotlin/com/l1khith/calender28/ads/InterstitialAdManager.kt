@@ -21,7 +21,20 @@ object InterstitialAdManager {
     private var isLoading = false
 
     fun loadAd(context: Context) {
+        if (com.l1khith.calender28.billing.SubscriptionManager.isProActive.value) {
+            interstitialAd = null
+            isLoading = false
+            return
+        }
         if (interstitialAd != null || isLoading) return
+
+        // AdMob InterstitialAd.load MUST be called on the Main UI thread!
+        if (android.os.Looper.myLooper() != android.os.Looper.getMainLooper()) {
+            android.os.Handler(android.os.Looper.getMainLooper()).post {
+                loadAd(context)
+            }
+            return
+        }
 
         isLoading = true
         val adUnitId = System.getProperty("ADMOB_INTERSTITIAL_UNIT_ID") ?: DEFAULT_TEST_AD_UNIT_ID
@@ -54,6 +67,14 @@ object InterstitialAdManager {
         onAdDismissed: () -> Unit = {},
         onAdUnavailable: () -> Unit = {}
     ) {
+        // AdMob show() MUST be called on the Main UI thread
+        if (android.os.Looper.myLooper() != android.os.Looper.getMainLooper()) {
+            android.os.Handler(android.os.Looper.getMainLooper()).post {
+                showAd(activity, onAdDismissed, onAdUnavailable)
+            }
+            return
+        }
+
         val ad = interstitialAd
         if (ad != null) {
             ad.fullScreenContentCallback = object : FullScreenContentCallback() {
