@@ -30,7 +30,10 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -53,6 +56,7 @@ fun MatrixSplashScreen(
         onExitApp()
     }
 
+    var isEntering by remember { mutableStateOf(false) }
     val contentAlpha = remember { Animatable(0f) }
 
     LaunchedEffect(Unit) {
@@ -210,14 +214,22 @@ fun MatrixSplashScreen(
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Button(
-                onClick = onEnterWorkspace,
+                onClick = {
+                    if (!isEntering) {
+                        isEntering = true
+                        onEnterWorkspace()
+                    }
+                },
+                enabled = !isEntering,
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(54.dp),
                 shape = RoundedCornerShape(16.dp),
                 colors = ButtonDefaults.buttonColors(
                     containerColor = Color(0xFFA8C7FA),
-                    contentColor = Color(0xFF0A1C36)
+                    contentColor = Color(0xFF0A1C36),
+                    disabledContainerColor = Color(0xFFA8C7FA).copy(alpha = 0.8f),
+                    disabledContentColor = Color(0xFF0A1C36)
                 ),
                 elevation = ButtonDefaults.buttonElevation(defaultElevation = 2.dp)
             ) {
@@ -225,19 +237,34 @@ fun MatrixSplashScreen(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.Center
                 ) {
-                    Text(
-                        text = "Enter Workspace",
-                        color = Color(0xFF0A1C36),
-                        fontWeight = FontWeight.SemiBold,
-                        fontSize = 15.sp
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.ArrowForward,
-                        contentDescription = null,
-                        tint = Color(0xFF0A1C36),
-                        modifier = Modifier.size(18.dp)
-                    )
+                    if (isEntering) {
+                        androidx.compose.material3.CircularProgressIndicator(
+                            modifier = Modifier.size(20.dp),
+                            color = Color(0xFF0A1C36),
+                            strokeWidth = 2.dp
+                        )
+                        Spacer(modifier = Modifier.width(10.dp))
+                        Text(
+                            text = "Opening...",
+                            color = Color(0xFF0A1C36),
+                            fontWeight = FontWeight.SemiBold,
+                            fontSize = 15.sp
+                        )
+                    } else {
+                        Text(
+                            text = "Enter Workspace",
+                            color = Color(0xFF0A1C36),
+                            fontWeight = FontWeight.SemiBold,
+                            fontSize = 15.sp
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                            contentDescription = null,
+                            tint = Color(0xFF0A1C36),
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
                 }
             }
 
