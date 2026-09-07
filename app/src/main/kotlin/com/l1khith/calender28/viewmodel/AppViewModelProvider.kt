@@ -36,6 +36,13 @@ object AppViewModelProvider {
                 coinRepository = app.container.coinRepository
             )
         }
+        initializer {
+            val app = matrixApplication()
+            SparkyViewModel(
+                application = app,
+                sparkyRepository = app.container.sparkyRepository
+            )
+        }
     }
 }
 
