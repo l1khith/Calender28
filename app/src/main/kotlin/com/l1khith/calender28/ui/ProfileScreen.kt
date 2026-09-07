@@ -47,9 +47,12 @@ fun ProfileScreen(
     onOpenFocusStats: () -> Unit = {},
     onOpenCoinStore: () -> Unit = {},
     onOpenExportTasks: () -> Unit = {},
-    onOpenMonthView: () -> Unit
+    onOpenMonthView: () -> Unit,
+    onOpenSparkyDetail: () -> Unit = {},
+    sparkyViewModel: com.l1khith.calender28.viewmodel.SparkyViewModel = androidx.lifecycle.viewmodel.compose.viewModel(factory = com.l1khith.calender28.viewmodel.AppViewModelProvider.Factory)
 ) {
     val isProActive by SubscriptionManager.isProActive.collectAsStateWithLifecycle()
+    val sparkyState by sparkyViewModel.sparkyState.collectAsStateWithLifecycle()
     val coroutineScope = rememberCoroutineScope()
     val currentTheme by ThemeManager.currentTheme.collectAsStateWithLifecycle()
     var showThemeDialog by remember { mutableStateOf(false) }
@@ -75,6 +78,139 @@ fun ProfileScreen(
         contentPadding = PaddingValues(top = 16.dp, bottom = 80.dp),
         verticalArrangement = Arrangement.spacedBy(20.dp)
     ) {
+        // Section: Sparky Companion (Zero Emoji - Vector Icons only)
+        item {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    modifier = Modifier.padding(horizontal = 4.dp)
+                ) {
+                    Icon(
+                        imageVector = AppIcons.Sparky,
+                        contentDescription = null,
+                        tint = MatrixColors.Primary,
+                        modifier = Modifier.size(15.dp)
+                    )
+                    Text(
+                        text = "SPARKY COMPANION",
+                        color = MatrixColors.TextSecondary,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold,
+                        letterSpacing = 1.sp
+                    )
+                }
+
+                Card(
+                    shape = MatrixShapes.Lg,
+                    colors = CardDefaults.cardColors(containerColor = MatrixColors.SurfaceContainerLow),
+                    border = BorderStroke(1.dp, MatrixColors.OutlineVariant),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(MatrixShapes.Lg)
+                        .clickable { onOpenSparkyDetail() }
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(10.dp)
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(36.dp)
+                                        .clip(CircleShape)
+                                        .background(MatrixColors.PrimaryContainer),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        imageVector = AppIcons.Sparky,
+                                        contentDescription = null,
+                                        tint = MatrixColors.Primary,
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                }
+
+                                Column {
+                                    Text(
+                                        text = "${sparkyState.name}'s Profile",
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 15.sp,
+                                        color = MatrixColors.TextHeader
+                                    )
+                                    Text(
+                                        text = "${sparkyState.stage.displayName} • Level ${sparkyState.level}",
+                                        fontSize = 12.sp,
+                                        color = MatrixColors.Primary,
+                                        fontWeight = FontWeight.SemiBold
+                                    )
+                                }
+                            }
+
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                                contentDescription = "View",
+                                tint = MatrixColors.TextSecondary,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+
+                        HorizontalDivider(color = MatrixColors.OutlineVariant.copy(alpha = 0.5f))
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Favorite,
+                                    contentDescription = null,
+                                    tint = Color(0xFFF43F5E),
+                                    modifier = Modifier.size(14.dp)
+                                )
+                                Text(
+                                    text = "Personality: " + sparkyState.dominantTraits.joinToString(", ") { it.displayName },
+                                    fontSize = 12.sp,
+                                    color = MatrixColors.TextSecondary
+                                )
+                            }
+
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.EmojiEvents,
+                                    contentDescription = null,
+                                    tint = MatrixColors.Secondary,
+                                    modifier = Modifier.size(14.dp)
+                                )
+                                Text(
+                                    text = "${sparkyState.claimedAchievements.size}/25",
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MatrixColors.Secondary
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
         // Section: Account Settings
         item {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {

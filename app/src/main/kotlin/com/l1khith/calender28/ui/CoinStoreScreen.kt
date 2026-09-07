@@ -28,12 +28,17 @@ import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.l1khith.calender28.data.CoinTransactionEntity
+import com.l1khith.calender28.data.SparkyCatalog
+import com.l1khith.calender28.data.SparkyShopCategory
+import com.l1khith.calender28.data.SparkyShopItem
 import com.l1khith.calender28.data.TransactionReason
+import com.l1khith.calender28.ui.sparky.SparkyAnimation
 import com.l1khith.calender28.ui.theme.AppIcons
 import com.l1khith.calender28.ui.theme.MatrixColors
 import com.l1khith.calender28.ui.theme.MatrixShapes
 import com.l1khith.calender28.viewmodel.CoinUiEvent
 import com.l1khith.calender28.viewmodel.CoinViewModel
+import com.l1khith.calender28.viewmodel.SparkyViewModel
 import kotlinx.coroutines.flow.collectLatest
 
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -43,13 +48,18 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 fun CoinStoreScreen(
     coinViewModel: CoinViewModel,
     onBack: () -> Unit,
-    onOpenPaywall: () -> Unit
+    onOpenPaywall: () -> Unit,
+    initialTab: Int = 0,
+    sparkyViewModel: com.l1khith.calender28.viewmodel.SparkyViewModel = androidx.lifecycle.viewmodel.compose.viewModel(factory = com.l1khith.calender28.viewmodel.AppViewModelProvider.Factory)
 ) {
     val coinBalance by coinViewModel.coinBalance.collectAsStateWithLifecycle()
     val transactions by coinViewModel.recentTransactions.collectAsStateWithLifecycle()
     val isProActive by coinViewModel.isProActive.collectAsStateWithLifecycle()
     val isPurchasing by coinViewModel.isPurchasing.collectAsStateWithLifecycle()
+    val sparkyState by sparkyViewModel.sparkyState.collectAsStateWithLifecycle()
+    val currentMood by sparkyViewModel.currentMood.collectAsStateWithLifecycle()
 
+    var selectedStoreTab by remember { mutableStateOf(initialTab) }
     var promoInput by remember { mutableStateOf("") }
     val snackbarHostState = remember { SnackbarHostState() }
     val keyboardController = LocalSoftwareKeyboardController.current
@@ -79,55 +89,116 @@ fun CoinStoreScreen(
         }
     }
 
+    LaunchedEffect(Unit) {
+        sparkyViewModel.uiEvent.collectLatest { event ->
+            when (event) {
+                is com.l1khith.calender28.viewmodel.SparkyUiEvent.ShowMessage -> {
+                    snackbarHostState.showSnackbar(event.message)
+                }
+                is com.l1khith.calender28.viewmodel.SparkyUiEvent.AchievementUnlocked -> {
+                    snackbarHostState.showSnackbar("Achievement unlocked: ${event.title}! +${event.reward} coins")
+                }
+            }
+        }
+    }
+
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
-            TopAppBar(
-                title = {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(
-                            imageVector = AppIcons.Coin,
-                            contentDescription = null,
-                            tint = Color.Unspecified,
-                            modifier = Modifier.size(24.dp)
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            text = "CalCoin Store",
-                            fontWeight = FontWeight.Bold,
-                            color = MatrixColors.TextHeader,
-                            fontSize = 20.sp
-                        )
-                    }
-                },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Back",
-                            tint = MatrixColors.TextHeader
-                        )
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MatrixColors.Surface
+            Column(modifier = Modifier.background(MatrixColors.Surface)) {
+                TopAppBar(
+                    title = {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                imageVector = if (selectedStoreTab == 0) AppIcons.Coin else AppIcons.SparkyShop,
+                                contentDescription = null,
+                                tint = if (selectedStoreTab == 0) Color.Unspecified else MatrixColors.Primary,
+                                modifier = Modifier.size(24.dp)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = if (selectedStoreTab == 0) "CalCoin Store" else "Sparky Shop",
+                                fontWeight = FontWeight.Bold,
+                                color = MatrixColors.TextHeader,
+                                fontSize = 20.sp
+                            )
+                        }
+                    },
+                    navigationIcon = {
+                        IconButton(onClick = onBack) {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                                contentDescription = "Back",
+                                tint = MatrixColors.TextHeader
+                            )
+                        }
+                    },
+                    colors = TopAppBarDefaults.topAppBarColors(
+                        containerColor = MatrixColors.Surface
+                    )
                 )
-            )
+
+                // TabRow with Vector Icons (Zero Emojis)
+                PrimaryTabRow(
+                    selectedTabIndex = selectedStoreTab,
+                    containerColor = MatrixColors.Surface,
+                    contentColor = MatrixColors.Primary,
+                    divider = { HorizontalDivider(color = MatrixColors.OutlineVariant.copy(alpha = 0.5f)) }
+                ) {
+                    Tab(
+                        selected = selectedStoreTab == 0,
+                        onClick = { selectedStoreTab = 0 },
+                        text = {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
+                                Icon(
+                                    imageVector = AppIcons.Coin,
+                                    contentDescription = null,
+                                    tint = Color.Unspecified,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                                Text("CalCoin Store", fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                            }
+                        }
+                    )
+                    Tab(
+                        selected = selectedStoreTab == 1,
+                        onClick = { selectedStoreTab = 1 },
+                        text = {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
+                                Icon(
+                                    imageVector = AppIcons.SparkyShop,
+                                    contentDescription = null,
+                                    tint = if (selectedStoreTab == 1) MatrixColors.Primary else MatrixColors.TextSecondary,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                                Text("Sparky Shop", fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                            }
+                        }
+                    )
+                }
+            }
         },
         containerColor = MatrixColors.Surface
     ) { paddingValues ->
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
-                .padding(horizontal = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
-            contentPadding = PaddingValues(vertical = 16.dp)
-        ) {
-            // 1. Balance Banner Card
-            item {
-                BalanceCard(balance = coinBalance)
-            }
+        if (selectedStoreTab == 0) {
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(paddingValues)
+                    .padding(horizontal = 16.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp),
+                contentPadding = PaddingValues(vertical = 16.dp)
+            ) {
+                // 1. Balance Banner Card
+                item {
+                    BalanceCard(balance = coinBalance)
+                }
 
             // 2. Pro Unlock Card
             item {
@@ -193,7 +264,14 @@ fun CoinStoreScreen(
                 }
             }
         }
+    } else {
+        SparkyShopContent(
+            sparkyViewModel = sparkyViewModel,
+            coinBalance = coinBalance,
+            paddingValues = paddingValues
+        )
     }
+}
 }
 
 @Composable
@@ -620,3 +698,361 @@ private fun EmptyTransactionsCard() {
         }
     }
 }
+
+@Composable
+private fun SparkyShopContent(
+    sparkyViewModel: SparkyViewModel,
+    coinBalance: Int,
+    paddingValues: PaddingValues
+) {
+    val sparkyState by sparkyViewModel.sparkyState.collectAsStateWithLifecycle()
+    val currentMood by sparkyViewModel.currentMood.collectAsStateWithLifecycle()
+    var selectedCategory by remember { mutableStateOf<SparkyShopCategory?>(null) }
+
+    val filteredItems = remember(selectedCategory) {
+        if (selectedCategory == null) SparkyCatalog.items
+        else SparkyCatalog.items.filter { it.category == selectedCategory }
+    }
+
+    LazyColumn(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(paddingValues)
+            .padding(horizontal = 16.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp),
+        contentPadding = PaddingValues(vertical = 16.dp)
+    ) {
+        // 1. Sparky Live Showcase & Balance Card
+        item {
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .border(1.dp, MatrixColors.Primary.copy(alpha = 0.4f), MatrixShapes.Lg),
+                shape = MatrixShapes.Lg,
+                colors = CardDefaults.cardColors(containerColor = MatrixColors.SurfaceContainer)
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Surface(
+                            shape = CircleShape,
+                            color = MatrixColors.Primary.copy(alpha = 0.15f)
+                        ) {
+                            Text(
+                                text = "Lvl ${sparkyState.level} - ${sparkyState.stage.displayName}",
+                                color = MatrixColors.Primary,
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Bold,
+                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
+                            )
+                        }
+
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                imageVector = AppIcons.Coin,
+                                contentDescription = null,
+                                tint = Color.Unspecified,
+                                modifier = Modifier.size(18.dp)
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(
+                                text = "$coinBalance",
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 16.sp,
+                                color = MatrixColors.TextHeader
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    SparkyAnimation(
+                        mood = currentMood,
+                        stage = sparkyState.stage,
+                        size = 110.dp,
+                        equippedSkin = sparkyState.equippedSkin
+                    )
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    Text(
+                        text = sparkyState.name,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 18.sp,
+                        color = MatrixColors.TextHeader
+                    )
+
+                    val activeCosmetics = buildList {
+                        sparkyState.equippedHat?.let { hatId ->
+                            SparkyCatalog.items.find { it.id == hatId }?.let { add(it.name) }
+                        }
+                        sparkyState.equippedSkin?.let { skinId ->
+                            SparkyCatalog.items.find { it.id == skinId }?.let { add(it.name) }
+                        }
+                    }
+                    if (activeCosmetics.isNotEmpty()) {
+                        Spacer(modifier = Modifier.height(2.dp))
+                        Text(
+                            text = "Wearing: ${activeCosmetics.joinToString(" + ")}",
+                            fontSize = 12.sp,
+                            color = MatrixColors.Primary
+                        )
+                    }
+                }
+            }
+        }
+
+        // 2. Filter Category Chips (Zero Emojis - Material / AppIcons)
+        item {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                FilterChip(
+                    selected = selectedCategory == null,
+                    onClick = { selectedCategory = null },
+                    label = { Text("All", fontSize = 12.sp) },
+                    leadingIcon = {
+                        Icon(
+                            imageVector = Icons.Default.Apps,
+                            contentDescription = null,
+                            modifier = Modifier.size(16.dp)
+                        )
+                    },
+                    colors = FilterChipDefaults.filterChipColors(
+                        selectedContainerColor = MatrixColors.Primary.copy(alpha = 0.2f),
+                        selectedLabelColor = MatrixColors.Primary
+                    )
+                )
+                SparkyShopCategory.values().forEach { category ->
+                    val isSelected = selectedCategory == category
+                    val icon = when (category) {
+                        SparkyShopCategory.HATS -> AppIcons.SparkyCrown
+                        SparkyShopCategory.SKINS -> Icons.Default.Palette
+                        SparkyShopCategory.BOOSTERS -> Icons.Default.Bolt
+                    }
+                    FilterChip(
+                        selected = isSelected,
+                        onClick = { selectedCategory = category },
+                        label = { Text(category.displayName, fontSize = 12.sp) },
+                        leadingIcon = {
+                            Icon(
+                                imageVector = icon,
+                                contentDescription = null,
+                                modifier = Modifier.size(16.dp)
+                            )
+                        },
+                        colors = FilterChipDefaults.filterChipColors(
+                            selectedContainerColor = MatrixColors.Primary.copy(alpha = 0.2f),
+                            selectedLabelColor = MatrixColors.Primary
+                        )
+                    )
+                }
+            }
+        }
+
+        // 3. Catalog Items
+        items(filteredItems, key = { it.id }) { item ->
+            val isUnlocked = when (item.category) {
+                SparkyShopCategory.HATS -> sparkyState.unlockedHats.contains(item.id)
+                SparkyShopCategory.SKINS -> sparkyState.unlockedSkins.contains(item.id)
+                SparkyShopCategory.BOOSTERS -> sparkyState.unlockedBoosters.contains(item.id)
+            }
+            val isEquipped = when (item.category) {
+                SparkyShopCategory.HATS -> sparkyState.equippedHat == item.id
+                SparkyShopCategory.SKINS -> sparkyState.equippedSkin == item.id
+                else -> false
+            }
+
+            SparkyShopItemCard(
+                item = item,
+                isUnlocked = isUnlocked,
+                isEquipped = isEquipped,
+                canAfford = coinBalance >= item.price,
+                onBuy = { sparkyViewModel.buyShopItem(item) },
+                onToggleEquip = { sparkyViewModel.toggleEquip(item) }
+            )
+        }
+    }
+}
+
+@Composable
+private fun SparkyShopItemCard(
+    item: SparkyShopItem,
+    isUnlocked: Boolean,
+    isEquipped: Boolean,
+    canAfford: Boolean,
+    onBuy: () -> Unit,
+    onToggleEquip: () -> Unit
+) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .border(
+                1.dp,
+                if (isEquipped) MatrixColors.Primary else MatrixColors.OutlineVariant.copy(alpha = 0.5f),
+                MatrixShapes.Md
+            ),
+        shape = MatrixShapes.Md,
+        colors = CardDefaults.cardColors(containerColor = MatrixColors.SurfaceContainer)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            val icon = when (item.category) {
+                SparkyShopCategory.HATS -> AppIcons.SparkyCrown
+                SparkyShopCategory.SKINS -> Icons.Default.Palette
+                SparkyShopCategory.BOOSTERS -> Icons.Default.Bolt
+            }
+            Surface(
+                shape = CircleShape,
+                color = Color(item.accentColor).copy(alpha = 0.2f),
+                modifier = Modifier.size(44.dp)
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Icon(
+                        imageVector = icon,
+                        contentDescription = null,
+                        tint = Color(item.accentColor),
+                        modifier = Modifier.size(22.dp)
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.width(14.dp))
+
+            Column(modifier = Modifier.weight(1f)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = item.name,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 15.sp,
+                        color = MatrixColors.TextHeader
+                    )
+                    if (isEquipped) {
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Surface(
+                            shape = CircleShape,
+                            color = MatrixColors.Primary.copy(alpha = 0.15f)
+                        ) {
+                            Text(
+                                text = "Equipped",
+                                color = MatrixColors.Primary,
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.Bold,
+                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                            )
+                        }
+                    }
+                }
+                Spacer(modifier = Modifier.height(2.dp))
+                Text(
+                    text = item.description,
+                    fontSize = 12.sp,
+                    color = MatrixColors.TextSecondary,
+                    lineHeight = 16.sp
+                )
+                Spacer(modifier = Modifier.height(6.dp))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        imageVector = AppIcons.Coin,
+                        contentDescription = null,
+                        tint = Color.Unspecified,
+                        modifier = Modifier.size(14.dp)
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(
+                        text = "${item.price} CalCoins",
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MatrixColors.Primary
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.width(12.dp))
+
+            when {
+                item.category == SparkyShopCategory.BOOSTERS -> {
+                    if (isUnlocked) {
+                        Surface(
+                            shape = MatrixShapes.Sm,
+                            color = MatrixColors.Primary.copy(alpha = 0.15f)
+                        ) {
+                            Text(
+                                text = "Active",
+                                color = MatrixColors.Primary,
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Bold,
+                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
+                            )
+                        }
+                    } else {
+                        Button(
+                            onClick = onBuy,
+                            enabled = canAfford,
+                            shape = MatrixShapes.Sm,
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = MatrixColors.Primary,
+                                contentColor = MatrixColors.OnPrimary
+                            ),
+                            contentPadding = PaddingValues(horizontal = 14.dp, vertical = 6.dp)
+                        ) {
+                            Text("Buy", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                        }
+                    }
+                }
+                isUnlocked -> {
+                    if (isEquipped) {
+                        OutlinedButton(
+                            onClick = onToggleEquip,
+                            shape = MatrixShapes.Sm,
+                            border = BorderStroke(1.dp, MatrixColors.OutlineVariant),
+                            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
+                        ) {
+                            Text("Unequip", fontSize = 12.sp, color = MatrixColors.TextSecondary)
+                        }
+                    } else {
+                        Button(
+                            onClick = onToggleEquip,
+                            shape = MatrixShapes.Sm,
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = MatrixColors.Primary,
+                                contentColor = MatrixColors.OnPrimary
+                            ),
+                            contentPadding = PaddingValues(horizontal = 14.dp, vertical = 6.dp)
+                        ) {
+                            Text("Equip", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                        }
+                    }
+                }
+                else -> {
+                    Button(
+                        onClick = onBuy,
+                        enabled = canAfford,
+                        shape = MatrixShapes.Sm,
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MatrixColors.Primary,
+                            contentColor = MatrixColors.OnPrimary
+                        ),
+                        contentPadding = PaddingValues(horizontal = 14.dp, vertical = 6.dp)
+                    ) {
+                        Text("Buy", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                    }
+                }
+            }
+        }
+    }
+}
+

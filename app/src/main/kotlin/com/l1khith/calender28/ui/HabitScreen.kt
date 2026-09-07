@@ -51,7 +51,8 @@ private const val TAG = "HabitScreen"
 fun HabitSection(
     viewModel: FixedCalendarViewModel,
     isProActive: Boolean,
-    onOpenPaywall: () -> Unit
+    onOpenPaywall: () -> Unit,
+    sparkyViewModel: com.l1khith.calender28.viewmodel.SparkyViewModel? = null
 ) {
     val habits by viewModel.habits.collectAsStateWithLifecycle()
     var selectedHabitId by remember { mutableStateOf<String?>(null) }
@@ -70,6 +71,9 @@ fun HabitSection(
         }
 
         val isCompleted = habit.completedDays.contains(dayInCycle)
+        if (!isCompleted) {
+            sparkyViewModel?.triggerHabitComplete(habit.name)
+        }
         viewModel.toggleHabitDay(habit.id, currentCyclePos.cycleIndex, dayInCycle, isCompleted)
     }
 

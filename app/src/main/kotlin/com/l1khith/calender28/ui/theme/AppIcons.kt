@@ -205,6 +205,62 @@ object AppIcons {
                 fill = SolidColor(Color(0xFFFECA51))
             ).build()
         }
+
+    val Sparky: ImageVector
+        @Composable get() = remember {
+            ImageVector.Builder(
+                name = "SparkyIcon",
+                defaultWidth = 24.dp, defaultHeight = 24.dp,
+                viewportWidth = 24f, viewportHeight = 24f
+            ).addPath(
+                pathData = PathParser().parsePathString(
+                    "M12 2C7.58 2 4 5.58 4 10C4 13.04 5.7 15.69 8.2 17.02C8.08 17.65 8 18.31 8 19C8 20.66 9.34 22 11 22H13C14.66 22 16 20.66 16 19C16 18.31 15.92 17.65 15.8 17.02C18.3 15.69 20 13.04 20 10C20 5.58 16.42 2 12 2ZM9 9C9.83 9 10.5 9.67 10.5 10.5C10.5 11.33 9.83 12 9 12C8.17 12 7.5 11.33 7.5 10.5C7.5 9.67 8.17 9 9 9ZM15 9C15.83 9 16.5 9.67 16.5 10.5C16.5 11.33 15.83 12 15 12C14.17 12 13.5 11.33 13.5 10.5C13.5 9.67 14.17 9 15 9ZM13.8 15C13.3 15.6 12.7 16 12 16C11.3 16 10.7 15.6 10.2 15C10.05 14.8 10.15 14.5 10.4 14.5H13.6C13.85 14.5 13.95 14.8 13.8 15Z"
+                ).toNodes(),
+                fill = SolidColor(Color(0xFFFFB800))
+            ).build()
+        }
+
+    val Egg: ImageVector
+        @Composable get() = remember {
+            ImageVector.Builder(
+                name = "EggIcon",
+                defaultWidth = 24.dp, defaultHeight = 24.dp,
+                viewportWidth = 24f, viewportHeight = 24f
+            ).addPath(
+                pathData = PathParser().parsePathString(
+                    "M12 2C8 2 5 7 5 13C5 17.42 8.13 21 12 21C15.87 21 19 17.42 19 13C19 7 16 2 12 2ZM12 19C9.24 19 7 16.31 7 13C7 8.5 9.24 4 12 4C14.76 4 17 8.5 17 13C17 16.31 14.76 19 12 19Z"
+                ).toNodes(),
+                fill = SolidColor(Color(0xFF818CF8))
+            ).build()
+        }
+
+    val SparkyCrown: ImageVector
+        @Composable get() = remember {
+            ImageVector.Builder(
+                name = "CrownIcon",
+                defaultWidth = 24.dp, defaultHeight = 24.dp,
+                viewportWidth = 24f, viewportHeight = 24f
+            ).addPath(
+                pathData = PathParser().parsePathString(
+                    "M5 16L3 5L8.5 10L12 4L15.5 10L21 5L19 16H5ZM19 19C19 19.55 18.55 20 18 20H6C5.45 20 5 19.55 5 19V18H19V19Z"
+                ).toNodes(),
+                fill = SolidColor(Color(0xFFFFD700))
+            ).build()
+        }
+
+    val SparkyShop: ImageVector
+        @Composable get() = remember {
+            ImageVector.Builder(
+                name = "ShopIcon",
+                defaultWidth = 24.dp, defaultHeight = 24.dp,
+                viewportWidth = 24f, viewportHeight = 24f
+            ).addPath(
+                pathData = PathParser().parsePathString(
+                    "M18.36 9L18.96 4.79C19.03 4.34 18.68 3.96 18.23 3.96H5.77C5.32 3.96 4.97 4.34 5.04 4.79L5.64 9M3 9H21V19C21 20.1 20.1 21 19 21H5C3.9 21 3 20.1 3 19V9ZM10 13H14V17H10V13Z"
+                ).toNodes(),
+                fill = SolidColor(Color(0xFF38BDF8))
+            ).build()
+        }
 }
 
 

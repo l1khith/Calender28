@@ -50,8 +50,14 @@ import com.l1khith.calender28.utils.rememberSecurityLockLauncher
 
 import com.l1khith.calender28.ui.theme.AppIcons
 import com.l1khith.calender28.ui.theme.MatrixColors
-
 import com.l1khith.calender28.ui.theme.MatrixShapes
+import com.l1khith.calender28.data.EvolutionStage
+import com.l1khith.calender28.data.SparkyMood
+import com.l1khith.calender28.ui.sparky.SparkyAnimation
+import com.l1khith.calender28.ui.sparky.SparkyDetailScreen
+import com.l1khith.calender28.ui.sparky.SparkyEvolutionDialog
+import com.l1khith.calender28.ui.sparky.SparkyHomeCard
+import com.l1khith.calender28.viewmodel.SparkyViewModel
 
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -114,6 +120,23 @@ fun FixedCalendarApp(
     val coinBalance by coinViewModel.coinBalance.collectAsStateWithLifecycle()
     val overallStreak by viewModel.overallStreak.collectAsStateWithLifecycle()
     var showStreakInfoDialog by remember { mutableStateOf(false) }
+
+    val sparkyViewModel: SparkyViewModel = androidx.lifecycle.viewmodel.compose.viewModel(factory = AppViewModelProvider.Factory)
+    val sparkyState by sparkyViewModel.sparkyState.collectAsStateWithLifecycle()
+    val sparkyMood by sparkyViewModel.currentMood.collectAsStateWithLifecycle()
+    var showSparkyDetail by remember { mutableStateOf(false) }
+    var showSparkyShopDirectly by remember { mutableStateOf(false) }
+    var evolvingStageToCelebrate by remember { mutableStateOf<EvolutionStage?>(null) }
+
+    LaunchedEffect(Unit) {
+        sparkyViewModel.evolutionEvent.collect { stage ->
+            evolvingStageToCelebrate = stage
+        }
+    }
+
+    LaunchedEffect(overallStreak) {
+        sparkyViewModel.triggerStreakUpdate(overallStreak)
+    }
 
     com.l1khith.calender28.utils.PlatformBackHandler(enabled = true) {
         if (isProActive) {
@@ -361,6 +384,28 @@ fun FixedCalendarApp(
                             ),
                             label = "flame_scale"
                         )
+
+                        // Mini Sparky Avatar (left of Streak)
+                        Surface(
+                            shape = CircleShape,
+                            color = MatrixColors.SurfaceContainerHigh,
+                            border = BorderStroke(1.dp, MatrixColors.Primary.copy(alpha = 0.5f)),
+                            modifier = Modifier
+                                .padding(end = 6.dp)
+                                .size(34.dp)
+                                .clickable {
+                                    showSparkyDetail = true
+                                }
+                        ) {
+                            Box(contentAlignment = Alignment.Center) {
+                                SparkyAnimation(
+                                    mood = sparkyMood,
+                                    stage = sparkyState.stage,
+                                    size = 28.dp,
+                                    equippedSkin = sparkyState.equippedSkin
+                                )
+                            }
+                        }
 
                         // Overall Streak Chip (to the left of Coins)
                         Surface(
@@ -617,13 +662,15 @@ fun FixedCalendarApp(
                         if (!task.completed) {
                             com.l1khith.calender28.service.FocusSessionManager.openSetup(task)
                         }
-                    }
+                    },
+                    sparkyViewModel = sparkyViewModel
                 )
 
                 2 -> HabitSection(
                     viewModel = viewModel,
                     isProActive = isProActive,
-                    onOpenPaywall = { showPaywallDialog = true }
+                    onOpenPaywall = { showPaywallDialog = true },
+                    sparkyViewModel = sparkyViewModel
                 )
 
                 3 -> ProfileScreen(
@@ -632,13 +679,15 @@ fun FixedCalendarApp(
                     onOpenSecurity = { showSecurityLockDialog = true },
                     onOpenNotifications = { launchNotificationPermission() },
                     onOpenFocusStats = { showFocusStatsDialog = true },
-                    onOpenCoinStore = { showCoinStoreDialog = true },
+                    onOpenCoinStore = {
+                        showSparkyShopDirectly = false
+                        showCoinStoreDialog = true
+                    },
                     onOpenExportTasks = { showExportTasksDialog = true },
-                    onOpenMonthView = { onNavigateToTab(0) }
+                    onOpenMonthView = { onNavigateToTab(0) },
+                    onOpenSparkyDetail = { showSparkyDetail = true },
+                    sparkyViewModel = sparkyViewModel
                 )
-
-
-
 
                     else -> Column(
                         modifier = Modifier
@@ -646,7 +695,12 @@ fun FixedCalendarApp(
                             .padding(horizontal = 16.dp)
                     ) {
 
+            SparkyHomeCard(
+                sparkyViewModel = sparkyViewModel,
+                onOpenDetail = { showSparkyDetail = true }
+            )
 
+            Spacer(modifier = Modifier.height(10.dp))
 
             MonthYearSelector(
                 selectedDate = selectedDate,
@@ -767,7 +821,12 @@ fun FixedCalendarApp(
                 } else {
                     AgendaList(
                         tasks = tasks,
-                        onToggleComplete = { viewModel.toggleTaskCompletion(it) },
+                        onToggleComplete = {
+                            if (!it.completed) {
+                                sparkyViewModel.triggerTaskComplete(it.title)
+                            }
+                            viewModel.toggleTaskCompletion(it)
+                        },
                         onEdit = {
                             taskToEdit = it
                             showAddTaskDialog = true
@@ -883,21 +942,59 @@ fun FixedCalendarApp(
                 onOpenPaywall = {
                     showCoinStoreDialog = false
                     showPaywallDialog = true
+                },
+                initialTab = if (showSparkyShopDirectly) 1 else 0,
+                sparkyViewModel = sparkyViewModel
+            )
+        }
+    }
+
+    if (showSparkyDetail) {
+        androidx.compose.ui.window.Dialog(
+            onDismissRequest = { showSparkyDetail = false },
+            properties = androidx.compose.ui.window.DialogProperties(
+                usePlatformDefaultWidth = false,
+                decorFitsSystemWindows = false
+            )
+        ) {
+            SparkyDetailScreen(
+                sparkyViewModel = sparkyViewModel,
+                onBack = { showSparkyDetail = false },
+                onOpenShop = {
+                    showSparkyDetail = false
+                    showSparkyShopDirectly = true
+                    showCoinStoreDialog = true
                 }
             )
         }
+    }
+
+    evolvingStageToCelebrate?.let { stage ->
+        SparkyEvolutionDialog(
+            newStage = stage,
+            onDismiss = { evolvingStageToCelebrate = null }
+        )
     }
 
     if (showStreakInfoDialog) {
         AlertDialog(
             onDismissRequest = { showStreakInfoDialog = false },
             icon = {
-                Icon(
-                    imageVector = AppIcons.Fire,
-                    contentDescription = null,
-                    tint = Color.Unspecified,
-                    modifier = Modifier.size(36.dp)
-                )
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    SparkyAnimation(
+                        mood = SparkyMood.CELEBRATING,
+                        stage = sparkyState.stage,
+                        size = 64.dp,
+                        equippedSkin = sparkyState.equippedSkin
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Icon(
+                        imageVector = AppIcons.Fire,
+                        contentDescription = null,
+                        tint = Color.Unspecified,
+                        modifier = Modifier.size(28.dp)
+                    )
+                }
             },
             title = {
                 Text(
@@ -1020,6 +1117,7 @@ fun FixedCalendarApp(
                 completedState = state,
                 onDone = { markTaskDone ->
                     focusViewModel.commitTaskDone(markTaskDone)
+                    sparkyViewModel.triggerFocusComplete((state.durationSeconds / 60).coerceAtLeast(1))
                     viewModel.refresh()
                 },
                 onAgain = {

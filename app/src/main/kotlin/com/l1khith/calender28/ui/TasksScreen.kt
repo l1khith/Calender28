@@ -41,13 +41,21 @@ fun TasksScreen(
     onEditTask: (AppTask) -> Unit,
     isProActive: Boolean = false,
     onOpenPaywall: () -> Unit = {},
-    onStartFocus: (AppTask) -> Unit = {}
+    onStartFocus: (AppTask) -> Unit = {},
+    sparkyViewModel: com.l1khith.calender28.viewmodel.SparkyViewModel? = null
 ) {
     val allTasks by viewModel.allTasks.collectAsStateWithLifecycle()
     var searchQuery by remember { mutableStateOf("") }
 
     val todayFixed = remember { FixedCalendarHelper.fromTimestamp(currentTimeMillis()) }
     val todayDateStr = todayFixed.toString()
+
+    fun handleToggleComplete(taskItem: AppTask) {
+        if (!taskItem.completed) {
+            sparkyViewModel?.triggerTaskComplete(taskItem.title)
+        }
+        viewModel.toggleTaskCompletion(taskItem)
+    }
 
     val filteredTasks by remember(allTasks, searchQuery) {
         derivedStateOf {
@@ -224,7 +232,7 @@ fun TasksScreen(
                             UrgentTaskCard(
                                 task = taskItem,
                                 todayDateStr = todayDateStr,
-                                onToggleComplete = { viewModel.toggleTaskCompletion(taskItem) },
+                                onToggleComplete = { handleToggleComplete(taskItem) },
                                 onClick = { onEditTask(taskItem) },
                                 onDeleteTask = { viewModel.deleteTask(taskItem) },
                                 onStartFocus = { onStartFocus(taskItem) }
@@ -271,7 +279,7 @@ fun TasksScreen(
                         for (taskItem in todaysFocus) {
                             FocusTaskCard(
                                 task = taskItem,
-                                onToggleComplete = { viewModel.toggleTaskCompletion(taskItem) },
+                                onToggleComplete = { handleToggleComplete(taskItem) },
                                 onClick = { onEditTask(taskItem) },
                                 onDeleteTask = { viewModel.deleteTask(taskItem) },
                                 onStartFocus = { onStartFocus(taskItem) }
@@ -336,7 +344,7 @@ fun TasksScreen(
                                 for (taskItem in dateTasks) {
                                     UpcomingTaskCard(
                                         task = taskItem,
-                                        onToggleComplete = { viewModel.toggleTaskCompletion(taskItem) },
+                                        onToggleComplete = { handleToggleComplete(taskItem) },
                                         onClick = { onEditTask(taskItem) },
                                         onDeleteTask = { viewModel.deleteTask(taskItem) },
                                         onStartFocus = { onStartFocus(taskItem) }
