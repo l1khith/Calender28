@@ -134,6 +134,8 @@ dependencies {
     implementation(libs.androidx.glance.appwidget)
     implementation(libs.androidx.glance.material3)
 
+    implementation(libs.lottie.compose)
+
     implementation(libs.androidx.biometric)
     implementation(libs.play.services.ads)
 
