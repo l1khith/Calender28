@@ -14,37 +14,45 @@ import com.l1khith.calender28.data.EvolutionStage
 import com.l1khith.calender28.data.SparkyMood
 
 /**
- * Animated companion visual powered by Lottie compositions downloaded for Sparky.
+ * Animated companion visual powered by Lottie compositions.
  */
 @Composable
 fun SparkyAnimation(
     mood: SparkyMood,
     stage: EvolutionStage = EvolutionStage.BABY,
     modifier: Modifier = Modifier,
-    size: Dp = 100.dp,
+    size: Dp? = 100.dp,
     speed: Float = 1.0f,
+    iterations: Int = LottieConstants.IterateForever,
     equippedSkin: String? = null
 ) {
-    val rawRes = when {
-        mood == SparkyMood.EVOLVING -> R.raw.bird_egg_breaks
-        stage == EvolutionStage.EGG && mood != SparkyMood.CELEBRATING -> R.raw.bird_egg_breaks
-        mood == SparkyMood.CELEBRATING || mood == SparkyMood.PROUD -> R.raw.bird_success
-        mood == SparkyMood.CALM -> R.raw.bird_dreaming
-        mood == SparkyMood.TIRED || mood == SparkyMood.SAD -> R.raw.bird_tired
-        else -> R.raw.bird_happy
+    val rawRes = when (mood) {
+        SparkyMood.CELEBRATING -> {
+            if (size != null && size < 150.dp) {
+                if (stage == EvolutionStage.EGG) R.raw.bird_egg_breaks else R.raw.sparky_happy
+            } else {
+                R.raw.confetti
+            }
+        }
+        SparkyMood.EVOLVING -> R.raw.bird_egg_breaks
+        SparkyMood.CALM -> R.raw.bird_dreaming
+        SparkyMood.TIRED, SparkyMood.SAD -> R.raw.sparky_sleepy
+        SparkyMood.HAPPY, SparkyMood.IDLE, SparkyMood.PROUD, SparkyMood.ENERGETIC, SparkyMood.CURIOUS -> {
+            if (stage == EvolutionStage.EGG) R.raw.bird_egg_breaks else R.raw.sparky_happy
+        }
     }
 
     val composition by rememberLottieComposition(LottieCompositionSpec.RawRes(rawRes))
-    val iterations = if (mood == SparkyMood.EVOLVING) 1 else LottieConstants.IterateForever
+    val playIterations = if (mood == SparkyMood.EVOLVING) 1 else iterations
 
     val progress by animateLottieCompositionAsState(
         composition = composition,
-        iterations = iterations,
+        iterations = playIterations,
         speed = speed,
         isPlaying = true
     )
 
-    // Subtle natural breathing bounce
+    // Subtle natural breathing bounce for avatars
     val infiniteTransition = rememberInfiniteTransition(label = "sparky_breath")
     val breathScale by infiniteTransition.animateFloat(
         initialValue = 0.98f,
@@ -56,10 +64,43 @@ fun SparkyAnimation(
         label = "breath_scale"
     )
 
-    Box(
-        modifier = modifier
+    val boxModifier = if (size != null) {
+        modifier
             .size(size)
-            .scale(breathScale),
+            .scale(breathScale)
+    } else {
+        modifier
+    }
+
+    Box(
+        modifier = boxModifier,
+        contentAlignment = Alignment.Center
+    ) {
+        LottieAnimation(
+            composition = composition,
+            progress = { progress },
+            modifier = Modifier.fillMaxSize()
+        )
+    }
+}
+
+/**
+ * Full-screen or container celebration confetti animation.
+ */
+@Composable
+fun ConfettiAnimation(
+    modifier: Modifier = Modifier,
+    iterations: Int = 1
+) {
+    val composition by rememberLottieComposition(LottieCompositionSpec.RawRes(R.raw.confetti))
+    val progress by animateLottieCompositionAsState(
+        composition = composition,
+        iterations = iterations,
+        isPlaying = true
+    )
+
+    Box(
+        modifier = modifier,
         contentAlignment = Alignment.Center
     ) {
         LottieAnimation(

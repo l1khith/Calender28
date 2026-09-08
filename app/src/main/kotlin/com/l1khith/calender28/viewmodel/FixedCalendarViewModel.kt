@@ -84,6 +84,18 @@ class FixedCalendarViewModel(
         streak
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), OverallStreakManager.getCachedStreak(context))
 
+    // Confetti celebration state
+    private val _showConfetti = MutableStateFlow(false)
+    val showConfetti: StateFlow<Boolean> = _showConfetti.asStateFlow()
+
+    fun triggerConfetti() {
+        viewModelScope.launch {
+            _showConfetti.value = true
+            kotlinx.coroutines.delay(3000L)
+            _showConfetti.value = false
+        }
+    }
+
     init {
         Log.d(TAG, "init: Initializing FixedCalendarViewModel with selected date ${_selectedDate.value}")
         val currentSelDate = _selectedDate.value
@@ -202,6 +214,15 @@ class FixedCalendarViewModel(
                     taskTitle = task.title
                 )
                 coinRepository.rewardStreakMilestone(overallStreak.value)
+                val streak = overallStreak.value
+                if (streak in listOf(7, 14, 30, 60, 100, 365)) {
+                    triggerConfetti()
+                } else {
+                    val dayTasks = taskRepository.getTasksForDate(task.associatedDate)
+                    if (dayTasks.isNotEmpty() && dayTasks.all { it.completed }) {
+                        triggerConfetti()
+                    }
+                }
             }
             loadState(targetDate)
         }
@@ -291,8 +312,13 @@ class FixedCalendarViewModel(
                 val progress = habitRepository.getCurrentCycleProgress(habitId, cycleIndex)
                 if (progress >= 28) {
                     coinRepository.rewardHabitCycleComplete(habitId, cycleIndex, habitName)
+                    triggerConfetti()
                 }
                 coinRepository.rewardStreakMilestone(overallStreak.value)
+                val streak = overallStreak.value
+                if (streak in listOf(7, 14, 30, 60, 100, 365)) {
+                    triggerConfetti()
+                }
             }
             loadState(targetDate)
         }

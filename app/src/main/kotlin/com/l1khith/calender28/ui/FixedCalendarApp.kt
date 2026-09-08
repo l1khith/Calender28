@@ -53,10 +53,12 @@ import com.l1khith.calender28.ui.theme.MatrixColors
 import com.l1khith.calender28.ui.theme.MatrixShapes
 import com.l1khith.calender28.data.EvolutionStage
 import com.l1khith.calender28.data.SparkyMood
+import com.l1khith.calender28.ui.sparky.ConfettiAnimation
 import com.l1khith.calender28.ui.sparky.SparkyAnimation
 import com.l1khith.calender28.ui.sparky.SparkyDetailScreen
 import com.l1khith.calender28.ui.sparky.SparkyEvolutionDialog
 import com.l1khith.calender28.ui.sparky.SparkyHomeCard
+import com.l1khith.calender28.viewmodel.CoinUiEvent
 import com.l1khith.calender28.viewmodel.SparkyViewModel
 
 
@@ -127,10 +129,19 @@ fun FixedCalendarApp(
     var showSparkyDetail by remember { mutableStateOf(false) }
     var showSparkyShopDirectly by remember { mutableStateOf(false) }
     var evolvingStageToCelebrate by remember { mutableStateOf<EvolutionStage?>(null) }
+    val showConfetti by viewModel.showConfetti.collectAsStateWithLifecycle()
 
     LaunchedEffect(Unit) {
         sparkyViewModel.evolutionEvent.collect { stage ->
             evolvingStageToCelebrate = stage
+        }
+    }
+
+    LaunchedEffect(Unit) {
+        coinViewModel.uiEvent.collect { event ->
+            if (event is CoinUiEvent.PremiumUnlocked) {
+                viewModel.triggerConfetti()
+            }
         }
     }
 
@@ -266,7 +277,8 @@ fun FixedCalendarApp(
         }
     }
 
-    if (showAddTaskDialog) {
+    Box(modifier = Modifier.fillMaxSize()) {
+        if (showAddTaskDialog) {
         CreateTaskScreen(
             task = taskToEdit,
             onDismiss = { showAddTaskDialog = false },
@@ -1050,7 +1062,11 @@ fun FixedCalendarApp(
 
     if (showPaywallDialog) {
         SubscriptionPaywallDialog(
-            onDismiss = { showPaywallDialog = false }
+            onDismiss = { showPaywallDialog = false },
+            onPurchaseSuccess = {
+                showPaywallDialog = false
+                viewModel.triggerConfetti()
+            }
         )
     }
 
@@ -1126,6 +1142,14 @@ fun FixedCalendarApp(
             )
         }
         com.l1khith.calender28.service.FocusState.Idle -> {}
+    }
+
+    if (showConfetti) {
+        ConfettiAnimation(
+            modifier = Modifier.fillMaxSize(),
+            iterations = 1
+        )
+    }
     }
 }
 
