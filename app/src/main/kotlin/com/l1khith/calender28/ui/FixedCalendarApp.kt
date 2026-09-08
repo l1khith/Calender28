@@ -7,6 +7,8 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
@@ -325,39 +327,13 @@ fun FixedCalendarApp(
 
                 TopAppBar(
                     title = {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            Icon(
-                                imageVector = AppIcons.AppLogo,
-                                contentDescription = "Matrix 28 Logo",
-                                tint = Color.Unspecified,
-                                modifier = Modifier.size(24.dp)
+                        Text(
+                            text = "Matrix 28",
+                            style = MaterialTheme.typography.titleLarge.copy(
+                                fontWeight = FontWeight.Bold,
+                                color = MatrixColors.Primary
                             )
-
-                            Text(
-                                text = "Matrix 28",
-                                style = MaterialTheme.typography.titleLarge.copy(
-                                    fontWeight = FontWeight.Bold,
-                                    color = MatrixColors.Primary
-                                )
-                            )
-
-                            Surface(
-                                shape = RoundedCornerShape(16.dp),
-                                color = MatrixColors.SurfaceContainerHigh,
-                                border = BorderStroke(1.dp, MatrixColors.OutlineVariant)
-                            ) {
-                                Text(
-                                    text = "28-Day Calendar",
-                                    color = textColorSecondary,
-                                    fontSize = 12.sp,
-                                    fontWeight = FontWeight.Medium,
-                                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
-                                )
-                            }
-                        }
+                        )
                     },
 
                     actions = {
@@ -701,11 +677,14 @@ fun FixedCalendarApp(
                     sparkyViewModel = sparkyViewModel
                 )
 
-                    else -> Column(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(horizontal = 16.dp)
-                    ) {
+                    else -> {
+                        val monthScrollState = rememberScrollState()
+                        Column(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .verticalScroll(monthScrollState)
+                                .padding(horizontal = 16.dp)
+                        ) {
 
             SparkyHomeCard(
                 sparkyViewModel = sparkyViewModel,
@@ -821,47 +800,38 @@ fun FixedCalendarApp(
 
             Spacer(modifier = Modifier.height(8.dp))
 
-
-
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .weight(1f)
-            ) {
-                if (tasks.isEmpty()) {
-                    EmptyState(textColor = textColorSecondary)
-                } else {
-                    AgendaList(
-                        tasks = tasks,
-                        onToggleComplete = {
-                            if (!it.completed) {
-                                sparkyViewModel.triggerTaskComplete(it.title)
-                            }
-                            viewModel.toggleTaskCompletion(it)
-                        },
-                        onEdit = {
-                            taskToEdit = it
-                            showAddTaskDialog = true
-                        },
-                        onDelete = { viewModel.deleteTask(it) },
-                        onStartFocus = { task ->
-                            if (!task.completed) {
-                                com.l1khith.calender28.service.FocusSessionManager.openSetup(task)
-                            }
-                        },
-                        primaryColor = primaryAccent,
-                        orangeColor = secondaryAccent,
-                        textColor = textColorPrimary,
-                        textColorSec = textColorSecondary,
-                        cardBg = cardBackground
-                    )
-                }
+            if (tasks.isEmpty()) {
+                EmptyState(textColor = textColorSecondary)
+            } else {
+                AgendaList(
+                    tasks = tasks,
+                    onToggleComplete = {
+                        if (!it.completed) {
+                            sparkyViewModel.triggerTaskComplete(it.title)
+                        }
+                        viewModel.toggleTaskCompletion(it)
+                    },
+                    onEdit = {
+                        taskToEdit = it
+                        showAddTaskDialog = true
+                    },
+                    onDelete = { viewModel.deleteTask(it) },
+                    onStartFocus = { task ->
+                        if (!task.completed) {
+                            com.l1khith.calender28.service.FocusSessionManager.openSetup(task)
+                        }
+                    },
+                    primaryColor = primaryAccent,
+                    orangeColor = secondaryAccent,
+                    textColor = textColorPrimary,
+                    textColorSec = textColorSecondary,
+                    cardBg = cardBackground
+                )
             }
 
-
-
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(80.dp))
             }
+        }
         }
     }
 }
@@ -1483,7 +1453,8 @@ fun AgendaList(
     orangeColor: Color,
     textColor: Color,
     textColorSec: Color,
-    cardBg: Color
+    cardBg: Color,
+    modifier: Modifier = Modifier
 ) {
     val bellIcon = remember {
         ImageVector.Builder(
@@ -1552,107 +1523,107 @@ fun AgendaList(
 
 
 
-    LazyColumn(
-        modifier = Modifier.fillMaxSize(),
+    Column(
+        modifier = modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(10.dp)
     ) {
         if (reminders.isNotEmpty()) {
-            item {
-                Row(
-                    modifier = Modifier.fillMaxWidth().padding(bottom = 6.dp, top = 2.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(
-                            imageVector = bellIcon,
-                            contentDescription = null,
-                            tint = Color(0xFFA1A1AA),
-                            modifier = Modifier.size(15.dp)
-                        )
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text(
-                            text = "Time-Critical Reminders",
-                            color = Color(0xFFA1A1AA),
-                            fontWeight = FontWeight.SemiBold,
-                            fontSize = 12.sp
-                        )
-                    }
-                }
-
-            }
-            items(reminders, key = { "rem_${it.id}" }) { task ->
-                ReminderItem(
-                    task = task,
-                    onToggleComplete = onToggleComplete,
-                    onEdit = onEdit,
-                    onDelete = onDelete,
-                    onStartFocus = onStartFocus,
-                    textColor = textColor,
-                    textColorSec = textColorSec,
-                    accentColor = orangeColor,
-                    cardBg = cardBg
-                )
-            }
-        }
-
-        if (todos.isNotEmpty()) {
-            item {
-                Row(
-                    modifier = Modifier.fillMaxWidth().padding(bottom = 6.dp, top = 10.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(bottom = 6.dp, top = 2.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(
-                        imageVector = todoHeaderIcon,
+                        imageVector = bellIcon,
                         contentDescription = null,
                         tint = Color(0xFFA1A1AA),
                         modifier = Modifier.size(15.dp)
                     )
                     Spacer(modifier = Modifier.width(6.dp))
                     Text(
-                        text = "Daily To-Dos",
+                        text = "Time-Critical Reminders",
                         color = Color(0xFFA1A1AA),
                         fontWeight = FontWeight.SemiBold,
                         fontSize = 12.sp
                     )
                 }
             }
-            items(todos, key = { "todo_${it.id}" }) { task ->
-                TodoItem(
-                    task = task,
-                    onToggleComplete = onToggleComplete,
-                    onEdit = onEdit,
-                    onDelete = onDelete,
-                    onStartFocus = onStartFocus,
-                    textColor = textColor,
-                    textColorSec = textColorSec,
-                    cardBg = cardBg
-                )
+
+            reminders.forEach { task ->
+                key("rem_${task.id}") {
+                    ReminderItem(
+                        task = task,
+                        onToggleComplete = onToggleComplete,
+                        onEdit = onEdit,
+                        onDelete = onDelete,
+                        onStartFocus = onStartFocus,
+                        textColor = textColor,
+                        textColorSec = textColorSec,
+                        accentColor = orangeColor,
+                        cardBg = cardBg
+                    )
+                }
             }
         }
 
-
-        if (recurring.isNotEmpty()) {
-            item {
+        if (todos.isNotEmpty()) {
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(bottom = 6.dp, top = 10.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(
+                    imageVector = todoHeaderIcon,
+                    contentDescription = null,
+                    tint = Color(0xFFA1A1AA),
+                    modifier = Modifier.size(15.dp)
+                )
+                Spacer(modifier = Modifier.width(6.dp))
                 Text(
-                    text = "RECURRING PLANS",
-                    color = Color(0xFF10B981),
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 12.sp,
-                    modifier = Modifier.padding(bottom = 4.dp, top = 8.dp)
+                    text = "Daily To-Dos",
+                    color = Color(0xFFA1A1AA),
+                    fontWeight = FontWeight.SemiBold,
+                    fontSize = 12.sp
                 )
             }
-            items(recurring, key = { "rec_${it.id}" }) { task ->
 
-                TodoItem(
-                    task = task,
-                    onToggleComplete = onToggleComplete,
-                    onEdit = {},
-                    onDelete = onDelete,
-                    onStartFocus = onStartFocus,
-                    textColor = textColor,
-                    textColorSec = textColorSec,
-                    cardBg = cardBg
-                )
+            todos.forEach { task ->
+                key("todo_${task.id}") {
+                    TodoItem(
+                        task = task,
+                        onToggleComplete = onToggleComplete,
+                        onEdit = onEdit,
+                        onDelete = onDelete,
+                        onStartFocus = onStartFocus,
+                        textColor = textColor,
+                        textColorSec = textColorSec,
+                        cardBg = cardBg
+                    )
+                }
+            }
+        }
+
+        if (recurring.isNotEmpty()) {
+            Text(
+                text = "RECURRING PLANS",
+                color = Color(0xFF10B981),
+                fontWeight = FontWeight.Bold,
+                fontSize = 12.sp,
+                modifier = Modifier.padding(bottom = 4.dp, top = 8.dp)
+            )
+
+            recurring.forEach { task ->
+                key("rec_${task.id}") {
+                    TodoItem(
+                        task = task,
+                        onToggleComplete = onToggleComplete,
+                        onEdit = {},
+                        onDelete = onDelete,
+                        onStartFocus = onStartFocus,
+                        textColor = textColor,
+                        textColorSec = textColorSec,
+                        cardBg = cardBg
+                    )
+                }
             }
         }
     }
