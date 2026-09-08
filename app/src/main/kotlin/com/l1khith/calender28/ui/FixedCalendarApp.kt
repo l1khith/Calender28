@@ -719,54 +719,9 @@ fun FixedCalendarApp(
 
             if (!isProActive) {
                 Spacer(modifier = Modifier.height(12.dp))
-
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = MatrixShapes.Md,
-                    colors = CardDefaults.cardColors(containerColor = cardBackground),
-                    border = BorderStroke(1.dp, borderSubtle)
-                ) {
-                    Column(modifier = Modifier.fillMaxWidth()) {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 12.dp, vertical = 8.dp),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Icon(
-                                    imageVector = Icons.Default.Notifications,
-                                    contentDescription = "Ad",
-                                    tint = textColorSecondary,
-                                    modifier = Modifier.size(20.dp)
-                                )
-
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Text(
-                                    text = "Ad Space / Go Pro to Remove",
-                                    color = textColorSecondary,
-                                    fontSize = 13.sp
-                                )
-                            }
-                            Button(
-                                onClick = { showPaywallDialog = true },
-                                colors = ButtonDefaults.buttonColors(containerColor = Color.Transparent),
-                                border = BorderStroke(1.dp, borderSubtle),
-                                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
-                                shape = MatrixShapes.Sm
-                            ) {
-                                Text("Remove Ads", color = textColorPrimary, fontSize = 11.sp, fontWeight = FontWeight.Medium)
-                            }
-                        }
-
-                        BannerAd(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(start = 8.dp, end = 8.dp, bottom = 8.dp)
-                        )
-                    }
-                }
+                BannerAd(
+                    modifier = Modifier.fillMaxWidth()
+                )
             }
 
             Spacer(modifier = Modifier.height(12.dp))

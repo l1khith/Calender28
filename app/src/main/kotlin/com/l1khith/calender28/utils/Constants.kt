@@ -61,7 +61,7 @@ object Constants {
     const val TEST_ADMOB_INTERSTITIAL_ID = "ca-app-pub-3940256099942544/1033173712"
 
     // Interstitial Ad Frequency
-    const val INTERSTITIAL_NAV_FREQUENCY = 4
+    const val INTERSTITIAL_NAV_FREQUENCY = 5
     const val INTERSTITIAL_COUNTDOWN_SECONDS = 5
 
     // --- Database Configuration ---
