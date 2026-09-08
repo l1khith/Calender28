@@ -18,12 +18,18 @@ class UserPreferencesRepository(
         val KEY_IS_PRO_USER = booleanPreferencesKey("is_pro_user")
         val KEY_SELECTED_THEME = stringPreferencesKey("selected_theme")
         val KEY_IS_APP_LOCK_ENABLED = booleanPreferencesKey("is_app_lock_enabled")
+        val KEY_ENABLE_SPARKY = booleanPreferencesKey("enable_sparky")
+        val KEY_ENABLE_ANIMATIONS = booleanPreferencesKey("enable_animations")
+        val KEY_ENABLE_SOUNDS = booleanPreferencesKey("enable_sounds")
 
         const val DEFAULT_USER_NAME = "Guest"
         const val DEFAULT_USER_AVATAR_URL = ""
         const val DEFAULT_IS_PRO_USER = false
         const val DEFAULT_SELECTED_THEME = "DEFAULT"
         const val DEFAULT_IS_APP_LOCK_ENABLED = false
+        const val DEFAULT_ENABLE_SPARKY = true
+        const val DEFAULT_ENABLE_ANIMATIONS = true
+        const val DEFAULT_ENABLE_SOUNDS = true
 
         @Volatile
         private var instance: UserPreferencesRepository? = null
@@ -56,6 +62,18 @@ class UserPreferencesRepository(
         preferences[KEY_IS_APP_LOCK_ENABLED] ?: DEFAULT_IS_APP_LOCK_ENABLED
     }
 
+    val enableSparky: Flow<Boolean> = dataStore.data.map { preferences ->
+        preferences[KEY_ENABLE_SPARKY] ?: DEFAULT_ENABLE_SPARKY
+    }
+
+    val enableAnimations: Flow<Boolean> = dataStore.data.map { preferences ->
+        preferences[KEY_ENABLE_ANIMATIONS] ?: DEFAULT_ENABLE_ANIMATIONS
+    }
+
+    val enableSounds: Flow<Boolean> = dataStore.data.map { preferences ->
+        preferences[KEY_ENABLE_SOUNDS] ?: DEFAULT_ENABLE_SOUNDS
+    }
+
     suspend fun updateUserName(name: String) {
         dataStore.edit { preferences ->
             preferences[KEY_USER_NAME] = name
@@ -83,6 +101,24 @@ class UserPreferencesRepository(
     suspend fun updateIsAppLockEnabled(enabled: Boolean) {
         dataStore.edit { preferences ->
             preferences[KEY_IS_APP_LOCK_ENABLED] = enabled
+        }
+    }
+
+    suspend fun updateEnableSparky(enabled: Boolean) {
+        dataStore.edit { preferences ->
+            preferences[KEY_ENABLE_SPARKY] = enabled
+        }
+    }
+
+    suspend fun updateEnableAnimations(enabled: Boolean) {
+        dataStore.edit { preferences ->
+            preferences[KEY_ENABLE_ANIMATIONS] = enabled
+        }
+    }
+
+    suspend fun updateEnableSounds(enabled: Boolean) {
+        dataStore.edit { preferences ->
+            preferences[KEY_ENABLE_SOUNDS] = enabled
         }
     }
 }

@@ -34,6 +34,7 @@ class MatrixApplication : Application() {
         }
 
         com.l1khith.calender28.security.AppLockManager.init(this, applicationScope)
+        com.l1khith.calender28.utils.AppSettingsManager.init(this, applicationScope)
 
         NotificationHelper(this).createNotificationChannels()
         MidnightRolloverWorker.scheduleNextMidnightRollover(this)

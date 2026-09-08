@@ -56,6 +56,16 @@ fun ProfileScreen(
     val coroutineScope = rememberCoroutineScope()
     val currentTheme by ThemeManager.currentTheme.collectAsStateWithLifecycle()
     var showThemeDialog by remember { mutableStateOf(false) }
+    var showAppPreferencesDialog by remember { mutableStateOf(false) }
+    val enableSparky by com.l1khith.calender28.utils.AppSettingsManager.enableSparky.collectAsStateWithLifecycle()
+    val enableAnimations by com.l1khith.calender28.utils.AppSettingsManager.enableAnimations.collectAsStateWithLifecycle()
+    val enableSounds by com.l1khith.calender28.utils.AppSettingsManager.enableSounds.collectAsStateWithLifecycle()
+
+    if (showAppPreferencesDialog) {
+        AppPreferencesDialog(
+            onDismiss = { showAppPreferencesDialog = false }
+        )
+    }
 
     if (showThemeDialog) {
         ThemeSelectionDialog(
@@ -79,14 +89,15 @@ fun ProfileScreen(
         verticalArrangement = Arrangement.spacedBy(20.dp)
     ) {
         // Section: Sparky Companion (Zero Emoji - Vector Icons only)
-        item {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(6.dp),
-                    modifier = Modifier.padding(horizontal = 4.dp)
-                ) {
-                    Icon(
+        if (enableSparky) {
+            item {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                        modifier = Modifier.padding(horizontal = 4.dp)
+                    ) {
+                        Icon(
                         imageVector = AppIcons.Sparky,
                         contentDescription = null,
                         tint = MatrixColors.Primary,
@@ -209,6 +220,7 @@ fun ProfileScreen(
                     }
                 }
             }
+        }
         }
 
         // Section: Account Settings
@@ -363,6 +375,13 @@ fun ProfileScreen(
                             icon = Icons.Default.MonetizationOn,
                             title = "CalCoin Store & Rewards",
                             onClick = onOpenCoinStore
+                        )
+                        HorizontalDivider(color = MatrixColors.OutlineVariant, thickness = 1.dp)
+                        ProfileSubtitleRow(
+                            icon = AppIcons.Sparky,
+                            title = "App Preferences",
+                            subtitle = "Sparky (${if (enableSparky) "On" else "Off"}) • Animations (${if (enableAnimations) "On" else "Off"}) • Sounds (${if (enableSounds) "On" else "Off"})",
+                            onClick = { showAppPreferencesDialog = true }
                         )
                     }
                 }

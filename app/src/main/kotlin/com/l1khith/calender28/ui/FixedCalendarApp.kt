@@ -132,6 +132,9 @@ fun FixedCalendarApp(
     var showSparkyShopDirectly by remember { mutableStateOf(false) }
     var evolvingStageToCelebrate by remember { mutableStateOf<EvolutionStage?>(null) }
     val showConfetti by viewModel.showConfetti.collectAsStateWithLifecycle()
+    val confettiTrigger by viewModel.confettiTrigger.collectAsStateWithLifecycle()
+    val completedCycleHabit by viewModel.completedCycleHabit.collectAsStateWithLifecycle()
+    val enableSparky by com.l1khith.calender28.utils.AppSettingsManager.enableSparky.collectAsStateWithLifecycle()
 
     LaunchedEffect(Unit) {
         sparkyViewModel.evolutionEvent.collect { stage ->
@@ -374,24 +377,26 @@ fun FixedCalendarApp(
                         )
 
                         // Mini Sparky Avatar (left of Streak)
-                        Surface(
-                            shape = CircleShape,
-                            color = MatrixColors.SurfaceContainerHigh,
-                            border = BorderStroke(1.dp, MatrixColors.Primary.copy(alpha = 0.5f)),
-                            modifier = Modifier
-                                .padding(end = 6.dp)
-                                .size(34.dp)
-                                .clickable {
-                                    showSparkyDetail = true
+                        if (enableSparky) {
+                            Surface(
+                                shape = CircleShape,
+                                color = MatrixColors.SurfaceContainerHigh,
+                                border = BorderStroke(1.dp, MatrixColors.Primary.copy(alpha = 0.5f)),
+                                modifier = Modifier
+                                    .padding(end = 6.dp)
+                                    .size(34.dp)
+                                    .clickable {
+                                        showSparkyDetail = true
+                                    }
+                            ) {
+                                Box(contentAlignment = Alignment.Center) {
+                                    SparkyAnimation(
+                                        mood = sparkyMood,
+                                        stage = sparkyState.stage,
+                                        size = 28.dp,
+                                        equippedSkin = sparkyState.equippedSkin
+                                    )
                                 }
-                        ) {
-                            Box(contentAlignment = Alignment.Center) {
-                                SparkyAnimation(
-                                    mood = sparkyMood,
-                                    stage = sparkyState.stage,
-                                    size = 28.dp,
-                                    equippedSkin = sparkyState.equippedSkin
-                                )
                             }
                         }
 
@@ -685,13 +690,18 @@ fun FixedCalendarApp(
                                 .verticalScroll(monthScrollState)
                                 .padding(horizontal = 16.dp)
                         ) {
+                        if (enableSparky) {
+                            Spacer(modifier = Modifier.height(12.dp))
 
-            SparkyHomeCard(
-                sparkyViewModel = sparkyViewModel,
-                onOpenDetail = { showSparkyDetail = true }
-            )
+                            SparkyHomeCard(
+                                sparkyViewModel = sparkyViewModel,
+                                onOpenDetail = { showSparkyDetail = true }
+                            )
 
-            Spacer(modifier = Modifier.height(10.dp))
+                            Spacer(modifier = Modifier.height(10.dp))
+                        } else {
+                            Spacer(modifier = Modifier.height(12.dp))
+                        }
 
             MonthYearSelector(
                 selectedDate = selectedDate,
@@ -886,7 +896,7 @@ fun FixedCalendarApp(
         }
     }
 
-    if (showSparkyDetail) {
+    if (enableSparky && showSparkyDetail) {
         androidx.compose.ui.window.Dialog(
             onDismissRequest = { showSparkyDetail = false },
             properties = androidx.compose.ui.window.DialogProperties(
@@ -906,11 +916,13 @@ fun FixedCalendarApp(
         }
     }
 
-    evolvingStageToCelebrate?.let { stage ->
-        SparkyEvolutionDialog(
-            newStage = stage,
-            onDismiss = { evolvingStageToCelebrate = null }
-        )
+    if (enableSparky) {
+        evolvingStageToCelebrate?.let { stage ->
+            SparkyEvolutionDialog(
+                newStage = stage,
+                onDismiss = { evolvingStageToCelebrate = null }
+            )
+        }
     }
 
     if (showStreakInfoDialog) {
@@ -918,13 +930,15 @@ fun FixedCalendarApp(
             onDismissRequest = { showStreakInfoDialog = false },
             icon = {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    SparkyAnimation(
-                        mood = SparkyMood.CELEBRATING,
-                        stage = sparkyState.stage,
-                        size = 64.dp,
-                        equippedSkin = sparkyState.equippedSkin
-                    )
-                    Spacer(modifier = Modifier.height(4.dp))
+                    if (enableSparky) {
+                        SparkyAnimation(
+                            mood = SparkyMood.CELEBRATING,
+                            stage = sparkyState.stage,
+                            size = 64.dp,
+                            equippedSkin = sparkyState.equippedSkin
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                    }
                     Icon(
                         imageVector = AppIcons.Fire,
                         contentDescription = null,
@@ -1070,9 +1084,18 @@ fun FixedCalendarApp(
     }
 
     if (showConfetti) {
-        ConfettiAnimation(
-            modifier = Modifier.fillMaxSize(),
-            iterations = 1
+        key(confettiTrigger) {
+            ConfettiAnimation(
+                modifier = Modifier.fillMaxSize(),
+                iterations = 1
+            )
+        }
+    }
+
+    completedCycleHabit?.let { habitName ->
+        com.l1khith.calender28.ui.sparky.HabitCycleCompleteDialog(
+            habitName = habitName,
+            onDismiss = { viewModel.dismissCycleCelebration() }
         )
     }
     }

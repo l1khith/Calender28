@@ -66,6 +66,19 @@ class SparkyViewModel(
         }
     }
 
+    fun triggerHabitCycleComplete(habitName: String = "") {
+        viewModelScope.launch {
+            val result = sparkyRepository.onHabitCompleted()
+            if (result.didEvolve) {
+                setTemporaryMood(SparkyMood.EVOLVING, "Sparky is evolving into ${result.newStage.displayName}!", 6000)
+                _evolutionEvent.emit(result.newStage)
+            } else {
+                val msg = if (habitName.isNotBlank()) "Incredible! 28-day cycle completed for $habitName!" else "28-day habit cycle completed!"
+                setTemporaryMood(SparkyMood.CELEBRATING, msg, 5000)
+            }
+        }
+    }
+
     fun triggerTaskComplete(taskTitle: String = "") {
         viewModelScope.launch {
             val result = sparkyRepository.onTaskCompleted()

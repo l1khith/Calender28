@@ -54,6 +54,7 @@ object SoundEffectHelper {
     }
 
     fun playFireSound(context: Context) {
+        if (!AppSettingsManager.enableSounds.value) return
         init(context)
         try {
             var played = false
@@ -87,6 +88,7 @@ object SoundEffectHelper {
     }
 
     fun playCoinSound(context: Context) {
+        if (!AppSettingsManager.enableSounds.value) return
         init(context)
         try {
             var played = false

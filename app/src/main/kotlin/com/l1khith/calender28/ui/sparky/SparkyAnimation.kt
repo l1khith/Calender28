@@ -6,8 +6,10 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.airbnb.lottie.compose.*
 import com.l1khith.calender28.R
 import com.l1khith.calender28.data.EvolutionStage
@@ -26,6 +28,24 @@ fun SparkyAnimation(
     iterations: Int = LottieConstants.IterateForever,
     equippedSkin: String? = null
 ) {
+    val enableAnimations by com.l1khith.calender28.utils.AppSettingsManager.enableAnimations.collectAsStateWithLifecycle()
+
+    if (!enableAnimations) {
+        val boxModifier = if (size != null) modifier.size(size) else modifier
+        Box(
+            modifier = boxModifier,
+            contentAlignment = Alignment.Center
+        ) {
+            androidx.compose.material3.Icon(
+                imageVector = com.l1khith.calender28.ui.theme.AppIcons.Sparky,
+                contentDescription = "Sparky",
+                tint = com.l1khith.calender28.ui.theme.MatrixColors.Primary,
+                modifier = Modifier.size((size ?: 40.dp) * 0.7f)
+            )
+        }
+        return
+    }
+
     val rawRes = when (mood) {
         SparkyMood.CELEBRATING -> {
             if (size == null) R.raw.confetti else R.raw.sparky_happy
@@ -90,8 +110,12 @@ fun SparkyAnimation(
 @Composable
 fun ConfettiAnimation(
     modifier: Modifier = Modifier,
-    iterations: Int = 1
+    iterations: Int = 1,
+    contentScale: ContentScale = ContentScale.Crop
 ) {
+    val enableAnimations by com.l1khith.calender28.utils.AppSettingsManager.enableAnimations.collectAsStateWithLifecycle()
+    if (!enableAnimations) return
+
     val composition by rememberLottieComposition(LottieCompositionSpec.RawRes(R.raw.confetti))
     val progress by animateLottieCompositionAsState(
         composition = composition,
@@ -106,6 +130,7 @@ fun ConfettiAnimation(
         LottieAnimation(
             composition = composition,
             progress = { progress },
+            contentScale = contentScale,
             modifier = Modifier.fillMaxSize()
         )
     }

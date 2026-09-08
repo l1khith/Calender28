@@ -88,10 +88,24 @@ class FixedCalendarViewModel(
     private val _showConfetti = MutableStateFlow(false)
     val showConfetti: StateFlow<Boolean> = _showConfetti.asStateFlow()
 
-    fun triggerConfetti() {
-        viewModelScope.launch {
+    private val _confettiTrigger = MutableStateFlow(0L)
+    val confettiTrigger: StateFlow<Long> = _confettiTrigger.asStateFlow()
+
+    private val _completedCycleHabit = MutableStateFlow<String?>(null)
+    val completedCycleHabit: StateFlow<String?> = _completedCycleHabit.asStateFlow()
+
+    fun dismissCycleCelebration() {
+        _completedCycleHabit.value = null
+    }
+
+    private var confettiJob: kotlinx.coroutines.Job? = null
+
+    fun triggerConfetti(durationMs: Long = 3000L) {
+        confettiJob?.cancel()
+        confettiJob = viewModelScope.launch {
+            _confettiTrigger.value = System.currentTimeMillis()
             _showConfetti.value = true
-            kotlinx.coroutines.delay(3000L)
+            kotlinx.coroutines.delay(durationMs)
             _showConfetti.value = false
         }
     }
@@ -312,12 +326,16 @@ class FixedCalendarViewModel(
                 val progress = habitRepository.getCurrentCycleProgress(habitId, cycleIndex)
                 if (progress >= 28) {
                     coinRepository.rewardHabitCycleComplete(habitId, cycleIndex, habitName)
-                    triggerConfetti()
+                    _completedCycleHabit.value = habitName
+                    triggerConfetti(durationMs = 5000L)
+                } else {
+                    // Confetti celebration for marking per-day habit
+                    triggerConfetti(durationMs = 2500L)
                 }
                 coinRepository.rewardStreakMilestone(overallStreak.value)
                 val streak = overallStreak.value
                 if (streak in listOf(7, 14, 30, 60, 100, 365)) {
-                    triggerConfetti()
+                    triggerConfetti(durationMs = 3500L)
                 }
             }
             loadState(targetDate)

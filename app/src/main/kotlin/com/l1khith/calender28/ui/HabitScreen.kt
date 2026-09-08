@@ -55,6 +55,8 @@ fun HabitSection(
     sparkyViewModel: com.l1khith.calender28.viewmodel.SparkyViewModel? = null
 ) {
     val habits by viewModel.habits.collectAsStateWithLifecycle()
+    val showConfetti by viewModel.showConfetti.collectAsStateWithLifecycle()
+    val confettiTrigger by viewModel.confettiTrigger.collectAsStateWithLifecycle()
     var selectedHabitId by remember { mutableStateOf<String?>(null) }
     var showCreateNewHabitScreen by remember { mutableStateOf(false) }
 
@@ -72,7 +74,12 @@ fun HabitSection(
 
         val isCompleted = habit.completedDays.contains(dayInCycle)
         if (!isCompleted) {
-            sparkyViewModel?.triggerHabitComplete(habit.name)
+            val willCompleteCycle = (habit.completedCount + 1 >= 28) && !habit.completedDays.contains(dayInCycle)
+            if (willCompleteCycle) {
+                sparkyViewModel?.triggerHabitCycleComplete(habit.name)
+            } else {
+                sparkyViewModel?.triggerHabitComplete(habit.name)
+            }
         }
         viewModel.toggleHabitDay(habit.id, currentCyclePos.cycleIndex, dayInCycle, isCompleted)
     }
@@ -94,7 +101,9 @@ fun HabitSection(
                 onDeleteHabit = { habitId ->
                     viewModel.deleteHabit(habitId)
                     selectedHabitId = null
-                }
+                },
+                showConfetti = showConfetti,
+                confettiTrigger = confettiTrigger
             )
         }
     }
@@ -636,7 +645,9 @@ fun HabitDetailScreen(
     onBack: () -> Unit,
     onToggleDay: (Int) -> Unit = {},
     onUpdateHabit: (Habit) -> Unit,
-    onDeleteHabit: (String) -> Unit
+    onDeleteHabit: (String) -> Unit,
+    showConfetti: Boolean = false,
+    confettiTrigger: Long = 0L
 ) {
     val weekHeaders = listOf("M", "T", "W", "T", "F", "S", "S")
 
@@ -677,14 +688,18 @@ fun HabitDetailScreen(
         },
         containerColor = MatrixColors.Surface
     ) { innerPadding ->
-        LazyColumn(
+        Box(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
-                .padding(horizontal = 16.dp),
-            contentPadding = PaddingValues(bottom = 40.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(horizontal = 16.dp),
+                contentPadding = PaddingValues(bottom = 40.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
             // CURRENT CYCLE PROGRESS CARD
             item {
                 Card(
@@ -969,6 +984,16 @@ fun HabitDetailScreen(
                 }
             }
         }
+
+        if (showConfetti) {
+            key(confettiTrigger) {
+                com.l1khith.calender28.ui.sparky.ConfettiAnimation(
+                    modifier = Modifier.fillMaxSize(),
+                    iterations = 1
+                )
+            }
+        }
     }
+}
 }
 
