@@ -19,6 +19,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import com.airbnb.lottie.compose.LottieConstants
 import com.l1khith.calender28.data.EvolutionStage
 import com.l1khith.calender28.data.SparkyMood
 import com.l1khith.calender28.ui.theme.AppIcons
@@ -78,15 +79,19 @@ fun SparkyEvolutionDialog(
                         )
                     )
 
-                    // Lottie animation of egg break / evolution
+                    // Lottie animation of companion celebration with confetti
                     Box(
                         modifier = Modifier.size(160.dp),
                         contentAlignment = Alignment.Center
                     ) {
+                        ConfettiAnimation(
+                            modifier = Modifier.fillMaxSize(),
+                            iterations = LottieConstants.IterateForever
+                        )
                         SparkyAnimation(
-                            mood = SparkyMood.EVOLVING,
+                            mood = SparkyMood.HAPPY,
                             stage = newStage,
-                            size = 160.dp
+                            size = 120.dp
                         )
                     }
 

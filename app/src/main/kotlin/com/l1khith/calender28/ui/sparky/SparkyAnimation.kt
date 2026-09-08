@@ -28,27 +28,27 @@ fun SparkyAnimation(
 ) {
     val rawRes = when (mood) {
         SparkyMood.CELEBRATING -> {
-            if (size != null && size < 150.dp) {
-                if (stage == EvolutionStage.EGG) R.raw.bird_egg_breaks else R.raw.sparky_happy
-            } else {
-                R.raw.confetti
-            }
+            if (size == null) R.raw.confetti else R.raw.sparky_happy
         }
-        SparkyMood.EVOLVING -> R.raw.bird_egg_breaks
-        SparkyMood.CALM -> R.raw.bird_dreaming
-        SparkyMood.TIRED, SparkyMood.SAD -> R.raw.sparky_sleepy
-        SparkyMood.HAPPY, SparkyMood.IDLE, SparkyMood.PROUD, SparkyMood.ENERGETIC, SparkyMood.CURIOUS -> {
-            if (stage == EvolutionStage.EGG) R.raw.bird_egg_breaks else R.raw.sparky_happy
-        }
+        SparkyMood.TIRED, SparkyMood.SAD, SparkyMood.CALM -> R.raw.sparky_sleepy
+        SparkyMood.HAPPY, SparkyMood.IDLE, SparkyMood.PROUD, SparkyMood.ENERGETIC, SparkyMood.CURIOUS, SparkyMood.EVOLVING -> R.raw.sparky_happy
     }
 
     val composition by rememberLottieComposition(LottieCompositionSpec.RawRes(rawRes))
-    val playIterations = if (mood == SparkyMood.EVOLVING) 1 else iterations
+    val playIterations = iterations
+
+    val effectiveSpeed = when {
+        speed != 1.0f -> speed
+        mood == SparkyMood.CALM -> 0.8f
+        mood == SparkyMood.TIRED || mood == SparkyMood.SAD -> 0.85f
+        mood == SparkyMood.ENERGETIC -> 1.25f
+        else -> 1.0f
+    }
 
     val progress by animateLottieCompositionAsState(
         composition = composition,
         iterations = playIterations,
-        speed = speed,
+        speed = effectiveSpeed,
         isPlaying = true
     )
 
