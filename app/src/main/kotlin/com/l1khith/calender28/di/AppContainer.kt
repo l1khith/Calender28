@@ -8,6 +8,8 @@ import com.l1khith.calender28.repository.FocusRepository
 import com.l1khith.calender28.repository.FocusRepositoryImpl
 import com.l1khith.calender28.repository.HabitRepository
 import com.l1khith.calender28.repository.HabitRepositoryImpl
+import com.l1khith.calender28.repository.NoteRepository
+import com.l1khith.calender28.repository.NoteRepositoryImpl
 import com.l1khith.calender28.repository.TaskRepository
 import com.l1khith.calender28.repository.TaskRepositoryImpl
 import com.l1khith.calender28.repository.UserPreferencesRepository
@@ -23,6 +25,7 @@ interface AppContainer {
     val focusRepository: FocusRepository
     val userPreferencesRepository: UserPreferencesRepository
     val sparkyRepository: com.l1khith.calender28.repository.SparkyRepository
+    val noteRepository: NoteRepository
 }
 
 /**
@@ -64,5 +67,9 @@ class DefaultAppContainer(private val context: Context) : AppContainer {
             sparkyDao = database.sparkyDao(),
             coinRepository = coinRepository
         )
+    }
+
+    override val noteRepository: NoteRepository by lazy {
+        NoteRepositoryImpl(database.noteDao())
     }
 }
