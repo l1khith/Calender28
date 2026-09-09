@@ -13,11 +13,14 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.activity.compose.BackHandler
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.l1khith.calender28.viewmodel.AppViewModelProvider
 import com.l1khith.calender28.viewmodel.CoinViewModel
@@ -135,6 +138,7 @@ fun FixedCalendarApp(
     val confettiTrigger by viewModel.confettiTrigger.collectAsStateWithLifecycle()
     val completedCycleHabit by viewModel.completedCycleHabit.collectAsStateWithLifecycle()
     val enableSparky by com.l1khith.calender28.utils.AppSettingsManager.enableSparky.collectAsStateWithLifecycle()
+    val enableAnimations by com.l1khith.calender28.utils.AppSettingsManager.enableAnimations.collectAsStateWithLifecycle()
 
     LaunchedEffect(Unit) {
         sparkyViewModel.evolutionEvent.collect { stage ->
@@ -250,6 +254,21 @@ fun FixedCalendarApp(
         ).build()
     }
 
+    val notesNavIcon = remember {
+        ImageVector.Builder(
+            name = "NotesNavIcon",
+            defaultWidth = 18.dp,
+            defaultHeight = 18.dp,
+            viewportWidth = 18f,
+            viewportHeight = 18f
+        ).addPath(
+            pathData = PathParser().parsePathString(
+                "M3 1C1.9 1 1 1.9 1 3V15C1 16.1 1.9 17 3 17H15C16.1 17 17 16.1 17 15V5L13 1H3ZM3 3H12V6H15V15H3V3ZM5 8H13V10H5V8ZM5 11H11V13H5V11Z"
+            ).toNodes(),
+            fill = SolidColor(Color(0xFFC2C6D6))
+        ).build()
+    }
+
     val backgroundColor = MatrixColors.Surface
 
     val cardBackground = MatrixColors.SurfaceContainerLow
@@ -261,6 +280,9 @@ fun FixedCalendarApp(
     val borderSubtle = MatrixColors.OutlineVariant
 
     var selectedTab by remember { mutableStateOf(0) }
+    var showProfileScreen by rememberSaveable { mutableStateOf(false) }
+    var createHabitTrigger by remember { mutableStateOf(0) }
+    var createNoteTrigger by remember { mutableStateOf(0) }
 
     val onNavigateToTab: (Int) -> Unit = { targetTab ->
         if (selectedTab != targetTab) {
@@ -317,8 +339,78 @@ fun FixedCalendarApp(
                 }
             }
         )
-    }
- else {
+    } else if (showProfileScreen) {
+        BackHandler { showProfileScreen = false }
+        Scaffold(
+            topBar = {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(MatrixColors.Surface)
+                ) {
+                    TopAppBar(
+                        title = {
+                            Text(
+                                text = "Profile & Settings",
+                                style = MaterialTheme.typography.titleLarge.copy(
+                                    fontWeight = FontWeight.Bold,
+                                    color = MatrixColors.Primary
+                                )
+                            )
+                        },
+                        navigationIcon = {
+                            IconButton(onClick = { showProfileScreen = false }) {
+                                Icon(
+                                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                                    contentDescription = "Back",
+                                    tint = MatrixColors.TextHeader
+                                )
+                            }
+                        },
+                        colors = TopAppBarDefaults.topAppBarColors(
+                            containerColor = MatrixColors.Surface,
+                            titleContentColor = MatrixColors.Primary
+                        )
+                    )
+                    AnimatedSparkDivider(
+                        baseColor = Color(0xFF424754),
+                        sparkColor = MatrixColors.Primary,
+                        glowColor = MatrixColors.Secondary,
+                        height = 1.dp,
+                        reverseDirection = true,
+                        durationMillis = 4000
+                    )
+                }
+            },
+            containerColor = backgroundColor
+        ) { innerPadding ->
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(innerPadding)
+                    .background(backgroundColor)
+            ) {
+                ProfileScreen(
+                    onOpenSubscription = { showPaywallDialog = true },
+                    onOpenCustomerCenter = { showCustomerCenterDialog = true },
+                    onOpenSecurity = { showSecurityLockDialog = true },
+                    onOpenNotifications = { launchNotificationPermission() },
+                    onOpenFocusStats = { showFocusStatsDialog = true },
+                    onOpenCoinStore = {
+                        showSparkyShopDirectly = false
+                        showCoinStoreDialog = true
+                    },
+                    onOpenExportTasks = { showExportTasksDialog = true },
+                    onOpenMonthView = {
+                        showProfileScreen = false
+                        onNavigateToTab(0)
+                    },
+                    onOpenSparkyDetail = { showSparkyDetail = true },
+                    sparkyViewModel = sparkyViewModel
+                )
+            }
+        }
+    } else {
 
         Scaffold(
             topBar = {
@@ -329,13 +421,27 @@ fun FixedCalendarApp(
                 ) {
 
                 TopAppBar(
+                    navigationIcon = {
+                        IconButton(
+                            onClick = { showProfileScreen = true },
+                            modifier = Modifier.padding(start = 4.dp)
+                        ) {
+                            Icon(
+                                imageVector = profileNavIcon,
+                                contentDescription = "Profile",
+                                tint = MatrixColors.Primary,
+                                modifier = Modifier.size(24.dp)
+                            )
+                        }
+                    },
                     title = {
                         Text(
                             text = "Matrix 28",
-                            style = MaterialTheme.typography.titleLarge.copy(
+                            style = MaterialTheme.typography.titleMedium.copy(
                                 fontWeight = FontWeight.Bold,
                                 color = MatrixColors.Primary
-                            )
+                            ),
+                            maxLines = 1
                         )
                     },
 
@@ -357,7 +463,7 @@ fun FixedCalendarApp(
 
                         // Flame wiggle / flicker animation
                         val flameTransition = rememberInfiniteTransition(label = "flame_wiggle")
-                        val flameRotation by flameTransition.animateFloat(
+                        val animatedFlameRotation by flameTransition.animateFloat(
                             initialValue = -8f,
                             targetValue = 8f,
                             animationSpec = infiniteRepeatable(
@@ -366,7 +472,7 @@ fun FixedCalendarApp(
                             ),
                             label = "flame_rot"
                         )
-                        val flameScale by flameTransition.animateFloat(
+                        val animatedFlameScale by flameTransition.animateFloat(
                             initialValue = 0.92f,
                             targetValue = 1.12f,
                             animationSpec = infiniteRepeatable(
@@ -375,6 +481,8 @@ fun FixedCalendarApp(
                             ),
                             label = "flame_scale"
                         )
+                        val flameRotation = if (enableAnimations) animatedFlameRotation else 0f
+                        val flameScale = if (enableAnimations) animatedFlameScale else 1f
 
                         // Mini Sparky Avatar (left of Streak)
                         if (enableSparky) {
@@ -440,7 +548,7 @@ fun FixedCalendarApp(
 
                         // Coin 3D Y-axis flip animation
                         val coinFlipTransition = rememberInfiniteTransition(label = "coin_flip")
-                        val coinRotationY by coinFlipTransition.animateFloat(
+                        val animatedCoinRotationY by coinFlipTransition.animateFloat(
                             initialValue = 0f,
                             targetValue = 360f,
                             animationSpec = infiniteRepeatable(
@@ -449,6 +557,7 @@ fun FixedCalendarApp(
                             ),
                             label = "coin_rot_y"
                         )
+                        val coinRotationY = if (enableAnimations) animatedCoinRotationY else 0f
 
                         // CalCoins Chip
                         Surface(
@@ -522,116 +631,41 @@ fun FixedCalendarApp(
             }
 
         },
-        floatingActionButton = {
-            if (selectedTab == 0) {
-                FloatingActionButton(
-                    onClick = {
-                        taskToEdit = null
-                        showAddTaskDialog = true
-                    },
-                    containerColor = MatrixColors.PrimaryContainer,
-                    contentColor = MatrixColors.OnPrimaryContainer,
-                    shape = MatrixShapes.Xl
-                ) {
-                    Icon(imageVector = Icons.Default.Add, contentDescription = "Add Task")
-                }
-            }
-        },
-
         bottomBar = {
-            Column(modifier = Modifier.fillMaxWidth().background(MatrixColors.Surface)) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(Color.Transparent)
+            ) {
                 if (!isProActive) {
                     BannerAd(modifier = Modifier.fillMaxWidth())
                 }
-                AnimatedSparkDivider(
-                    baseColor = MatrixColors.OutlineVariant,
-                    sparkColor = MatrixColors.Primary,
-                    glowColor = MatrixColors.Secondary,
-                    height = 1.dp,
-                    reverseDirection = false,
-                    durationMillis = 4000
-                )
-                NavigationBar(
-                    containerColor = MatrixColors.Surface,
-                    contentColor = MatrixColors.OnSurface,
-                    tonalElevation = 0.dp
-                ) {
-
-                NavigationBarItem(
-                    selected = selectedTab == 0,
-                    onClick = { onNavigateToTab(0) },
-                    icon = {
-                        Icon(
-                            imageVector = monthNavIcon,
-                            contentDescription = "Month"
-                        )
+                FloatingBottomNavBar(
+                    selectedTab = NavigationTab.fromIndex(selectedTab),
+                    onTabSelected = { tab ->
+                        onNavigateToTab(tab.ordinal)
                     },
-                    label = { Text("Month", style = MaterialTheme.typography.labelSmall) },
-                    colors = NavigationBarItemDefaults.colors(
-                        selectedIconColor = MatrixColors.Primary,
-                        selectedTextColor = MatrixColors.Primary,
-                        indicatorColor = Color.Transparent,
-                        unselectedIconColor = MatrixColors.OnSurfaceVariant,
-                        unselectedTextColor = MatrixColors.OnSurfaceVariant
-                    )
-                )
-                NavigationBarItem(
-                    selected = selectedTab == 1,
-                    onClick = { onNavigateToTab(1) },
-                    icon = {
-                        Icon(
-                            imageVector = tasksNavIcon,
-                            contentDescription = "Tasks"
-                        )
+                    onAddClicked = {
+                        when (selectedTab) {
+                            0, 1 -> {
+                                taskToEdit = null
+                                showAddTaskDialog = true
+                            }
+                            2 -> {
+                                createHabitTrigger++
+                            }
+                            3 -> {
+                                createNoteTrigger++
+                            }
+                        }
                     },
-                    label = { Text("Tasks", style = MaterialTheme.typography.labelSmall) },
-                    colors = NavigationBarItemDefaults.colors(
-                        selectedIconColor = MatrixColors.Primary,
-                        selectedTextColor = MatrixColors.Primary,
-                        indicatorColor = Color.Transparent,
-                        unselectedIconColor = MatrixColors.OnSurfaceVariant,
-                        unselectedTextColor = MatrixColors.OnSurfaceVariant
-                    )
-                )
-                NavigationBarItem(
-                    selected = selectedTab == 2,
-                    onClick = { onNavigateToTab(2) },
-                    icon = {
-                        Icon(
-                            imageVector = habitNavIcon,
-                            contentDescription = "Habit"
-                        )
-                    },
-                    label = { Text("Habit", style = MaterialTheme.typography.labelSmall) },
-                    colors = NavigationBarItemDefaults.colors(
-                        selectedIconColor = MatrixColors.Primary,
-                        selectedTextColor = MatrixColors.Primary,
-                        indicatorColor = Color.Transparent,
-                        unselectedIconColor = MatrixColors.OnSurfaceVariant,
-                        unselectedTextColor = MatrixColors.OnSurfaceVariant
-                    )
-                )
-                NavigationBarItem(
-                    selected = selectedTab == 3,
-                    onClick = { onNavigateToTab(3) },
-                    icon = {
-                        Icon(
-                            imageVector = profileNavIcon,
-                            contentDescription = "Profile"
-                        )
-                    },
-                    label = { Text("Profile", style = MaterialTheme.typography.labelSmall) },
-                    colors = NavigationBarItemDefaults.colors(
-                        selectedIconColor = MatrixColors.Primary,
-                        selectedTextColor = MatrixColors.Primary,
-                        indicatorColor = Color.Transparent,
-                        unselectedIconColor = MatrixColors.OnSurfaceVariant,
-                        unselectedTextColor = MatrixColors.OnSurfaceVariant
-                    )
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 12.dp)
+                        .navigationBarsPadding()
                 )
             }
-        }
-    },
+        },
     containerColor = backgroundColor
 
     ) { innerPadding ->
@@ -663,23 +697,14 @@ fun FixedCalendarApp(
                     viewModel = viewModel,
                     isProActive = isProActive,
                     onOpenPaywall = { showPaywallDialog = true },
-                    sparkyViewModel = sparkyViewModel
+                    sparkyViewModel = sparkyViewModel,
+                    createHabitTrigger = createHabitTrigger
                 )
 
-                3 -> ProfileScreen(
-                    onOpenSubscription = { showPaywallDialog = true },
-                    onOpenCustomerCenter = { showCustomerCenterDialog = true },
-                    onOpenSecurity = { showSecurityLockDialog = true },
-                    onOpenNotifications = { launchNotificationPermission() },
-                    onOpenFocusStats = { showFocusStatsDialog = true },
-                    onOpenCoinStore = {
-                        showSparkyShopDirectly = false
-                        showCoinStoreDialog = true
-                    },
-                    onOpenExportTasks = { showExportTasksDialog = true },
-                    onOpenMonthView = { onNavigateToTab(0) },
-                    onOpenSparkyDetail = { showSparkyDetail = true },
-                    sparkyViewModel = sparkyViewModel
+                3 -> NotesListScreen(
+                    isProActive = isProActive,
+                    onOpenPaywall = { showPaywallDialog = true },
+                    createNoteTrigger = createNoteTrigger
                 )
 
                     else -> {
@@ -2110,6 +2135,26 @@ fun AnimatedSparkDivider(
     reverseDirection: Boolean = false,
     durationMillis: Int = 4200
 ) {
+    val enableAnimations by com.l1khith.calender28.utils.AppSettingsManager.enableAnimations.collectAsStateWithLifecycle()
+
+    if (!enableAnimations) {
+        androidx.compose.foundation.Canvas(
+            modifier = modifier
+                .fillMaxWidth()
+                .height(height)
+        ) {
+            val width = size.width
+            val y = size.height / 2f
+            drawLine(
+                color = baseColor,
+                start = androidx.compose.ui.geometry.Offset(0f, y),
+                end = androidx.compose.ui.geometry.Offset(width, y),
+                strokeWidth = size.height
+            )
+        }
+        return
+    }
+
     val transition = rememberInfiniteTransition(label = "spark_divider_transition_${if (reverseDirection) "rev" else "fwd"}")
     val initial = if (reverseDirection) 1.15f else -0.15f
     val target = if (reverseDirection) -0.15f else 1.15f

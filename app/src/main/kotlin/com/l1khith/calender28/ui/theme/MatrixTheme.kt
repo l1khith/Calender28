@@ -61,6 +61,10 @@ object MatrixShapes {
     val Md = RoundedCornerShape(8.dp)
     val Lg = RoundedCornerShape(16.dp)
     val Xl = RoundedCornerShape(24.dp)
+    val Pill = RoundedCornerShape(50)
+    val CardSmall = Md
+    val CardMedium = Lg
+    val CardLarge = Xl
 }
 
 @Composable
