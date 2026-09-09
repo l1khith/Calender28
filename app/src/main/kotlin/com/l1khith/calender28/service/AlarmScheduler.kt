@@ -8,16 +8,20 @@ import android.os.Build
 import android.util.Log
 import com.l1khith.calender28.data.AppTask
 import com.l1khith.calender28.data.Habit
+import com.l1khith.calender28.data.RoomTaskDatabase
 import com.l1khith.calender28.data.ScheduledAlarmEntity
-import com.l1khith.calender28.data.TaskDatabase
 import com.l1khith.calender28.utils.FixedCalendarHelper
-import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
 
 private const val TAG = "ServiceAlarmScheduler"
 
 class AlarmScheduler(private val context: Context) {
 
     private val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     companion object {
         const val EXTRA_ITEM_ID = "item_id"
@@ -124,12 +128,11 @@ class AlarmScheduler(private val context: Context) {
 
     fun cancelAllForItem(itemId: String) {
         Log.d(TAG, "cancelAllForItem: Cancelling all alarms for itemId=$itemId")
-        runBlocking {
+        scope.launch(Dispatchers.IO) {
             try {
-                val db = TaskDatabase(context)
-                val alarms = db.getScheduledAlarmDao().getAlarmsForItem(itemId)
-                // Cancel PendingIntents directly without calling cancelAlarm() to avoid
-                // nested runBlocking deadlock (cancelAlarm -> deleteAlarmRecord -> runBlocking)
+                val db = RoomTaskDatabase.getInstance(context)
+                val alarms = db.scheduledAlarmDao().getAlarmsForItem(itemId)
+                // Cancel PendingIntents directly without calling cancelAlarm()
                 alarms.forEach { alarm ->
                     val intent = Intent(context, AlarmReceiver::class.java)
                     val pendingIntent = PendingIntent.getBroadcast(
@@ -141,8 +144,8 @@ class AlarmScheduler(private val context: Context) {
                         it.cancel()
                     }
                 }
-                // Bulk delete all alarm records for this item (avoids per-item runBlocking)
-                db.getScheduledAlarmDao().deleteAlarmsForItem(itemId)
+                // Bulk delete all alarm records for this item
+                db.scheduledAlarmDao().deleteAlarmsForItem(itemId)
             } catch (e: Exception) {
                 Log.e(TAG, "Error cancelling alarms for $itemId", e)
             }
@@ -208,10 +211,10 @@ class AlarmScheduler(private val context: Context) {
         isRecurring: Boolean,
         recurrenceIndex: Int = 0
     ) {
-        runBlocking {
+        scope.launch(Dispatchers.IO) {
             try {
-                val db = TaskDatabase(context)
-                db.getScheduledAlarmDao().insertAlarm(
+                val db = RoomTaskDatabase.getInstance(context)
+                db.scheduledAlarmDao().insertAlarm(
                     ScheduledAlarmEntity(
                         alarm_id = alarmId,
                         item_id = itemId,
@@ -228,10 +231,10 @@ class AlarmScheduler(private val context: Context) {
     }
 
     private fun deleteAlarmRecord(alarmId: Int) {
-        runBlocking {
+        scope.launch(Dispatchers.IO) {
             try {
-                val db = TaskDatabase(context)
-                db.getScheduledAlarmDao().deleteAlarm(alarmId)
+                val db = RoomTaskDatabase.getInstance(context)
+                db.scheduledAlarmDao().deleteAlarm(alarmId)
             } catch (e: Exception) {
                 Log.e(TAG, "Error deleting alarm record", e)
             }

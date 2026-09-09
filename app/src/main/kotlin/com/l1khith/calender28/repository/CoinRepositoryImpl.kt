@@ -7,14 +7,19 @@ import com.l1khith.calender28.data.CoinDao
 import com.l1khith.calender28.data.CoinTransactionEntity
 import com.l1khith.calender28.data.RoomTaskDatabase
 import com.l1khith.calender28.data.TransactionReason
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 import java.util.UUID
+import java.util.concurrent.TimeoutException
 
 class CoinRepositoryImpl(
     private val coinDao: CoinDao,
@@ -28,49 +33,54 @@ class CoinRepositoryImpl(
 
     private val mutex = Mutex()
 
-    override val coinBalance: Flow<Int> = coinDao.getCoinBalanceFlow().map { it?.balance ?: 0 }
-    override val recentTransactions: Flow<List<CoinTransactionEntity>> = coinDao.getRecentTransactionsFlow(50)
+    override val coinBalance: Flow<Int> = coinDao.getCoinBalanceFlow().map { it?.balance ?: 0 }.flowOn(Dispatchers.IO)
+    override val recentTransactions: Flow<List<CoinTransactionEntity>> = coinDao.getRecentTransactionsFlow(50).flowOn(Dispatchers.IO)
 
     private fun getCurrentIsoTimestamp(): String {
         val sdf = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.US)
         return sdf.format(Date())
     }
 
-    override suspend fun getBalance(): Int {
-        return coinDao.getCoinBalance()?.balance ?: 0
+    override suspend fun getBalance(): Int = withContext(Dispatchers.IO) {
+        coinDao.getCoinBalance()?.balance ?: 0
     }
 
     private suspend fun executeTransaction(
         amount: Int,
         reason: TransactionReason,
         note: String? = null
-    ): CoinRewardResult = mutex.withLock {
-        val currentBalance = coinDao.getCoinBalance()?.balance ?: 0
-        val newBalance = (currentBalance + amount).coerceAtLeast(0)
+    ): CoinRewardResult = withContext(Dispatchers.IO) {
+        val result = withTimeoutOrNull(5000L) {
+            mutex.withLock {
+                val currentBalance = coinDao.getCoinBalance()?.balance ?: 0
+                val newBalance = (currentBalance + amount).coerceAtLeast(0)
 
-        coinDao.insertOrUpdateBalance(CoinBalanceEntity(id = 1, balance = newBalance))
+                coinDao.insertOrUpdateBalance(CoinBalanceEntity(id = 1, balance = newBalance))
 
-        val tx = CoinTransactionEntity(
-            id = UUID.randomUUID().toString(),
-            amount = amount,
-            reason = reason.name,
-            timestamp = getCurrentIsoTimestamp(),
-            note = note
-        )
-        coinDao.insertTransaction(tx)
+                val tx = CoinTransactionEntity(
+                    id = UUID.randomUUID().toString(),
+                    amount = amount,
+                    reason = reason.name,
+                    timestamp = getCurrentIsoTimestamp(),
+                    note = note
+                )
+                coinDao.insertTransaction(tx)
 
-        val message = if (amount >= 0) {
-            "+$amount CalCoins: ${reason.displayName}"
-        } else {
-            "$amount CalCoins: ${reason.displayName}"
-        }
+                val message = if (amount >= 0) {
+                    "+$amount CalCoins: ${reason.displayName}"
+                } else {
+                    "$amount CalCoins: ${reason.displayName}"
+                }
 
-        CoinRewardResult(
-            coinsAwarded = amount,
-            reasonName = reason.name,
-            newBalance = newBalance,
-            message = message
-        )
+                CoinRewardResult(
+                    coinsAwarded = amount,
+                    reasonName = reason.name,
+                    newBalance = newBalance,
+                    message = message
+                )
+            }
+        } ?: throw TimeoutException("Coin transaction timed out")
+        result
     }
 
     override suspend fun rewardDailyLogin(datePrefix: String): CoinRewardResult? {
@@ -188,37 +198,40 @@ class CoinRepositoryImpl(
         return Result.success(result)
     }
 
-    override suspend fun buyPremiumWithCoins(): Result<Unit> {
+    override suspend fun buyPremiumWithCoins(): Result<Unit> = withContext(Dispatchers.IO) {
         if (SubscriptionManager.isProActive.value) {
-            return Result.failure(IllegalStateException("Pro is already active on this device."))
+            return@withContext Result.failure(IllegalStateException("Pro is already active on this device."))
         }
 
         val requiredCoins = com.l1khith.calender28.utils.Constants.PREMIUM_UNLOCK_COIN_COST
 
-        // Check balance AND deduct inside the same mutex lock to prevent race conditions
-        return mutex.withLock {
-            val currentBalance = coinDao.getCoinBalance()?.balance ?: 0
-            if (currentBalance < requiredCoins) {
-                return@withLock Result.failure(IllegalStateException("Insufficient CalCoins. You need $requiredCoins CalCoins to unlock Premium."))
+        // Check balance AND deduct inside the same mutex lock with timeout to prevent race conditions or deadlocks
+        val result = withTimeoutOrNull(5000L) {
+            mutex.withLock {
+                val currentBalance = coinDao.getCoinBalance()?.balance ?: 0
+                if (currentBalance < requiredCoins) {
+                    return@withLock Result.failure(IllegalStateException("Insufficient CalCoins. You need $requiredCoins CalCoins to unlock Premium."))
+                }
+
+                val newBalance = (currentBalance - requiredCoins).coerceAtLeast(0)
+                coinDao.insertOrUpdateBalance(CoinBalanceEntity(id = 1, balance = newBalance))
+
+                val tx = CoinTransactionEntity(
+                    id = java.util.UUID.randomUUID().toString(),
+                    amount = -requiredCoins,
+                    reason = TransactionReason.PREMIUM_PURCHASE.name,
+                    timestamp = getCurrentIsoTimestamp(),
+                    note = "Unlocked Premium with $requiredCoins CalCoins"
+                )
+                coinDao.insertTransaction(tx)
+
+                userPrefsRepo?.updateIsProUser(true)
+                SubscriptionManager.setProActive(true)
+
+                Result.success(Unit)
             }
-
-            val newBalance = (currentBalance - requiredCoins).coerceAtLeast(0)
-            coinDao.insertOrUpdateBalance(CoinBalanceEntity(id = 1, balance = newBalance))
-
-            val tx = CoinTransactionEntity(
-                id = java.util.UUID.randomUUID().toString(),
-                amount = -requiredCoins,
-                reason = TransactionReason.PREMIUM_PURCHASE.name,
-                timestamp = getCurrentIsoTimestamp(),
-                note = "Unlocked Premium with $requiredCoins CalCoins"
-            )
-            coinDao.insertTransaction(tx)
-
-            userPrefsRepo?.updateIsProUser(true)
-            SubscriptionManager.setProActive(true)
-
-            Result.success(Unit)
         }
+        result ?: Result.failure(TimeoutException("Purchase transaction timed out"))
     }
 
     override suspend fun rewardFocusSessionComplete(taskTitle: String, durationMinutes: Int): CoinRewardResult? {

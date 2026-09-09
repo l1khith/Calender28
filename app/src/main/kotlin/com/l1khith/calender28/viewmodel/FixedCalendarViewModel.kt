@@ -15,11 +15,14 @@ import com.l1khith.calender28.utils.FixedCalendarHelper
 import com.l1khith.calender28.utils.FixedDate
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -29,7 +32,6 @@ import com.l1khith.calender28.repository.CoinRepositoryImpl
 import com.l1khith.calender28.repository.HabitRepository
 import com.l1khith.calender28.repository.TaskRepository
 import com.l1khith.calender28.utils.OverallStreakManager
-import kotlinx.coroutines.flow.combine
 
 private const val TAG = "FixedCalendarVM"
 
@@ -82,7 +84,8 @@ class FixedCalendarViewModel(
         val streak = OverallStreakManager.computeOverallStreak(tasks, habitList)
         OverallStreakManager.saveCachedStreak(context, streak)
         streak
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), OverallStreakManager.getCachedStreak(context))
+    }.flowOn(Dispatchers.IO)
+     .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), OverallStreakManager.getCachedStreak(context))
 
     // Confetti celebration state
     private val _showConfetti = MutableStateFlow(false)
@@ -114,11 +117,15 @@ class FixedCalendarViewModel(
         Log.d(TAG, "init: Initializing FixedCalendarViewModel with selected date ${_selectedDate.value}")
         val currentSelDate = _selectedDate.value
         viewModelScope.launch(Dispatchers.IO) {
+            ensureActive()
             taskRepository.catchUpRollover(currentSelDate)
+            ensureActive()
             val systemEvents = CalendarSyncHelper.importSystemCalendarEvents(context)
+            ensureActive()
             if (systemEvents.isNotEmpty()) {
                 taskRepository.importSystemCalendarTasks(systemEvents)
             }
+            ensureActive()
             coinRepository.rewardDailyLogin(FixedCalendarHelper.currentFixedDate().toString())
             loadState(currentSelDate)
         }
@@ -132,7 +139,7 @@ class FixedCalendarViewModel(
     fun onDateSelected(date: FixedDate) {
         Log.d(TAG, "onDateSelected: Date changed from ${_selectedDate.value} to $date")
         _selectedDate.value = date
-        viewModelScope.launch(Dispatchers.Default) {
+        viewModelScope.launch(Dispatchers.IO) {
             taskRepository.catchUpRollover(date)
             loadState(date)
         }
@@ -160,7 +167,7 @@ class FixedCalendarViewModel(
 
     fun onTaskSelected(taskId: String) {
         Log.d(TAG, "onTaskSelected: Selected taskId=$taskId")
-        viewModelScope.launch(Dispatchers.Default) {
+        viewModelScope.launch(Dispatchers.IO) {
             val task = taskRepository.getAllTasks().find { it.id == taskId }
             if (task != null) {
                 val parsed = FixedCalendarHelper.parseDateStr(task.associatedDate)
@@ -190,7 +197,7 @@ class FixedCalendarViewModel(
         }
         Log.d(TAG, "saveTask: id=$id, title=$title, date=$targetDate, isReminder=$isReminder, reminderTime=$reminderTime")
 
-        viewModelScope.launch(Dispatchers.Default) {
+        viewModelScope.launch(Dispatchers.IO) {
             taskRepository.saveTask(
                 id = id,
                 title = title,
@@ -207,7 +214,7 @@ class FixedCalendarViewModel(
     fun deleteTask(task: AppTask) {
         Log.d(TAG, "deleteTask: Deleting taskId=${task.id}, title=${task.title}")
         val targetDate = _selectedDate.value
-        viewModelScope.launch(Dispatchers.Default) {
+        viewModelScope.launch(Dispatchers.IO) {
             taskRepository.deleteTask(task.id, task.recurringParentId)
             loadState(targetDate)
         }
@@ -217,7 +224,7 @@ class FixedCalendarViewModel(
         Log.d(TAG, "toggleTaskCompletion: Toggling taskId=${task.id}, currentCompleted=${task.completed}")
         val targetDate = _selectedDate.value
         val isNowCompleting = !task.completed
-        viewModelScope.launch(Dispatchers.Default) {
+        viewModelScope.launch(Dispatchers.IO) {
             taskRepository.toggleTaskCompletion(task)
             if (isNowCompleting) {
                 val isRecurring = task.recurringParentId != null || task.isGenerated == 1
@@ -258,7 +265,7 @@ class FixedCalendarViewModel(
     ) {
         val targetDate = _selectedDate.value
         Log.d(TAG, "saveRecurringTask: id=$id, title=$title, type=$recurrenceType, isActive=$isActive")
-        viewModelScope.launch(Dispatchers.Default) {
+        viewModelScope.launch(Dispatchers.IO) {
             taskRepository.saveRecurringTask(
                 id = id,
                 title = title,
@@ -279,7 +286,7 @@ class FixedCalendarViewModel(
     fun deleteRecurringTask(id: String) {
         Log.d(TAG, "deleteRecurringTask: Deleting recurring taskId=$id")
         val targetDate = _selectedDate.value
-        viewModelScope.launch(Dispatchers.Default) {
+        viewModelScope.launch(Dispatchers.IO) {
             taskRepository.deleteRecurringTask(id)
             loadState(targetDate)
         }
@@ -296,7 +303,7 @@ class FixedCalendarViewModel(
     ) {
         Log.d(TAG, "saveHabit: id=$id, name=$name, category=$category, reminderTime=$reminderTime")
         val targetDate = _selectedDate.value
-        viewModelScope.launch(Dispatchers.Default) {
+        viewModelScope.launch(Dispatchers.IO) {
             habitRepository.saveHabit(id, name, category, reminderTime, colorHex)
             loadState(targetDate)
         }
@@ -305,7 +312,7 @@ class FixedCalendarViewModel(
     fun deleteHabit(id: String) {
         Log.d(TAG, "deleteHabit: Deleting habitId=$id")
         val targetDate = _selectedDate.value
-        viewModelScope.launch(Dispatchers.Default) {
+        viewModelScope.launch(Dispatchers.IO) {
             habitRepository.deleteHabit(id)
             loadState(targetDate)
         }
@@ -315,7 +322,7 @@ class FixedCalendarViewModel(
         Log.d(TAG, "toggleHabitDay: habitId=$habitId, cycleIndex=$cycleIndex, dayInCycle=$dayInCycle, currentCompleted=$currentCompletedState")
         val targetDate = _selectedDate.value
         val isNowCompleted = !currentCompletedState
-        viewModelScope.launch(Dispatchers.Default) {
+        viewModelScope.launch(Dispatchers.IO) {
             habitRepository.toggleHabitDay(habitId, cycleIndex, dayInCycle, currentCompletedState)
             if (isNowCompleted) {
                 val allHabits = habitRepository.getAllHabits()
@@ -352,7 +359,7 @@ class FixedCalendarViewModel(
     fun refresh() {
         val date = _selectedDate.value
         Log.d(TAG, "refresh: Refreshing state for date=$date")
-        viewModelScope.launch(Dispatchers.Default) {
+        viewModelScope.launch(Dispatchers.IO) {
             taskRepository.catchUpRollover(date)
             loadState(date)
         }
@@ -394,13 +401,16 @@ class FixedCalendarViewModel(
         val targetDate = _selectedDate.value
         viewModelScope.launch(Dispatchers.IO) {
             try {
+                ensureActive()
                 val events = CalendarSyncHelper.importSystemCalendarEvents(context)
+                ensureActive()
                 Log.d(TAG, "importSystemCalendar: Found ${events.size} system calendar events")
                 if (events.isNotEmpty()) {
                     taskRepository.importSystemCalendarTasks(events)
                 }
                 loadState(targetDate)
             } catch (e: Exception) {
+                if (e is kotlinx.coroutines.CancellationException) throw e
                 Log.e(TAG, "importSystemCalendar: Failed to import", e)
             }
         }
@@ -416,7 +426,9 @@ class FixedCalendarViewModel(
         Log.d(TAG, "exportTasksToDownloads: Exporting year=$year, month=$month, format=$format, currentMonthOnly=$currentMonthOnly")
         viewModelScope.launch(Dispatchers.IO) {
             try {
+                ensureActive()
                 val allTasks = taskRepository.getAllTasks()
+                ensureActive()
                 val monthStr = month.toString().padStart(2, '0')
                 val prefix = "$year-$monthStr"
 
@@ -461,6 +473,7 @@ class FixedCalendarViewModel(
                     }
                 }
             } catch (e: Exception) {
+                if (e is kotlinx.coroutines.CancellationException) throw e
                 Log.e(TAG, "Export failed", e)
                 withContext(Dispatchers.Main) {
                     onResult(false, "", "Export error: ${e.localizedMessage}")
@@ -476,10 +489,12 @@ class FixedCalendarViewModel(
     fun importFromIcsContent(content: String) {
         Log.d(TAG, "importFromIcsContent: Importing ICS content length=${content.length}")
         val targetDate = _selectedDate.value
-        viewModelScope.launch(Dispatchers.Default) {
+        viewModelScope.launch(Dispatchers.IO) {
+            ensureActive()
             val tasks = CalendarSyncHelper.importFromIcs(content)
             Log.d(TAG, "importFromIcsContent: Imported ${tasks.size} tasks")
             for (t in tasks) {
+                ensureActive()
                 taskRepository.saveTask(
                     id = t.id,
                     title = t.title,

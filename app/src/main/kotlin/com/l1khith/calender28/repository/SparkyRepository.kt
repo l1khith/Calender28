@@ -1,10 +1,15 @@
 package com.l1khith.calender28.repository
 
 import com.l1khith.calender28.data.*
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
+import java.util.concurrent.TimeoutException
 
 data class SparkyProgressionResult(
     val newState: SparkyState,
@@ -38,7 +43,7 @@ class SparkyRepositoryImpl(
 
     override val sparkyState: Flow<SparkyState> = sparkyDao.observeSparky().map { entity ->
         entity?.toSparkyState() ?: SparkyState()
-    }
+    }.flowOn(Dispatchers.IO)
 
     private suspend fun getOrCreateEntity(): SparkyEntity {
         val existing = sparkyDao.getSparky()
@@ -61,256 +66,301 @@ class SparkyRepositoryImpl(
         return initial
     }
 
-    override suspend fun getSparky(): SparkyState = mutex.withLock {
-        getOrCreateEntity().toSparkyState()
-    }
-
-    override suspend fun onHabitCompleted(): SparkyProgressionResult = mutex.withLock {
-        val current = getOrCreateEntity()
-        val newHabits = current.totalHabitsCompleted + 1
-        val xpGain = 15
-        val newXp = current.xp + xpGain
-
-        val prevLevel = current.level
-        val newLevel = (newXp / 100) + 1
-        val didLevelUp = newLevel > prevLevel
-
-        val prevStage = EvolutionStage.valueOf(current.evolutionStage)
-        val newStage = EvolutionStage.fromHabits(newHabits)
-        val didEvolve = newStage != prevStage
-
-        val updated = current.copy(
-            totalHabitsCompleted = newHabits,
-            xp = newXp,
-            level = newLevel,
-            evolutionStage = newStage.name,
-            personalityEnergetic = (current.personalityEnergetic + 1).coerceAtMost(100),
-            personalityWise = (current.personalityWise + 1).coerceAtMost(100)
-        )
-        sparkyDao.insertOrUpdateSparky(updated)
-
-        // Award level-up bonus coins
-        if (didLevelUp) {
-            coinRepository.addCustomCoins(25, "SPARKY_LEVEL_UP", "Sparky reached Level $newLevel!")
-        }
-        if (didEvolve) {
-            coinRepository.addCustomCoins(100, "SPARKY_EVOLUTION", "Sparky evolved to ${newStage.displayName}!")
-        }
-
-        SparkyProgressionResult(
-            newState = updated.toSparkyState(),
-            xpGained = xpGain,
-            didLevelUp = didLevelUp,
-            didEvolve = didEvolve,
-            previousStage = prevStage,
-            newStage = newStage
-        )
-    }
-
-    override suspend fun onTaskCompleted(): SparkyProgressionResult = mutex.withLock {
-        val current = getOrCreateEntity()
-        val newTasks = current.totalTasksCompleted + 1
-        val xpGain = 10
-        val newXp = current.xp + xpGain
-
-        val prevLevel = current.level
-        val newLevel = (newXp / 100) + 1
-        val didLevelUp = newLevel > prevLevel
-
-        val stage = EvolutionStage.valueOf(current.evolutionStage)
-
-        val updated = current.copy(
-            totalTasksCompleted = newTasks,
-            xp = newXp,
-            level = newLevel,
-            personalityCurious = (current.personalityCurious + 1).coerceAtMost(100),
-            personalityResilient = (current.personalityResilient + 1).coerceAtMost(100)
-        )
-        sparkyDao.insertOrUpdateSparky(updated)
-
-        if (didLevelUp) {
-            coinRepository.addCustomCoins(25, "SPARKY_LEVEL_UP", "Sparky reached Level $newLevel!")
-        }
-
-        SparkyProgressionResult(
-            newState = updated.toSparkyState(),
-            xpGained = xpGain,
-            didLevelUp = didLevelUp,
-            didEvolve = false,
-            previousStage = stage,
-            newStage = stage
-        )
-    }
-
-    override suspend fun onFocusCompleted(durationMinutes: Int): SparkyProgressionResult = mutex.withLock {
-        val current = getOrCreateEntity()
-        val newSessions = current.totalFocusSessions + 1
-        val xpGain = (durationMinutes / 5).coerceAtLeast(1) * 5
-        val newXp = current.xp + xpGain
-
-        val prevLevel = current.level
-        val newLevel = (newXp / 100) + 1
-        val didLevelUp = newLevel > prevLevel
-
-        val stage = EvolutionStage.valueOf(current.evolutionStage)
-
-        val updated = current.copy(
-            totalFocusSessions = newSessions,
-            xp = newXp,
-            level = newLevel,
-            personalityCalm = (current.personalityCalm + 2).coerceAtMost(100)
-        )
-        sparkyDao.insertOrUpdateSparky(updated)
-
-        if (didLevelUp) {
-            coinRepository.addCustomCoins(25, "SPARKY_LEVEL_UP", "Sparky reached Level $newLevel!")
-        }
-
-        SparkyProgressionResult(
-            newState = updated.toSparkyState(),
-            xpGained = xpGain,
-            didLevelUp = didLevelUp,
-            didEvolve = false,
-            previousStage = stage,
-            newStage = stage
-        )
-    }
-
-    override suspend fun onStreakUpdated(streak: Int): SparkyProgressionResult = mutex.withLock {
-        val current = getOrCreateEntity()
-        val record = current.streakRecord.coerceAtLeast(streak)
-        val xpGain = 5
-        val newXp = current.xp + xpGain
-
-        val prevLevel = current.level
-        val newLevel = (newXp / 100) + 1
-        val didLevelUp = newLevel > prevLevel
-
-        val stage = EvolutionStage.valueOf(current.evolutionStage)
-
-        val updated = current.copy(
-            streakRecord = record,
-            xp = newXp,
-            level = newLevel,
-            personalityFriendly = (current.personalityFriendly + 1).coerceAtMost(100),
-            personalityResilient = (current.personalityResilient + 1).coerceAtMost(100)
-        )
-        sparkyDao.insertOrUpdateSparky(updated)
-
-        if (didLevelUp) {
-            coinRepository.addCustomCoins(25, "SPARKY_LEVEL_UP", "Sparky reached Level $newLevel!")
-        }
-
-        SparkyProgressionResult(
-            newState = updated.toSparkyState(),
-            xpGained = xpGain,
-            didLevelUp = didLevelUp,
-            didEvolve = false,
-            previousStage = stage,
-            newStage = stage
-        )
-    }
-
-    override suspend fun buyShopItem(item: SparkyShopItem): Result<Unit> = mutex.withLock {
-        val current = getOrCreateEntity()
-        val state = current.toSparkyState()
-
-        val isAlreadyOwned = when (item.category) {
-            SparkyShopCategory.HATS -> state.unlockedHats.contains(item.id)
-            SparkyShopCategory.SKINS -> state.unlockedSkins.contains(item.id)
-            SparkyShopCategory.BOOSTERS -> state.unlockedBoosters.contains(item.id)
-        }
-        if (isAlreadyOwned) {
-            return Result.failure(IllegalStateException("Item '${item.name}' is already owned."))
-        }
-
-        val balance = coinRepository.getBalance()
-        if (balance < item.price) {
-            return Result.failure(IllegalStateException("Insufficient CalCoins. You need ${item.price} coins."))
-        }
-
-        // Deduct coins
-        coinRepository.addCustomCoins(-item.price, "SPARKY_SHOP_BUY", "Purchased ${item.name} for Sparky")
-
-        // Add to inventory and equip
-        val updated = when (item.category) {
-            SparkyShopCategory.HATS -> {
-                val newHats = (state.unlockedHats + item.id).joinToString(",")
-                current.copy(unlockedHats = newHats, equippedHat = item.id)
-            }
-            SparkyShopCategory.SKINS -> {
-                val newSkins = (state.unlockedSkins + item.id).joinToString(",")
-                current.copy(unlockedSkins = newSkins, equippedSkin = item.id)
-            }
-            SparkyShopCategory.BOOSTERS -> {
-                val newBoosters = (state.unlockedBoosters + item.id).joinToString(",")
-                current.copy(unlockedBoosters = newBoosters)
+    override suspend fun getSparky(): SparkyState = withContext(Dispatchers.IO) {
+        val result = withTimeoutOrNull(5000L) {
+            mutex.withLock {
+                getOrCreateEntity().toSparkyState()
             }
         }
-        sparkyDao.insertOrUpdateSparky(updated)
-        Result.success(Unit)
+        result ?: SparkyState()
     }
 
-    override suspend fun toggleEquip(item: SparkyShopItem): Result<Unit> = mutex.withLock {
-        val current = getOrCreateEntity()
-        val state = current.toSparkyState()
+    override suspend fun onHabitCompleted(): SparkyProgressionResult = withContext(Dispatchers.IO) {
+        val result = withTimeoutOrNull(5000L) {
+            mutex.withLock {
+                val current = getOrCreateEntity()
+                val newHabits = current.totalHabitsCompleted + 1
+                val xpGain = 15
+                val newXp = current.xp + xpGain
 
-        val isOwned = when (item.category) {
-            SparkyShopCategory.HATS -> state.unlockedHats.contains(item.id)
-            SparkyShopCategory.SKINS -> state.unlockedSkins.contains(item.id)
-            SparkyShopCategory.BOOSTERS -> return Result.failure(IllegalArgumentException("Boosters cannot be equipped."))
-        }
-        if (!isOwned) {
-            return Result.failure(IllegalStateException("You don't own '${item.name}' yet."))
-        }
+                val prevLevel = current.level
+                val newLevel = (newXp / 100) + 1
+                val didLevelUp = newLevel > prevLevel
 
-        val updated = when (item.category) {
-            SparkyShopCategory.HATS -> {
-                val newEquip = if (current.equippedHat == item.id) null else item.id
-                current.copy(equippedHat = newEquip)
+                val prevStage = EvolutionStage.valueOf(current.evolutionStage)
+                val newStage = EvolutionStage.fromHabits(newHabits)
+                val didEvolve = newStage != prevStage
+
+                val updated = current.copy(
+                    totalHabitsCompleted = newHabits,
+                    xp = newXp,
+                    level = newLevel,
+                    evolutionStage = newStage.name,
+                    personalityEnergetic = (current.personalityEnergetic + 1).coerceAtMost(100),
+                    personalityWise = (current.personalityWise + 1).coerceAtMost(100)
+                )
+                sparkyDao.insertOrUpdateSparky(updated)
+
+                // Award level-up bonus coins
+                if (didLevelUp) {
+                    coinRepository.addCustomCoins(25, "SPARKY_LEVEL_UP", "Sparky reached Level $newLevel!")
+                }
+                if (didEvolve) {
+                    coinRepository.addCustomCoins(100, "SPARKY_EVOLUTION", "Sparky evolved to ${newStage.displayName}!")
+                }
+
+                SparkyProgressionResult(
+                    newState = updated.toSparkyState(),
+                    xpGained = xpGain,
+                    didLevelUp = didLevelUp,
+                    didEvolve = didEvolve,
+                    previousStage = prevStage,
+                    newStage = newStage
+                )
             }
-            SparkyShopCategory.SKINS -> {
-                val newEquip = if (current.equippedSkin == item.id) null else item.id
-                current.copy(equippedSkin = newEquip)
-            }
-            else -> current
-        }
-        sparkyDao.insertOrUpdateSparky(updated)
-        Result.success(Unit)
+        } ?: throw TimeoutException("Habit completion timed out")
+        result
     }
 
-    override suspend fun renameSparky(name: String): Result<Unit> = mutex.withLock {
+    override suspend fun onTaskCompleted(): SparkyProgressionResult = withContext(Dispatchers.IO) {
+        val result = withTimeoutOrNull(5000L) {
+            mutex.withLock {
+                val current = getOrCreateEntity()
+                val newTasks = current.totalTasksCompleted + 1
+                val xpGain = 10
+                val newXp = current.xp + xpGain
+
+                val prevLevel = current.level
+                val newLevel = (newXp / 100) + 1
+                val didLevelUp = newLevel > prevLevel
+
+                val stage = EvolutionStage.valueOf(current.evolutionStage)
+
+                val updated = current.copy(
+                    totalTasksCompleted = newTasks,
+                    xp = newXp,
+                    level = newLevel,
+                    personalityCurious = (current.personalityCurious + 1).coerceAtMost(100),
+                    personalityResilient = (current.personalityResilient + 1).coerceAtMost(100)
+                )
+                sparkyDao.insertOrUpdateSparky(updated)
+
+                if (didLevelUp) {
+                    coinRepository.addCustomCoins(25, "SPARKY_LEVEL_UP", "Sparky reached Level $newLevel!")
+                }
+
+                SparkyProgressionResult(
+                    newState = updated.toSparkyState(),
+                    xpGained = xpGain,
+                    didLevelUp = didLevelUp,
+                    didEvolve = false,
+                    previousStage = stage,
+                    newStage = stage
+                )
+            }
+        } ?: throw TimeoutException("Task completion timed out")
+        result
+    }
+
+    override suspend fun onFocusCompleted(durationMinutes: Int): SparkyProgressionResult = withContext(Dispatchers.IO) {
+        val result = withTimeoutOrNull(5000L) {
+            mutex.withLock {
+                val current = getOrCreateEntity()
+                val newSessions = current.totalFocusSessions + 1
+                val xpGain = (durationMinutes / 5).coerceAtLeast(1) * 5
+                val newXp = current.xp + xpGain
+
+                val prevLevel = current.level
+                val newLevel = (newXp / 100) + 1
+                val didLevelUp = newLevel > prevLevel
+
+                val stage = EvolutionStage.valueOf(current.evolutionStage)
+
+                val updated = current.copy(
+                    totalFocusSessions = newSessions,
+                    xp = newXp,
+                    level = newLevel,
+                    personalityCalm = (current.personalityCalm + 2).coerceAtMost(100)
+                )
+                sparkyDao.insertOrUpdateSparky(updated)
+
+                if (didLevelUp) {
+                    coinRepository.addCustomCoins(25, "SPARKY_LEVEL_UP", "Sparky reached Level $newLevel!")
+                }
+
+                SparkyProgressionResult(
+                    newState = updated.toSparkyState(),
+                    xpGained = xpGain,
+                    didLevelUp = didLevelUp,
+                    didEvolve = false,
+                    previousStage = stage,
+                    newStage = stage
+                )
+            }
+        } ?: throw TimeoutException("Focus completion timed out")
+        result
+    }
+
+    override suspend fun onStreakUpdated(streak: Int): SparkyProgressionResult = withContext(Dispatchers.IO) {
+        val result = withTimeoutOrNull(5000L) {
+            mutex.withLock {
+                val current = getOrCreateEntity()
+                val record = current.streakRecord.coerceAtLeast(streak)
+                val xpGain = 5
+                val newXp = current.xp + xpGain
+
+                val prevLevel = current.level
+                val newLevel = (newXp / 100) + 1
+                val didLevelUp = newLevel > prevLevel
+
+                val stage = EvolutionStage.valueOf(current.evolutionStage)
+
+                val updated = current.copy(
+                    streakRecord = record,
+                    xp = newXp,
+                    level = newLevel,
+                    personalityFriendly = (current.personalityFriendly + 1).coerceAtMost(100),
+                    personalityResilient = (current.personalityResilient + 1).coerceAtMost(100)
+                )
+                sparkyDao.insertOrUpdateSparky(updated)
+
+                if (didLevelUp) {
+                    coinRepository.addCustomCoins(25, "SPARKY_LEVEL_UP", "Sparky reached Level $newLevel!")
+                }
+
+                SparkyProgressionResult(
+                    newState = updated.toSparkyState(),
+                    xpGained = xpGain,
+                    didLevelUp = didLevelUp,
+                    didEvolve = false,
+                    previousStage = stage,
+                    newStage = stage
+                )
+            }
+        } ?: throw TimeoutException("Streak update timed out")
+        result
+    }
+
+    override suspend fun buyShopItem(item: SparkyShopItem): Result<Unit> = withContext(Dispatchers.IO) {
+        val result = withTimeoutOrNull(5000L) {
+            mutex.withLock {
+                val current = getOrCreateEntity()
+                val state = current.toSparkyState()
+
+                val isAlreadyOwned = when (item.category) {
+                    SparkyShopCategory.HATS -> state.unlockedHats.contains(item.id)
+                    SparkyShopCategory.SKINS -> state.unlockedSkins.contains(item.id)
+                    SparkyShopCategory.BOOSTERS -> state.unlockedBoosters.contains(item.id)
+                }
+                if (isAlreadyOwned) {
+                    return@withLock Result.failure(IllegalStateException("Item '${item.name}' is already owned."))
+                }
+
+                val balance = coinRepository.getBalance()
+                if (balance < item.price) {
+                    return@withLock Result.failure(IllegalStateException("Insufficient CalCoins. You need ${item.price} coins."))
+                }
+
+                // Deduct coins
+                coinRepository.addCustomCoins(-item.price, "SPARKY_SHOP_BUY", "Purchased ${item.name} for Sparky")
+
+                // Add to inventory and equip
+                val updated = when (item.category) {
+                    SparkyShopCategory.HATS -> {
+                        val newHats = (state.unlockedHats + item.id).joinToString(",")
+                        current.copy(unlockedHats = newHats, equippedHat = item.id)
+                    }
+                    SparkyShopCategory.SKINS -> {
+                        val newSkins = (state.unlockedSkins + item.id).joinToString(",")
+                        current.copy(unlockedSkins = newSkins, equippedSkin = item.id)
+                    }
+                    SparkyShopCategory.BOOSTERS -> {
+                        val newBoosters = (state.unlockedBoosters + item.id).joinToString(",")
+                        current.copy(unlockedBoosters = newBoosters)
+                    }
+                }
+                sparkyDao.insertOrUpdateSparky(updated)
+                Result.success(Unit)
+            }
+        }
+        result ?: Result.failure(TimeoutException("Shop purchase timed out"))
+    }
+
+    override suspend fun toggleEquip(item: SparkyShopItem): Result<Unit> = withContext(Dispatchers.IO) {
+        val result = withTimeoutOrNull(5000L) {
+            mutex.withLock {
+                val current = getOrCreateEntity()
+                val state = current.toSparkyState()
+
+                val isOwned = when (item.category) {
+                    SparkyShopCategory.HATS -> state.unlockedHats.contains(item.id)
+                    SparkyShopCategory.SKINS -> state.unlockedSkins.contains(item.id)
+                    SparkyShopCategory.BOOSTERS -> return@withLock Result.failure(IllegalArgumentException("Boosters cannot be equipped."))
+                }
+                if (!isOwned) {
+                    return@withLock Result.failure(IllegalStateException("You don't own '${item.name}' yet."))
+                }
+
+                val updated = when (item.category) {
+                    SparkyShopCategory.HATS -> {
+                        val newEquip = if (current.equippedHat == item.id) null else item.id
+                        current.copy(equippedHat = newEquip)
+                    }
+                    SparkyShopCategory.SKINS -> {
+                        val newEquip = if (current.equippedSkin == item.id) null else item.id
+                        current.copy(equippedSkin = newEquip)
+                    }
+                    else -> current
+                }
+                sparkyDao.insertOrUpdateSparky(updated)
+                Result.success(Unit)
+            }
+        }
+        result ?: Result.failure(TimeoutException("Equip item timed out"))
+    }
+
+    override suspend fun renameSparky(name: String): Result<Unit> = withContext(Dispatchers.IO) {
         val clean = name.trim()
-        if (clean.isBlank()) return Result.failure(IllegalArgumentException("Name cannot be empty."))
-        if (clean.length > 20) return Result.failure(IllegalArgumentException("Name too long (max 20 characters)."))
-        val current = getOrCreateEntity()
-        sparkyDao.insertOrUpdateSparky(current.copy(name = clean))
-        Result.success(Unit)
+        if (clean.isBlank()) return@withContext Result.failure(IllegalArgumentException("Name cannot be empty."))
+        if (clean.length > 20) return@withContext Result.failure(IllegalArgumentException("Name too long (max 20 characters)."))
+        val result = withTimeoutOrNull(5000L) {
+            mutex.withLock {
+                val current = getOrCreateEntity()
+                sparkyDao.insertOrUpdateSparky(current.copy(name = clean))
+                Result.success(Unit)
+            }
+        }
+        result ?: Result.failure(TimeoutException("Rename timed out"))
     }
 
-    override suspend fun claimAchievement(achievementId: String): Result<Int> = mutex.withLock {
-        val current = getOrCreateEntity()
-        val state = current.toSparkyState()
+    override suspend fun claimAchievement(achievementId: String): Result<Int> = withContext(Dispatchers.IO) {
+        val result = withTimeoutOrNull(5000L) {
+            mutex.withLock {
+                val current = getOrCreateEntity()
+                val state = current.toSparkyState()
 
-        if (state.claimedAchievements.contains(achievementId)) {
-            return Result.failure(IllegalStateException("Achievement already claimed."))
+                if (state.claimedAchievements.contains(achievementId)) {
+                    return@withLock Result.failure(IllegalStateException("Achievement already claimed."))
+                }
+
+                val achievements = getAchievements(state)
+                val target = achievements.find { it.id == achievementId }
+                    ?: return@withLock Result.failure(IllegalArgumentException("Unknown achievement."))
+
+                if (!target.isUnlocked) {
+                    return@withLock Result.failure(IllegalStateException("Achievement requirement not yet reached."))
+                }
+
+                // Award reward coins
+                coinRepository.addCustomCoins(target.rewardCoins, "SPARKY_ACHIEVEMENT", "Achievement: ${target.title}")
+
+                val newClaimed = (state.claimedAchievements + achievementId).joinToString(",")
+                sparkyDao.insertOrUpdateSparky(current.copy(claimedAchievements = newClaimed))
+
+                Result.success(target.rewardCoins)
+            }
         }
-
-        val achievements = getAchievements(state)
-        val target = achievements.find { it.id == achievementId }
-            ?: return Result.failure(IllegalArgumentException("Unknown achievement."))
-
-        if (!target.isUnlocked) {
-            return Result.failure(IllegalStateException("Achievement requirement not yet reached."))
-        }
-
-        // Award reward coins
-        coinRepository.addCustomCoins(target.rewardCoins, "SPARKY_ACHIEVEMENT", "Achievement: ${target.title}")
-
-        val newClaimed = (state.claimedAchievements + achievementId).joinToString(",")
-        sparkyDao.insertOrUpdateSparky(current.copy(claimedAchievements = newClaimed))
-
-        Result.success(target.rewardCoins)
+        result ?: Result.failure(TimeoutException("Claim achievement timed out"))
     }
 
     override fun getAchievements(state: SparkyState): List<SparkyAchievement> {

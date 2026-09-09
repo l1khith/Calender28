@@ -7,6 +7,7 @@ import com.l1khith.calender28.data.FocusSessionEntity
 import com.l1khith.calender28.data.RoomTaskDatabase
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
 
@@ -52,21 +53,21 @@ class FocusRepositoryImpl(private val context: Context) : FocusRepository {
     override fun getAllFocusSessionsFlow(): Flow<List<FocusSession>> {
         return focusSessionDao.observeAllSessions().map { list ->
             list.map { it.toDomain() }
-        }
+        }.flowOn(Dispatchers.IO)
     }
 
     override fun getFocusSessionsForTaskFlow(taskId: String): Flow<List<FocusSession>> {
         return focusSessionDao.observeSessionsForTask(taskId).map { list ->
             list.map { it.toDomain() }
-        }
+        }.flowOn(Dispatchers.IO)
     }
 
     override fun getTotalFocusSecondsFlow(): Flow<Long> {
-        return focusSessionDao.observeTotalFocusSeconds().map { it ?: 0L }
+        return focusSessionDao.observeTotalFocusSeconds().map { it ?: 0L }.flowOn(Dispatchers.IO)
     }
 
     override fun getCompletedSessionCountFlow(): Flow<Int> {
-        return focusSessionDao.observeCompletedSessionCount()
+        return focusSessionDao.observeCompletedSessionCount().flowOn(Dispatchers.IO)
     }
 
     override suspend fun deleteFocusSession(sessionId: Long): Int = withContext(Dispatchers.IO) {

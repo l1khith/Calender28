@@ -14,6 +14,7 @@ import com.l1khith.calender28.utils.FixedCalendarHelper
 import com.l1khith.calender28.utils.FixedDate
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
 import java.util.UUID
@@ -31,21 +32,21 @@ class TaskRepositoryImpl(private val context: Context) : TaskRepository {
         Log.d(TAG, "getTasksForDateFlow: Observing tasks for date=$dateStr")
         return taskDao.observeTasksForDate(dateStr).map { list: List<AppTaskEntity> ->
             list.map { it.toAppTask() }
-        }
+        }.flowOn(Dispatchers.IO)
     }
 
     override fun getAllTasksFlow(): Flow<List<AppTask>> {
         Log.d(TAG, "getAllTasksFlow: Observing all tasks")
         return taskDao.observeAllTasks().map { list: List<AppTaskEntity> ->
             list.map { it.toAppTask() }
-        }
+        }.flowOn(Dispatchers.IO)
     }
 
     override fun getDatesWithActiveTasksFlow(): Flow<Set<String>> {
         Log.d(TAG, "getDatesWithActiveTasksFlow: Observing dates with active tasks")
         return taskDao.observeDatesWithActiveTasks().map { list: List<String> ->
             list.toSet()
-        }
+        }.flowOn(Dispatchers.IO)
     }
 
     override fun getTaskCountsPerDateFlow(): Flow<Map<String, Int>> {
@@ -59,14 +60,14 @@ class TaskRepositoryImpl(private val context: Context) : TaskRepository {
                 }
             }
             map
-        }
+        }.flowOn(Dispatchers.IO)
     }
 
     override fun getRecurringTasksFlow(): Flow<List<RecurringTask>> {
         Log.d(TAG, "getRecurringTasksFlow: Observing recurring tasks flow")
         return recurringTaskDao.observeAllRecurringTasks().map { list: List<RecurringTaskEntity> ->
             list.map { it.toRecurringTask() }
-        }
+        }.flowOn(Dispatchers.IO)
     }
 
     override suspend fun getTasksForDate(dateStr: String): List<AppTask> = withContext(Dispatchers.IO) {

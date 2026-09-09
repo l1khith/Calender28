@@ -5,6 +5,7 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.l1khith.calender28.data.*
 import com.l1khith.calender28.repository.SparkyRepository
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.*
@@ -33,10 +34,10 @@ class SparkyViewModel(
     private val _moodMessage = MutableStateFlow("Ready for today's achievements!")
     val moodMessage: StateFlow<String> = _moodMessage.asStateFlow()
 
-    private val _evolutionEvent = MutableSharedFlow<EvolutionStage>()
+    private val _evolutionEvent = MutableSharedFlow<EvolutionStage>(extraBufferCapacity = 8)
     val evolutionEvent: SharedFlow<EvolutionStage> = _evolutionEvent.asSharedFlow()
 
-    private val _uiEvent = MutableSharedFlow<SparkyUiEvent>()
+    private val _uiEvent = MutableSharedFlow<SparkyUiEvent>(extraBufferCapacity = 64)
     val uiEvent: SharedFlow<SparkyUiEvent> = _uiEvent.asSharedFlow()
 
     private var moodResetJob: Job? = null
@@ -52,7 +53,7 @@ class SparkyViewModel(
     private var phraseIndex = 0
 
     fun triggerHabitComplete(habitName: String = "") {
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
             val result = sparkyRepository.onHabitCompleted()
             if (result.didEvolve) {
                 setTemporaryMood(SparkyMood.EVOLVING, "Sparky is evolving into ${result.newStage.displayName}!", 6000)
@@ -67,7 +68,7 @@ class SparkyViewModel(
     }
 
     fun triggerHabitCycleComplete(habitName: String = "") {
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
             val result = sparkyRepository.onHabitCompleted()
             if (result.didEvolve) {
                 setTemporaryMood(SparkyMood.EVOLVING, "Sparky is evolving into ${result.newStage.displayName}!", 6000)
@@ -80,7 +81,7 @@ class SparkyViewModel(
     }
 
     fun triggerTaskComplete(taskTitle: String = "") {
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
             val result = sparkyRepository.onTaskCompleted()
             if (result.didLevelUp) {
                 setTemporaryMood(SparkyMood.CELEBRATING, "Level Up! Sparky reached Level ${result.newState.level}!", 4000)
@@ -92,14 +93,14 @@ class SparkyViewModel(
     }
 
     fun triggerFocusComplete(durationMinutes: Int) {
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
             val result = sparkyRepository.onFocusCompleted(durationMinutes)
             setTemporaryMood(SparkyMood.CALM, "Deep focus completed! Sparky feels calm and energized.", 4000)
         }
     }
 
     fun triggerStreakUpdate(streak: Int) {
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
             sparkyRepository.onStreakUpdated(streak)
             if (streak >= 3) {
                 setTemporaryMood(SparkyMood.CELEBRATING, "$streak-day streak! The fire burns bright!", 3500)
@@ -125,7 +126,7 @@ class SparkyViewModel(
     }
 
     fun buyShopItem(item: SparkyShopItem) {
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
             val result = sparkyRepository.buyShopItem(item)
             result.onSuccess {
                 _uiEvent.emit(SparkyUiEvent.ShowMessage("Unlocked ${item.name} for Sparky!"))
@@ -137,7 +138,7 @@ class SparkyViewModel(
     }
 
     fun toggleEquip(item: SparkyShopItem) {
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
             val result = sparkyRepository.toggleEquip(item)
             result.onSuccess {
                 val isEquipped = when (item.category) {
@@ -154,7 +155,7 @@ class SparkyViewModel(
     }
 
     fun renameSparky(name: String) {
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
             val result = sparkyRepository.renameSparky(name)
             result.onSuccess {
                 _uiEvent.emit(SparkyUiEvent.ShowMessage("Renamed companion to '$name'"))
@@ -165,7 +166,7 @@ class SparkyViewModel(
     }
 
     fun claimAchievement(achievementId: String) {
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
             val result = sparkyRepository.claimAchievement(achievementId)
             result.onSuccess { coins ->
                 _uiEvent.emit(SparkyUiEvent.ShowMessage("Claimed +$coins CalCoins reward!"))

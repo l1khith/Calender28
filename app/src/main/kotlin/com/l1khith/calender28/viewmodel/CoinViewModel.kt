@@ -15,6 +15,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
 sealed interface CoinUiEvent {
@@ -41,14 +42,14 @@ class CoinViewModel(
 
     val isProActive: StateFlow<Boolean> = SubscriptionManager.isProActive
 
-    private val _uiEvent = MutableSharedFlow<CoinUiEvent>()
+    private val _uiEvent = MutableSharedFlow<CoinUiEvent>(extraBufferCapacity = 64)
     val uiEvent: SharedFlow<CoinUiEvent> = _uiEvent.asSharedFlow()
 
     private val _isPurchasing = MutableStateFlow(false)
     val isPurchasing: StateFlow<Boolean> = _isPurchasing.asStateFlow()
 
     fun redeemPromoCode(code: String) {
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
             val result = coinRepository.redeemPromoCode(code)
             result.onSuccess { reward ->
                 _uiEvent.emit(CoinUiEvent.CoinsEarned(reward.coinsAwarded, reward.message))
@@ -61,7 +62,7 @@ class CoinViewModel(
     fun purchasePremiumWithCoins() {
         if (_isPurchasing.value) return
         _isPurchasing.value = true
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
             try {
                 val result = coinRepository.buyPremiumWithCoins()
                 result.onSuccess {
