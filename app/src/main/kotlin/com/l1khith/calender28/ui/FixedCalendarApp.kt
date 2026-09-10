@@ -14,6 +14,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.*
@@ -26,6 +27,8 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.StrokeJoin
@@ -135,6 +138,8 @@ fun FixedCalendarApp(
     val confettiTrigger by viewModel.confettiTrigger.collectAsStateWithLifecycle()
     val completedCycleHabit by viewModel.completedCycleHabit.collectAsStateWithLifecycle()
     val enableSparky by com.l1khith.calender28.utils.AppSettingsManager.enableSparky.collectAsStateWithLifecycle()
+    val enableAnimations by com.l1khith.calender28.utils.AppSettingsManager.enableAnimations.collectAsStateWithLifecycle()
+    var showProfileScreen by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
         sparkyViewModel.evolutionEvent.collect { stage ->
@@ -250,6 +255,21 @@ fun FixedCalendarApp(
         ).build()
     }
 
+    val notesNavIcon = remember {
+        ImageVector.Builder(
+            name = "NotesNavIcon",
+            defaultWidth = 18.dp,
+            defaultHeight = 18.dp,
+            viewportWidth = 24f,
+            viewportHeight = 24f
+        ).addPath(
+            pathData = PathParser().parsePathString(
+                "M14 2H6C4.9 2 4 2.9 4 4V20C4 21.1 4.9 22 6 22H18C19.1 22 20 21.1 20 20V8L14 2ZM18 20H6V4H13V9H18V20ZM8 12H16V14H8V12ZM8 16H13V18H8V16Z"
+            ).toNodes(),
+            fill = SolidColor(Color(0xFFC2C6D6))
+        ).build()
+    }
+
     val backgroundColor = MatrixColors.Surface
 
     val cardBackground = MatrixColors.SurfaceContainerLow
@@ -283,7 +303,56 @@ fun FixedCalendarApp(
     }
 
     Box(modifier = Modifier.fillMaxSize()) {
-        if (showAddTaskDialog) {
+        if (showProfileScreen) {
+            androidx.activity.compose.BackHandler { showProfileScreen = false }
+            Scaffold(
+                topBar = {
+                    TopAppBar(
+                        title = {
+                            Text(
+                                text = "Profile & Settings",
+                                style = MaterialTheme.typography.titleLarge.copy(
+                                    fontWeight = FontWeight.Bold,
+                                    color = MatrixColors.Primary
+                                )
+                            )
+                        },
+                        navigationIcon = {
+                            IconButton(onClick = { showProfileScreen = false }) {
+                                Icon(
+                                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                                    contentDescription = "Back",
+                                    tint = MatrixColors.TextHeader
+                                )
+                            }
+                        },
+                        colors = TopAppBarDefaults.topAppBarColors(
+                            containerColor = MatrixColors.Surface,
+                            titleContentColor = MatrixColors.Primary
+                        )
+                    )
+                },
+                containerColor = MatrixColors.Surface
+            ) { innerPad ->
+                Box(modifier = Modifier.padding(innerPad)) {
+                    ProfileScreen(
+                        onOpenSubscription = { showPaywallDialog = true },
+                        onOpenCustomerCenter = { showCustomerCenterDialog = true },
+                        onOpenSecurity = { showSecurityLockDialog = true },
+                        onOpenNotifications = { launchNotificationPermission() },
+                        onOpenFocusStats = { showFocusStatsDialog = true },
+                        onOpenCoinStore = {
+                            showSparkyShopDirectly = false
+                            showCoinStoreDialog = true
+                        },
+                        onOpenExportTasks = { showExportTasksDialog = true },
+                        onOpenMonthView = { showProfileScreen = false },
+                        onOpenSparkyDetail = { showSparkyDetail = true },
+                        sparkyViewModel = sparkyViewModel
+                    )
+                }
+            }
+        } else if (showAddTaskDialog) {
         CreateTaskScreen(
             task = taskToEdit,
             onDismiss = { showAddTaskDialog = false },
@@ -329,6 +398,25 @@ fun FixedCalendarApp(
                 ) {
 
                 TopAppBar(
+                    navigationIcon = {
+                        Box(
+                            modifier = Modifier
+                                .padding(start = 12.dp)
+                                .size(38.dp)
+                                .clip(CircleShape)
+                                .background(cardBackground)
+                                .border(BorderStroke(1.dp, borderSubtle), CircleShape)
+                                .clickable { showProfileScreen = true },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = profileNavIcon,
+                                contentDescription = "Profile",
+                                tint = Color(0xFFC2C6D6),
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+                    },
                     title = {
                         Text(
                             text = "Matrix 28",
@@ -422,10 +510,16 @@ fun FixedCalendarApp(
                                     tint = Color.Unspecified,
                                     modifier = Modifier
                                         .size(16.dp)
-                                        .graphicsLayer(
-                                            rotationZ = flameRotation,
-                                            scaleX = flameScale,
-                                            scaleY = flameScale
+                                        .then(
+                                            if (enableAnimations) {
+                                                Modifier.graphicsLayer(
+                                                    rotationZ = flameRotation,
+                                                    scaleX = flameScale,
+                                                    scaleY = flameScale
+                                                )
+                                            } else {
+                                                Modifier
+                                            }
                                         )
                                 )
                                 Spacer(modifier = Modifier.width(4.dp))
@@ -472,9 +566,15 @@ fun FixedCalendarApp(
                                     tint = Color.Unspecified,
                                     modifier = Modifier
                                         .size(16.dp)
-                                        .graphicsLayer(
-                                            rotationY = coinRotationY,
-                                            cameraDistance = 12f * androidx.compose.ui.platform.LocalDensity.current.density
+                                        .then(
+                                            if (enableAnimations) {
+                                                Modifier.graphicsLayer(
+                                                    rotationY = coinRotationY,
+                                                    cameraDistance = 12f * androidx.compose.ui.platform.LocalDensity.current.density
+                                                )
+                                            } else {
+                                                Modifier
+                                            }
                                         )
                                 )
                                 Spacer(modifier = Modifier.width(4.dp))
@@ -517,7 +617,8 @@ fun FixedCalendarApp(
                     glowColor = MatrixColors.Secondary,
                     height = 1.dp,
                     reverseDirection = true,
-                    durationMillis = 4000
+                    durationMillis = 4000,
+                    enableSparkle = enableAnimations
                 )
             }
 
@@ -549,7 +650,8 @@ fun FixedCalendarApp(
                     glowColor = MatrixColors.Secondary,
                     height = 1.dp,
                     reverseDirection = false,
-                    durationMillis = 4000
+                    durationMillis = 4000,
+                    enableSparkle = enableAnimations
                 )
                 NavigationBar(
                     containerColor = MatrixColors.Surface,
@@ -616,11 +718,11 @@ fun FixedCalendarApp(
                     onClick = { onNavigateToTab(3) },
                     icon = {
                         Icon(
-                            imageVector = profileNavIcon,
-                            contentDescription = "Profile"
+                            imageVector = notesNavIcon,
+                            contentDescription = "Notes"
                         )
                     },
-                    label = { Text("Profile", style = MaterialTheme.typography.labelSmall) },
+                    label = { Text("Notes", style = MaterialTheme.typography.labelSmall) },
                     colors = NavigationBarItemDefaults.colors(
                         selectedIconColor = MatrixColors.Primary,
                         selectedTextColor = MatrixColors.Primary,
@@ -666,21 +768,7 @@ fun FixedCalendarApp(
                     sparkyViewModel = sparkyViewModel
                 )
 
-                3 -> ProfileScreen(
-                    onOpenSubscription = { showPaywallDialog = true },
-                    onOpenCustomerCenter = { showCustomerCenterDialog = true },
-                    onOpenSecurity = { showSecurityLockDialog = true },
-                    onOpenNotifications = { launchNotificationPermission() },
-                    onOpenFocusStats = { showFocusStatsDialog = true },
-                    onOpenCoinStore = {
-                        showSparkyShopDirectly = false
-                        showCoinStoreDialog = true
-                    },
-                    onOpenExportTasks = { showExportTasksDialog = true },
-                    onOpenMonthView = { onNavigateToTab(0) },
-                    onOpenSparkyDetail = { showSparkyDetail = true },
-                    sparkyViewModel = sparkyViewModel
-                )
+                3 -> NotesListScreen()
 
                     else -> {
                         val monthScrollState = rememberScrollState()
@@ -1207,102 +1295,145 @@ fun CalendarMatrix(
 ) {
     val weekDays = arrayOf("Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat")
     val isLeap = FixedCalendarHelper.isLeapYear(selectedDate.year)
+    val headerHeight = 38.dp
+    val rowHeight = 52.dp
+    val gridLineColor = borderColor
 
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = MatrixShapes.Lg,
         colors = CardDefaults.cardColors(containerColor = MatrixColors.SurfaceContainerLow),
-        border = BorderStroke(1.dp, MatrixColors.OutlineVariant)
+        border = BorderStroke(1.dp, gridLineColor)
     ) {
-        Column(modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp)) {
-            // Weekday Header Row - NO lines here
-            Row(
+        Column(modifier = Modifier.fillMaxWidth()) {
+            Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 4.dp, vertical = 6.dp),
-                horizontalArrangement = Arrangement.SpaceBetween
+                    .drawBehind {
+                        val strokeWidth = 1.dp.toPx()
+                        val colWidth = size.width / 7f
+                        val headerHeightPx = headerHeight.toPx()
+                        val rowHeightPx = rowHeight.toPx()
+
+                        // ─── 1. Continuous Vertical Grid Lines (Top to Bottom) ───
+                        for (col in 1..6) {
+                            val x = col * colWidth
+                            drawLine(
+                                color = gridLineColor,
+                                start = Offset(x, 0f),
+                                end = Offset(x, size.height),
+                                strokeWidth = strokeWidth
+                            )
+                        }
+
+                        // ─── 2. Horizontal Divider below Weekday Header ───
+                        drawLine(
+                            color = gridLineColor,
+                            start = Offset(0f, headerHeightPx),
+                            end = Offset(size.width, headerHeightPx),
+                            strokeWidth = strokeWidth
+                        )
+
+                        // ─── 3. Horizontal Dividers between Date Rows ─────
+                        for (r in 1..3) {
+                            val y = headerHeightPx + (r * rowHeightPx)
+                            drawLine(
+                                color = gridLineColor,
+                                start = Offset(0f, y),
+                                end = Offset(size.width, y),
+                                strokeWidth = strokeWidth
+                            )
+                        }
+                    }
             ) {
-                for (day in weekDays) {
-                    Text(
-                        text = day,
-                        modifier = Modifier.weight(1f),
-                        textAlign = TextAlign.Center,
-                        color = MatrixColors.TextSecondary,
-                        fontWeight = FontWeight.Medium,
-                        fontSize = 13.sp
-                    )
-                }
-            }
-
-            Spacer(modifier = Modifier.height(4.dp))
-
-            // Date Grid (4 rows x 7 columns) with subtle grid lines between date cells
-            for (row in 0 until 4) {
-                HorizontalDivider(color = MatrixColors.OutlineVariant.copy(alpha = 0.5f), thickness = 0.5.dp)
+                // Weekday Header Row
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(52.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween
+                        .height(headerHeight),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    for (col in 1..7) {
-                        if (col > 1) {
-                            VerticalDivider(color = MatrixColors.OutlineVariant.copy(alpha = 0.5f), thickness = 0.5.dp)
-                        }
-                        val dayNum = row * 7 + col
-                        val cellDate = FixedDate(selectedDate.year, selectedDate.month, dayNum)
-                        val cellDateStr = cellDate.toString()
-                        val taskCount = taskCounts[cellDateStr] ?: if (activeDates.contains(cellDateStr)) 1 else 0
-                        val isCellSelected = selectedDate.month == cellDate.month && selectedDate.day == dayNum
-                        val isCellToday = todayFixed.year == cellDate.year && todayFixed.month == cellDate.month && todayFixed.day == dayNum
-
+                    for (day in weekDays) {
                         Box(
                             modifier = Modifier
                                 .weight(1f)
-                                .fillMaxHeight()
-                                .clickable { onDateSelect(cellDate) },
+                                .fillMaxHeight(),
                             contentAlignment = Alignment.Center
                         ) {
-                            Column(
-                                horizontalAlignment = Alignment.CenterHorizontally,
-                                verticalArrangement = Arrangement.Center
-                            ) {
-                                Box(
-                                    modifier = Modifier
-                                        .size(30.dp)
-                                        .clip(CircleShape)
-                                        .background(if (isCellSelected) Color(0xFF3B82F6) else Color.Transparent)
-                                        .border(
-                                            width = if (isCellToday && !isCellSelected) 1.dp else 0.dp,
-                                            color = if (isCellToday && !isCellSelected) Color(0xFF3B82F6) else Color.Transparent,
-                                            shape = CircleShape
-                                        ),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Text(
-                                        text = dayNum.toString(),
-                                        color = if (isCellSelected) Color.White else if (taskCount > 0) MatrixColors.TextHeader else MatrixColors.TextSecondary,
-                                        fontWeight = if (isCellSelected || isCellToday || taskCount > 0) FontWeight.Bold else FontWeight.Normal,
-                                        fontSize = 14.sp
-                                    )
-                                }
+                            Text(
+                                text = day,
+                                textAlign = TextAlign.Center,
+                                color = MatrixColors.TextSecondary,
+                                fontWeight = FontWeight.Medium,
+                                fontSize = 13.sp
+                            )
+                        }
+                    }
+                }
 
-                                if (taskCount > 0) {
-                                    Spacer(modifier = Modifier.height(2.dp))
-                                    Row(
-                                        horizontalArrangement = Arrangement.spacedBy(2.dp),
-                                        verticalAlignment = Alignment.CenterVertically
+                // Date Grid (4 rows x 7 columns)
+                for (row in 0 until 4) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(rowHeight)
+                    ) {
+                        for (col in 1..7) {
+                            val dayNum = row * 7 + col
+                            val cellDate = FixedDate(selectedDate.year, selectedDate.month, dayNum)
+                            val cellDateStr = cellDate.toString()
+                            val taskCount = taskCounts[cellDateStr] ?: if (activeDates.contains(cellDateStr)) 1 else 0
+                            val isCellSelected = selectedDate.month == cellDate.month && selectedDate.day == dayNum
+                            val isCellToday = todayFixed.year == cellDate.year && todayFixed.month == cellDate.month && todayFixed.day == dayNum
+
+                            Box(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .fillMaxHeight()
+                                    .clickable { onDateSelect(cellDate) },
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Column(
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                    verticalArrangement = Arrangement.Center
+                                ) {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(30.dp)
+                                            .clip(CircleShape)
+                                            .background(if (isCellSelected) Color(0xFF3B82F6) else Color.Transparent)
+                                            .border(
+                                                width = if (isCellToday && !isCellSelected) 1.dp else 0.dp,
+                                                color = if (isCellToday && !isCellSelected) Color(0xFF3B82F6) else Color.Transparent,
+                                                shape = CircleShape
+                                            ),
+                                        contentAlignment = Alignment.Center
                                     ) {
-                                        val dotsToShow = taskCount.coerceAtMost(3)
-                                        for (i in 0 until dotsToShow) {
-                                            Box(
-                                                modifier = Modifier
-                                                    .size(4.dp)
-                                                    .clip(CircleShape)
-                                                    .background(
-                                                        if (i % 2 == 0) MatrixColors.Tertiary else MatrixColors.Secondary
-                                                    )
-                                            )
+                                        Text(
+                                            text = dayNum.toString(),
+                                            color = if (isCellSelected) Color.White else if (taskCount > 0) MatrixColors.TextHeader else MatrixColors.TextSecondary,
+                                            fontWeight = if (isCellSelected || isCellToday || taskCount > 0) FontWeight.Bold else FontWeight.Normal,
+                                            fontSize = 14.sp
+                                        )
+                                    }
+
+                                    if (taskCount > 0) {
+                                        Spacer(modifier = Modifier.height(2.dp))
+                                        Row(
+                                            horizontalArrangement = Arrangement.spacedBy(2.dp),
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            val dotsToShow = taskCount.coerceAtMost(3)
+                                            for (i in 0 until dotsToShow) {
+                                                Box(
+                                                    modifier = Modifier
+                                                        .size(4.dp)
+                                                        .clip(CircleShape)
+                                                        .background(
+                                                            if (i % 2 == 0) MatrixColors.Tertiary else MatrixColors.Secondary
+                                                        )
+                                                )
+                                            }
                                         }
                                     }
                                 }
@@ -1313,41 +1444,49 @@ fun CalendarMatrix(
             }
 
             if (selectedDate.month == 6 && isLeap) {
-                Spacer(modifier = Modifier.height(10.dp))
+                HorizontalDivider(color = gridLineColor, thickness = 1.dp)
+                Spacer(modifier = Modifier.height(8.dp))
                 val leapDay = FixedDate(selectedDate.year, 6, 29, isLeapDay = true)
                 val isLeapSelected = selectedDate.month == 6 && selectedDate.day == 29
                 val isLeapToday = todayFixed.year == selectedDate.year && todayFixed.month == 6 && todayFixed.day == 29
                 val hasTasks = activeDates.contains(leapDay.toString())
 
-                SpecialDayCard(
-                    label = "Leap Day — Leave Day (June 29)",
-                    isSelected = isLeapSelected,
-                    isToday = isLeapToday,
-                    hasTasks = hasTasks,
-                    onClick = { onDateSelect(leapDay) },
-                    primaryColor = primaryColor,
-                    orangeDotColor = orangeDotColor,
-                    textColor = textColor
-                )
+                Box(modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)) {
+                    SpecialDayCard(
+                        label = "Leap Day — Leave Day (June 29)",
+                        isSelected = isLeapSelected,
+                        isToday = isLeapToday,
+                        hasTasks = hasTasks,
+                        onClick = { onDateSelect(leapDay) },
+                        primaryColor = primaryColor,
+                        orangeDotColor = orangeDotColor,
+                        textColor = textColor
+                    )
+                }
+                Spacer(modifier = Modifier.height(6.dp))
             }
 
             if (selectedDate.month == 13) {
-                Spacer(modifier = Modifier.height(10.dp))
+                HorizontalDivider(color = gridLineColor, thickness = 1.dp)
+                Spacer(modifier = Modifier.height(8.dp))
                 val yearDay = FixedDate(selectedDate.year, 13, 29, isYearDay = true)
                 val isYearSelected = selectedDate.month == 13 && selectedDate.day == 29
                 val isYearToday = todayFixed.year == selectedDate.year && todayFixed.month == 13 && todayFixed.day == 29
                 val hasTasks = activeDates.contains(yearDay.toString())
 
-                SpecialDayCard(
-                    label = "Sol Day — Leave Day (December 29)",
-                    isSelected = isYearSelected,
-                    isToday = isYearToday,
-                    hasTasks = hasTasks,
-                    onClick = { onDateSelect(yearDay) },
-                    primaryColor = primaryColor,
-                    orangeDotColor = orangeDotColor,
-                    textColor = textColor
-                )
+                Box(modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)) {
+                    SpecialDayCard(
+                        label = "Sol Day — Leave Day (December 29)",
+                        isSelected = isYearSelected,
+                        isToday = isYearToday,
+                        hasTasks = hasTasks,
+                        onClick = { onDateSelect(yearDay) },
+                        primaryColor = primaryColor,
+                        orangeDotColor = orangeDotColor,
+                        textColor = textColor
+                    )
+                }
+                Spacer(modifier = Modifier.height(6.dp))
             }
         }
     }
@@ -2099,6 +2238,7 @@ fun EmptyState(textColor: Color) {
  * A divider line with an animated electric/neon spark traveling continuously across it.
  * [reverseDirection] controls whether the spark travels left-to-right or right-to-left.
  * [durationMillis] controls the travel speed (larger = slower).
+ * When [enableSparkle] is false, renders only the static divider line itself without any travelling spark/glow.
  */
 @Composable
 fun AnimatedSparkDivider(
@@ -2108,8 +2248,28 @@ fun AnimatedSparkDivider(
     glowColor: Color = MatrixColors.Secondary,
     height: androidx.compose.ui.unit.Dp = 1.dp,
     reverseDirection: Boolean = false,
-    durationMillis: Int = 4200
+    durationMillis: Int = 4200,
+    enableSparkle: Boolean = com.l1khith.calender28.utils.AppSettingsManager.enableAnimations.collectAsStateWithLifecycle().value
 ) {
+    if (!enableSparkle) {
+        // Draw only the static base divider line itself; remove all spark/glow effects
+        androidx.compose.foundation.Canvas(
+            modifier = modifier
+                .fillMaxWidth()
+                .height(height)
+        ) {
+            val width = size.width
+            val y = size.height / 2f
+            drawLine(
+                color = baseColor,
+                start = androidx.compose.ui.geometry.Offset(0f, y),
+                end = androidx.compose.ui.geometry.Offset(width, y),
+                strokeWidth = size.height
+            )
+        }
+        return
+    }
+
     val transition = rememberInfiniteTransition(label = "spark_divider_transition_${if (reverseDirection) "rev" else "fwd"}")
     val initial = if (reverseDirection) 1.15f else -0.15f
     val target = if (reverseDirection) -0.15f else 1.15f
