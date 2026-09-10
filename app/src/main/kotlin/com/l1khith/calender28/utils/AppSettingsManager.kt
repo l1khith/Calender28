@@ -1,6 +1,7 @@
 package com.l1khith.calender28.utils
 
 import android.content.Context
+import com.l1khith.calender28.data.BottomTab
 import com.l1khith.calender28.repository.UserPreferencesRepository
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -19,6 +20,12 @@ object AppSettingsManager {
 
     private val _enableSounds = MutableStateFlow(true)
     val enableSounds: StateFlow<Boolean> = _enableSounds.asStateFlow()
+
+    private val _enabledTabs = MutableStateFlow<Set<BottomTab>>(BottomTab.DEFAULT_TABS)
+    val enabledTabs: StateFlow<Set<BottomTab>> = _enabledTabs.asStateFlow()
+
+    private val _tabOrder = MutableStateFlow<List<BottomTab>>(BottomTab.ALL_TABS)
+    val tabOrder: StateFlow<List<BottomTab>> = _tabOrder.asStateFlow()
 
     private var prefsRepo: UserPreferencesRepository? = null
     private var scope: CoroutineScope? = null
@@ -39,6 +46,16 @@ object AppSettingsManager {
         }
         coroutineScope.launch(Dispatchers.Default) {
             repo.enableSounds.collect { _enableSounds.value = it }
+        }
+        coroutineScope.launch(Dispatchers.Default) {
+            repo.enabledBottomTabs.collect { ids ->
+                _enabledTabs.value = BottomTab.parseTabs(ids)
+            }
+        }
+        coroutineScope.launch(Dispatchers.Default) {
+            repo.bottomTabOrder.collect { orderStr ->
+                _tabOrder.value = BottomTab.parseOrder(orderStr)
+            }
         }
     }
 
@@ -65,6 +82,60 @@ object AppSettingsManager {
         scope?.launch(Dispatchers.IO) {
             try {
                 prefsRepo?.updateEnableSounds(enabled)
+            } catch (_: Exception) {}
+        }
+    }
+
+    fun toggleTab(tab: BottomTab, enabled: Boolean): Boolean {
+        val current = _enabledTabs.value.toMutableSet()
+        if (enabled) {
+            current.add(tab)
+        } else {
+            if (current.size <= 1 || !current.contains(tab)) return false
+            current.remove(tab)
+        }
+        _enabledTabs.value = current
+        scope?.launch(Dispatchers.IO) {
+            try {
+                prefsRepo?.updateEnabledBottomTabs(BottomTab.toIds(current))
+            } catch (_: Exception) {}
+        }
+        return true
+    }
+
+    fun setTabOrder(order: List<BottomTab>) {
+        if (order.isEmpty()) return
+        _tabOrder.value = order
+        scope?.launch(Dispatchers.IO) {
+            try {
+                prefsRepo?.updateBottomTabOrder(BottomTab.orderToString(order))
+            } catch (_: Exception) {}
+        }
+    }
+
+    fun reorderTabs(fromIndex: Int, toIndex: Int) {
+        val current = _tabOrder.value.toMutableList()
+        if (fromIndex in current.indices && toIndex in current.indices && fromIndex != toIndex) {
+            val item = current.removeAt(fromIndex)
+            current.add(toIndex, item)
+            _tabOrder.value = current
+            scope?.launch(Dispatchers.IO) {
+                try {
+                    prefsRepo?.updateBottomTabOrder(BottomTab.orderToString(current))
+                } catch (_: Exception) {}
+            }
+        }
+    }
+
+    fun resetTabs() {
+        val defaultTabs = BottomTab.DEFAULT_TABS
+        val defaultOrder = BottomTab.ALL_TABS
+        _enabledTabs.value = defaultTabs
+        _tabOrder.value = defaultOrder
+        scope?.launch(Dispatchers.IO) {
+            try {
+                prefsRepo?.updateEnabledBottomTabs(BottomTab.DEFAULT_TAB_IDS)
+                prefsRepo?.updateBottomTabOrder(BottomTab.DEFAULT_ORDER_STRING)
             } catch (_: Exception) {}
         }
     }

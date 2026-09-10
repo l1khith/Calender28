@@ -50,6 +50,13 @@ object AppViewModelProvider {
                 noteRepository = app.container.noteRepository
             )
         }
+        initializer {
+            val app = matrixApplication()
+            CustomizeNavViewModel(
+                application = app,
+                navRepository = app.container.navPreferencesRepository
+            )
+        }
     }
 }
 

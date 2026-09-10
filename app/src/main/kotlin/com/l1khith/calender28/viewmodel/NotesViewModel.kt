@@ -4,13 +4,14 @@ import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.l1khith.calender28.data.Note
+import com.l1khith.calender28.data.NoteFormat
 import com.l1khith.calender28.repository.NoteRepository
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 
-@OptIn(ExperimentalCoroutinesApi::class)
+/**
+ * ViewModel managing Notes list state, real-time search, and editor draft canvas.
+ */
 class NotesViewModel(
     application: Application,
     private val noteRepository: NoteRepository
@@ -19,88 +20,163 @@ class NotesViewModel(
     private val _searchQuery = MutableStateFlow("")
     val searchQuery: StateFlow<String> = _searchQuery.asStateFlow()
 
-    private val _selectedFilter = MutableStateFlow("ALL")
-    val selectedFilter: StateFlow<String> = _selectedFilter.asStateFlow()
+    // Base flow of all notes from DB
+    private val _allNotes = noteRepository.getAllNotes()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    val notes: StateFlow<List<Note>> = combine(_searchQuery, _selectedFilter) { query, filter ->
-        Pair(query, filter)
-    }.flatMapLatest { (query, filter) ->
-        val baseFlow = if (query.isBlank()) {
-            noteRepository.observeAllNotes()
+    // Filtered notes by search query (matching content)
+    val notes: StateFlow<List<Note>> = combine(_allNotes, _searchQuery) { list, query ->
+        if (query.isBlank()) {
+            list
         } else {
-            noteRepository.searchNotes(query.trim())
-        }
-
-        baseFlow.map { list ->
-            if (filter == "ALL") {
-                list
-            } else {
-                list.filter { it.linkedEntity.equals(filter, ignoreCase = true) }
+            list.filter { note ->
+                note.content.contains(query, ignoreCase = true) ||
+                    note.displayTitle.contains(query, ignoreCase = true)
             }
         }
-    }
-    .flowOn(Dispatchers.IO)
-    .stateIn(
-        scope = viewModelScope,
-        started = SharingStarted.WhileSubscribed(5000L),
-        initialValue = emptyList()
-    )
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    fun onSearchQueryChanged(newQuery: String) {
-        _searchQuery.value = newQuery
+    // ─── Active Note / Editor Canvas State ───
+    private val _activeNote = MutableStateFlow<Note?>(null)
+    val activeNote: StateFlow<Note?> = _activeNote.asStateFlow()
+
+    private val _draftContent = MutableStateFlow("")
+    val draftContent: StateFlow<String> = _draftContent.asStateFlow()
+
+    private val _draftFormat = MutableStateFlow(NoteFormat.TXT)
+    val draftFormat: StateFlow<NoteFormat> = _draftFormat.asStateFlow()
+
+    private val _isPreviewMode = MutableStateFlow(false)
+    val isPreviewMode: StateFlow<Boolean> = _isPreviewMode.asStateFlow()
+
+    fun updateSearchQuery(query: String) {
+        _searchQuery.value = query
     }
 
     fun clearSearch() {
         _searchQuery.value = ""
     }
 
-    fun setFilter(filter: String) {
-        _selectedFilter.value = filter
+    /**
+     * Opens a new blank note canvas.
+     */
+    fun createNewNote(defaultFormat: NoteFormat = NoteFormat.TXT) {
+        val newNote = Note(
+            content = "",
+            format = defaultFormat
+        )
+        _activeNote.value = newNote
+        _draftContent.value = ""
+        _draftFormat.value = defaultFormat
+        _isPreviewMode.value = false
     }
 
-    fun saveNote(
-        title: String,
-        content: String,
-        existingNote: Note? = null,
-        colorHex: String? = null,
-        associatedDate: String? = null,
-        linkedEntity: String = "NOTE",
-        isMarkdown: Boolean = false
-    ) {
-        if (title.isBlank() && content.isBlank()) return
+    /**
+     * Opens an existing note in the editor canvas.
+     */
+    fun openNoteForEdit(note: Note) {
+        _activeNote.value = note
+        _draftContent.value = note.content
+        _draftFormat.value = note.format
+        _isPreviewMode.value = false
+    }
 
-        viewModelScope.launch(Dispatchers.IO) {
-            val noteToSave = existingNote?.copy(
-                title = title.trim(),
-                content = content.trim(),
-                colorHex = colorHex ?: existingNote.colorHex,
-                associatedDate = associatedDate ?: existingNote.associatedDate,
-                linkedEntity = linkedEntity,
-                isMarkdown = isMarkdown,
-                updatedAtMs = System.currentTimeMillis()
-            ) ?: Note(
-                title = title.trim(),
-                content = content.trim(),
-                colorHex = colorHex,
-                associatedDate = associatedDate,
-                linkedEntity = linkedEntity,
-                isMarkdown = isMarkdown,
-                createdAtMs = System.currentTimeMillis(),
-                updatedAtMs = System.currentTimeMillis()
-            )
-            noteRepository.saveNote(noteToSave)
+    fun updateContent(content: String) {
+        _draftContent.value = content
+    }
+
+    fun setFormat(format: NoteFormat) {
+        _draftFormat.value = format
+        if (format == NoteFormat.TXT) {
+            _isPreviewMode.value = false
         }
+    }
+
+    fun toggleFormat() {
+        val newFormat = if (_draftFormat.value == NoteFormat.MD) NoteFormat.TXT else NoteFormat.MD
+        setFormat(newFormat)
+    }
+
+    fun togglePreview() {
+        if (_draftFormat.value == NoteFormat.MD) {
+            _isPreviewMode.value = !_isPreviewMode.value
+        }
+    }
+
+    fun setPreviewMode(enabled: Boolean) {
+        if (_draftFormat.value == NoteFormat.MD) {
+            _isPreviewMode.value = enabled
+        } else {
+            _isPreviewMode.value = false
+        }
+    }
+
+    /**
+     * Saves the draft and closes the editor canvas.
+     * Blank/empty notes are automatically discarded.
+     */
+    fun saveAndCloseEditor(onSaved: (() -> Unit)? = null) {
+        val current = _activeNote.value ?: return
+        val finalContent = _draftContent.value.trimEnd()
+        val finalFormat = _draftFormat.value
+
+        if (finalContent.isBlank()) {
+            // Delete or discard blank note
+            viewModelScope.launch {
+                noteRepository.deleteNote(current)
+                _activeNote.value = null
+                _draftContent.value = ""
+                _isPreviewMode.value = false
+                onSaved?.invoke()
+            }
+            return
+        }
+
+        val updatedNote = current.copy(
+            content = finalContent,
+            format = finalFormat,
+            updatedAt = System.currentTimeMillis()
+        )
+
+        viewModelScope.launch {
+            noteRepository.insertNote(updatedNote)
+            _activeNote.value = null
+            _draftContent.value = ""
+            _isPreviewMode.value = false
+            onSaved?.invoke()
+        }
+    }
+
+    fun closeEditorWithoutSaving() {
+        _activeNote.value = null
+        _draftContent.value = ""
+        _isPreviewMode.value = false
+    }
+
+    fun deleteNote(note: Note, onDeleted: (() -> Unit)? = null) {
+        viewModelScope.launch {
+            noteRepository.deleteNote(note)
+            if (_activeNote.value?.id == note.id) {
+                _activeNote.value = null
+                _draftContent.value = ""
+                _isPreviewMode.value = false
+            }
+            onDeleted?.invoke()
+        }
+    }
+
+    fun deleteActiveNote(onDeleted: (() -> Unit)? = null) {
+        val current = _activeNote.value ?: return
+        deleteNote(current, onDeleted)
     }
 
     fun togglePin(note: Note) {
-        viewModelScope.launch(Dispatchers.IO) {
-            noteRepository.togglePin(note.id)
-        }
-    }
-
-    fun deleteNote(note: Note) {
-        viewModelScope.launch(Dispatchers.IO) {
-            noteRepository.deleteNote(note.id)
+        viewModelScope.launch {
+            val updated = note.copy(
+                isPinned = !note.isPinned,
+                updatedAt = System.currentTimeMillis()
+            )
+            noteRepository.updateNote(updated)
         }
     }
 }

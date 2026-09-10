@@ -111,7 +111,7 @@ fun AppPreferencesDialog(
                     PreferenceToggleRow(
                         icon = Icons.Default.Animation,
                         title = "Enable Animations",
-                        subtitle = "Play/hide Lottie animations",
+                        subtitle = "UI effects, motion, and animations",
                         checked = enableAnimations,
                         onCheckedChange = { AppSettingsManager.setEnableAnimations(it) }
                     )

@@ -6,6 +6,7 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
+import androidx.datastore.preferences.core.stringSetPreferencesKey
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 
@@ -21,6 +22,8 @@ class UserPreferencesRepository(
         val KEY_ENABLE_SPARKY = booleanPreferencesKey("enable_sparky")
         val KEY_ENABLE_ANIMATIONS = booleanPreferencesKey("enable_animations")
         val KEY_ENABLE_SOUNDS = booleanPreferencesKey("enable_sounds")
+        val KEY_ENABLED_BOTTOM_TABS = stringSetPreferencesKey("enabled_bottom_tabs")
+        val KEY_BOTTOM_TAB_ORDER = stringPreferencesKey("bottom_tab_order")
 
         const val DEFAULT_USER_NAME = "Guest"
         const val DEFAULT_USER_AVATAR_URL = ""
@@ -30,6 +33,8 @@ class UserPreferencesRepository(
         const val DEFAULT_ENABLE_SPARKY = true
         const val DEFAULT_ENABLE_ANIMATIONS = true
         const val DEFAULT_ENABLE_SOUNDS = true
+        val DEFAULT_ENABLED_BOTTOM_TABS = setOf("month", "tasks", "habit", "notes")
+        const val DEFAULT_BOTTOM_TAB_ORDER = "month,tasks,habit,notes"
 
         @Volatile
         private var instance: UserPreferencesRepository? = null
@@ -72,6 +77,15 @@ class UserPreferencesRepository(
 
     val enableSounds: Flow<Boolean> = dataStore.data.map { preferences ->
         preferences[KEY_ENABLE_SOUNDS] ?: DEFAULT_ENABLE_SOUNDS
+    }
+
+    val enabledBottomTabs: Flow<Set<String>> = dataStore.data.map { preferences ->
+        val saved = preferences[KEY_ENABLED_BOTTOM_TABS]
+        if (saved.isNullOrEmpty()) DEFAULT_ENABLED_BOTTOM_TABS else saved
+    }
+
+    val bottomTabOrder: Flow<String> = dataStore.data.map { preferences ->
+        preferences[KEY_BOTTOM_TAB_ORDER] ?: DEFAULT_BOTTOM_TAB_ORDER
     }
 
     suspend fun updateUserName(name: String) {
@@ -119,6 +133,18 @@ class UserPreferencesRepository(
     suspend fun updateEnableSounds(enabled: Boolean) {
         dataStore.edit { preferences ->
             preferences[KEY_ENABLE_SOUNDS] = enabled
+        }
+    }
+
+    suspend fun updateEnabledBottomTabs(tabs: Set<String>) {
+        dataStore.edit { preferences ->
+            preferences[KEY_ENABLED_BOTTOM_TABS] = tabs
+        }
+    }
+
+    suspend fun updateBottomTabOrder(order: String) {
+        dataStore.edit { preferences ->
+            preferences[KEY_BOTTOM_TAB_ORDER] = order
         }
     }
 }

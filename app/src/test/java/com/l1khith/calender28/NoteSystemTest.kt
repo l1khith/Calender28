@@ -3,6 +3,8 @@ package com.l1khith.calender28
 import com.l1khith.calender28.data.Note
 import com.l1khith.calender28.data.NoteDao
 import com.l1khith.calender28.data.NoteEntity
+import com.l1khith.calender28.data.NoteFormat
+import com.l1khith.calender28.repository.NoteRepository
 import com.l1khith.calender28.repository.NoteRepositoryImpl
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -14,173 +16,156 @@ import org.junit.Before
 import org.junit.Test
 
 class FakeNoteDao : NoteDao {
-    private val notes = mutableMapOf<String, NoteEntity>()
+    private val notesMap = mutableMapOf<String, NoteEntity>()
     private val notesFlow = MutableStateFlow<List<NoteEntity>>(emptyList())
 
     private fun emit() {
-        val sorted = notes.values.sortedWith(
-            compareByDescending<NoteEntity> { it.is_pinned }
-                .thenByDescending { it.updated_at_ms }
-        )
-        notesFlow.value = sorted
+        notesFlow.value = notesMap.values
+            .sortedWith(compareByDescending<NoteEntity> { it.isPinned }.thenByDescending { it.updatedAt })
     }
 
-    override fun observeAllNotes(): Flow<List<NoteEntity>> = notesFlow
-
-    override suspend fun getAllNotes(): List<NoteEntity> = notesFlow.value
-
-    override suspend fun getNoteById(id: String): NoteEntity? = notes[id]
-
-    override fun observeNotesForDate(dateStr: String): Flow<List<NoteEntity>> =
-        notesFlow.map { list -> list.filter { it.associated_date == dateStr } }
-
-    override fun observeNotesByEntity(entityType: String): Flow<List<NoteEntity>> =
-        notesFlow.map { list -> list.filter { it.linked_entity.equals(entityType, ignoreCase = true) } }
-
-    override suspend fun insertNote(note: NoteEntity): Long {
-        notes[note.id] = note
+    override suspend fun insert(note: NoteEntity) {
+        notesMap[note.id] = note
         emit()
-        return 1L
     }
 
-    override suspend fun updateNote(note: NoteEntity): Int {
-        notes[note.id] = note
+    override suspend fun update(note: NoteEntity) {
+        notesMap[note.id] = note
         emit()
-        return 1
     }
 
-    override suspend fun deleteNote(id: String): Int {
-        val removed = notes.remove(id) != null
-        if (removed) emit()
-        return if (removed) 1 else 0
+    override suspend fun delete(note: NoteEntity) {
+        notesMap.remove(note.id)
+        emit()
     }
+
+    override suspend fun deleteById(id: String) {
+        notesMap.remove(id)
+        emit()
+    }
+
+    override fun getAllNotes(): Flow<List<NoteEntity>> = notesFlow
 
     override fun searchNotes(query: String): Flow<List<NoteEntity>> =
         notesFlow.map { list ->
-            list.filter {
-                it.title.contains(query, ignoreCase = true) ||
-                        it.content.contains(query, ignoreCase = true)
-            }
+            list.filter { it.title.contains(query, ignoreCase = true) || it.content.contains(query, ignoreCase = true) }
+        }
+
+    override suspend fun getNoteById(id: String): NoteEntity? = notesMap[id]
+
+    override fun getNotesForEntity(type: String, id: String): Flow<List<NoteEntity>> =
+        notesFlow.map { list ->
+            list.filter { it.linkedType.equals(type, ignoreCase = true) && it.linkedId == id }
+        }
+
+    override fun getNotesByType(type: String): Flow<List<NoteEntity>> =
+        notesFlow.map { list ->
+            list.filter { it.linkedType.equals(type, ignoreCase = true) }
         }
 }
 
 class NoteSystemTest {
 
-    private lateinit var fakeDao: FakeNoteDao
-    private lateinit var repository: NoteRepositoryImpl
+    private lateinit var fakeNoteDao: FakeNoteDao
+    private lateinit var noteRepository: NoteRepository
 
     @Before
     fun setUp() {
-        fakeDao = FakeNoteDao()
-        repository = NoteRepositoryImpl(fakeDao)
+        fakeNoteDao = FakeNoteDao()
+        noteRepository = NoteRepositoryImpl(fakeNoteDao)
     }
 
     @Test
-    fun `saveNote persists note with linkedEntity and isMarkdown`() = runBlocking {
+    fun `default note format is TXT`() {
+        val note = Note(content = "Milk, Bread")
+        assertEquals(NoteFormat.TXT, note.format)
+        assertFalse(note.isMarkdown)
+        assertEquals("text/plain", note.format.mimeType)
+    }
+
+    @Test
+    fun `markdown note has MD format and markdown flag`() {
         val note = Note(
-            id = "note_1",
-            title = "Morning Reflection",
-            content = "Completed my 7-day streak today.",
-            isPinned = false,
-            colorHex = "#3B82F6",
-            linkedEntity = "HABIT",
-            isMarkdown = true
+            content = "# Reflection\nGreat day!",
+            format = NoteFormat.MD
         )
+        assertEquals(NoteFormat.MD, note.format)
+        assertTrue(note.isMarkdown)
+        assertEquals("text/markdown", note.format.mimeType)
+    }
 
-        val result = repository.saveNote(note)
-        assertTrue(result.isSuccess)
+    @Test
+    fun `displayTitle derives from first line and strips markdown heading`() {
+        val markdownNote = Note(content = "### Meeting Agenda\n1. Review goals\n2. Next steps", format = NoteFormat.MD)
+        assertEquals("Meeting Agenda", markdownNote.displayTitle)
+        assertEquals("1. Review goals 2. Next steps", markdownNote.snippetPreview)
 
-        val retrieved = repository.getNoteById("note_1")
+        val plainNote = Note(content = "Grocery Shopping\nApples\nBananas", format = NoteFormat.TXT)
+        assertEquals("Grocery Shopping", plainNote.displayTitle)
+        assertEquals("Apples Bananas", plainNote.snippetPreview)
+
+        val emptyNote = Note(content = "")
+        assertEquals("Untitled Note", emptyNote.displayTitle)
+        assertEquals("", emptyNote.snippetPreview)
+    }
+
+    @Test
+    fun `save and retrieve note from repository`() = runBlocking {
+        val note = Note(
+            content = "# Task notes\nDetails about project",
+            format = NoteFormat.MD
+        )
+        noteRepository.insertNote(note)
+
+        val retrieved = noteRepository.getNoteById(note.id)
         assertNotNull(retrieved)
-        assertEquals("Morning Reflection", retrieved?.title)
-        assertEquals("Completed my 7-day streak today.", retrieved?.content)
-        assertEquals("#3B82F6", retrieved?.colorHex)
-        assertEquals("HABIT", retrieved?.linkedEntity)
-        assertTrue(retrieved?.isMarkdown == true)
-        assertFalse(retrieved?.isPinned ?: true)
+        assertEquals("Task notes", retrieved!!.displayTitle)
+        assertEquals(NoteFormat.MD, retrieved.format)
     }
 
     @Test
-    fun `togglePin toggles note pinned state`() = runBlocking {
-        val note = Note(
-            id = "note_pin_test",
-            title = "Important Checklist",
-            content = "Keep this pinned at the top",
-            isPinned = false
-        )
-        repository.saveNote(note)
+    fun `search notes filters by content`() = runBlocking {
+        val note1 = Note(content = "Morning Reflection\nFeeling energized")
+        val note2 = Note(content = "Gym Schedule\nLeg day today")
+        val note3 = Note(content = "Book Notes\nQuotes on discipline")
 
-        val toggleResult1 = repository.togglePin("note_pin_test")
-        assertTrue(toggleResult1.isSuccess)
+        noteRepository.insertNote(note1)
+        noteRepository.insertNote(note2)
+        noteRepository.insertNote(note3)
 
-        val pinnedNote = repository.getNoteById("note_pin_test")
-        assertTrue(pinnedNote?.isPinned == true)
+        val titleMatch = noteRepository.searchNotes("Morning").first()
+        assertEquals(1, titleMatch.size)
+        assertEquals("Morning Reflection", titleMatch[0].displayTitle)
 
-        val toggleResult2 = repository.togglePin("note_pin_test")
-        assertTrue(toggleResult2.isSuccess)
-
-        val unpinnedNote = repository.getNoteById("note_pin_test")
-        assertFalse(unpinnedNote?.isPinned == true)
+        val contentMatch = noteRepository.searchNotes("discipline").first()
+        assertEquals(1, contentMatch.size)
+        assertEquals("Book Notes", contentMatch[0].displayTitle)
     }
 
     @Test
-    fun `deleteNote removes note from repository`() = runBlocking {
-        val note = Note(
-            id = "note_to_delete",
-            title = "Delete Me",
-            content = "Temporary scratchpad"
-        )
-        repository.saveNote(note)
-        assertNotNull(repository.getNoteById("note_to_delete"))
+    fun `delete note removes it from repository`() = runBlocking {
+        val note = Note(content = "Delete me")
+        noteRepository.insertNote(note)
 
-        val deleteResult = repository.deleteNote("note_to_delete")
-        assertTrue(deleteResult.isSuccess)
+        var allNotes = noteRepository.getAllNotes().first()
+        assertEquals(1, allNotes.size)
 
-        assertNull(repository.getNoteById("note_to_delete"))
+        noteRepository.deleteNote(note)
+        allNotes = noteRepository.getAllNotes().first()
+        assertTrue(allNotes.isEmpty())
     }
 
     @Test
-    fun `searchNotes filters by title or content`() = runBlocking {
-        repository.saveNote(Note(id = "1", title = "Grocery List", content = "Apples, bananas, oats"))
-        repository.saveNote(Note(id = "2", title = "Workout Plan", content = "Leg day: squats, lunges"))
-        repository.saveNote(Note(id = "3", title = "App Architecture", content = "Review Room migration"))
+    fun `pinned notes appear before unpinned notes`() = runBlocking {
+        val unpinned = Note(id = "1", content = "Unpinned Note", isPinned = false, updatedAt = 1000)
+        val pinned = Note(id = "2", content = "Pinned Note", isPinned = true, updatedAt = 500)
 
-        val searchApples = repository.searchNotes("apples").first()
-        assertEquals(1, searchApples.size)
-        assertEquals("Grocery List", searchApples[0].title)
+        noteRepository.insertNote(unpinned)
+        noteRepository.insertNote(pinned)
 
-        val searchPlan = repository.searchNotes("Plan").first()
-        assertEquals(1, searchPlan.size)
-        assertEquals("Workout Plan", searchPlan[0].title)
-
-        val searchNotFound = repository.searchNotes("NonExistentKeyword").first()
-        assertTrue(searchNotFound.isEmpty())
-    }
-
-    @Test
-    fun `observeNotesByEntity filters by linked entity`() = runBlocking {
-        repository.saveNote(Note(id = "1", title = "Habit note", content = "Read 20 mins", linkedEntity = "HABIT"))
-        repository.saveNote(Note(id = "2", title = "Task note", content = "File taxes", linkedEntity = "TASK"))
-        repository.saveNote(Note(id = "3", title = "Cycle note", content = "End of month", linkedEntity = "CYCLE"))
-
-        val habitNotes = repository.observeNotesByEntity("HABIT").first()
-        assertEquals(1, habitNotes.size)
-        assertEquals("Habit note", habitNotes[0].title)
-
-        val taskNotes = repository.observeNotesByEntity("TASK").first()
-        assertEquals(1, taskNotes.size)
-        assertEquals("Task note", taskNotes[0].title)
-    }
-
-    @Test
-    fun `pinned notes appear before unpinned notes in observed flow`() = runBlocking {
-        repository.saveNote(Note(id = "1", title = "Unpinned 1", content = "First", isPinned = false, updatedAtMs = 1000L))
-        repository.saveNote(Note(id = "2", title = "Unpinned 2", content = "Second", isPinned = false, updatedAtMs = 2000L))
-        repository.saveNote(Note(id = "3", title = "Pinned Note", content = "Crucial", isPinned = true, updatedAtMs = 500L))
-
-        val notesList = repository.observeAllNotes().first()
-        assertEquals(3, notesList.size)
-        assertEquals("Pinned Note", notesList[0].title)
-        assertTrue(notesList[0].isPinned)
+        val list = noteRepository.getAllNotes().first()
+        assertEquals(2, list.size)
+        assertEquals("Pinned Note", list[0].displayTitle)
+        assertEquals("Unpinned Note", list[1].displayTitle)
     }
 }
