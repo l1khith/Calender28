@@ -20,8 +20,11 @@ import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.l1khith.calender28.data.BottomTab
+import com.l1khith.calender28.ui.settings.CustomizeNavScreen
 import com.l1khith.calender28.viewmodel.AppViewModelProvider
 import com.l1khith.calender28.viewmodel.CoinViewModel
+import com.l1khith.calender28.viewmodel.CustomizeNavViewModel
 import com.l1khith.calender28.viewmodel.FocusViewModel
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -139,7 +142,10 @@ fun FixedCalendarApp(
     val completedCycleHabit by viewModel.completedCycleHabit.collectAsStateWithLifecycle()
     val enableSparky by com.l1khith.calender28.utils.AppSettingsManager.enableSparky.collectAsStateWithLifecycle()
     val enableAnimations by com.l1khith.calender28.utils.AppSettingsManager.enableAnimations.collectAsStateWithLifecycle()
+    val enabledTabs by com.l1khith.calender28.utils.AppSettingsManager.enabledTabs.collectAsStateWithLifecycle()
+    val tabOrder by com.l1khith.calender28.utils.AppSettingsManager.tabOrder.collectAsStateWithLifecycle()
     var showProfileScreen by remember { mutableStateOf(false) }
+    var showCustomizeNavScreen by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
         sparkyViewModel.evolutionEvent.collect { stage ->
@@ -282,6 +288,17 @@ fun FixedCalendarApp(
 
     var selectedTab by remember { mutableStateOf(0) }
 
+    val visibleTabs = remember(tabOrder, enabledTabs) {
+        tabOrder.filter { enabledTabs.contains(it) }
+    }
+
+    LaunchedEffect(visibleTabs) {
+        val validIndices = visibleTabs.map { it.tabIndex }
+        if (validIndices.isNotEmpty() && selectedTab !in validIndices) {
+            selectedTab = validIndices.first()
+        }
+    }
+
     val onNavigateToTab: (Int) -> Unit = { targetTab ->
         if (selectedTab != targetTab) {
             selectedTab = targetTab
@@ -303,7 +320,14 @@ fun FixedCalendarApp(
     }
 
     Box(modifier = Modifier.fillMaxSize()) {
-        if (showProfileScreen) {
+        if (showCustomizeNavScreen) {
+            androidx.activity.compose.BackHandler { showCustomizeNavScreen = false }
+            val customizeNavViewModel: CustomizeNavViewModel = androidx.lifecycle.viewmodel.compose.viewModel(factory = AppViewModelProvider.Factory)
+            CustomizeNavScreen(
+                viewModel = customizeNavViewModel,
+                onBack = { showCustomizeNavScreen = false }
+            )
+        } else if (showProfileScreen) {
             androidx.activity.compose.BackHandler { showProfileScreen = false }
             Scaffold(
                 topBar = {
@@ -348,6 +372,7 @@ fun FixedCalendarApp(
                         onOpenExportTasks = { showExportTasksDialog = true },
                         onOpenMonthView = { showProfileScreen = false },
                         onOpenSparkyDetail = { showSparkyDetail = true },
+                        onOpenCustomizeNav = { showCustomizeNavScreen = true },
                         sparkyViewModel = sparkyViewModel
                     )
                 }
@@ -658,80 +683,33 @@ fun FixedCalendarApp(
                     contentColor = MatrixColors.OnSurface,
                     tonalElevation = 0.dp
                 ) {
-
-                NavigationBarItem(
-                    selected = selectedTab == 0,
-                    onClick = { onNavigateToTab(0) },
-                    icon = {
-                        Icon(
-                            imageVector = monthNavIcon,
-                            contentDescription = "Month"
+                    visibleTabs.forEach { tab ->
+                        val icon = when (tab) {
+                            BottomTab.MONTH -> monthNavIcon
+                            BottomTab.TASKS -> tasksNavIcon
+                            BottomTab.HABIT -> habitNavIcon
+                            BottomTab.NOTES -> notesNavIcon
+                        }
+                        NavigationBarItem(
+                            selected = selectedTab == tab.tabIndex,
+                            onClick = { onNavigateToTab(tab.tabIndex) },
+                            icon = {
+                                Icon(
+                                    imageVector = icon,
+                                    contentDescription = tab.label
+                                )
+                            },
+                            label = { Text(tab.label, style = MaterialTheme.typography.labelSmall) },
+                            colors = NavigationBarItemDefaults.colors(
+                                selectedIconColor = MatrixColors.Primary,
+                                selectedTextColor = MatrixColors.Primary,
+                                indicatorColor = Color.Transparent,
+                                unselectedIconColor = MatrixColors.OnSurfaceVariant,
+                                unselectedTextColor = MatrixColors.OnSurfaceVariant
+                            )
                         )
-                    },
-                    label = { Text("Month", style = MaterialTheme.typography.labelSmall) },
-                    colors = NavigationBarItemDefaults.colors(
-                        selectedIconColor = MatrixColors.Primary,
-                        selectedTextColor = MatrixColors.Primary,
-                        indicatorColor = Color.Transparent,
-                        unselectedIconColor = MatrixColors.OnSurfaceVariant,
-                        unselectedTextColor = MatrixColors.OnSurfaceVariant
-                    )
-                )
-                NavigationBarItem(
-                    selected = selectedTab == 1,
-                    onClick = { onNavigateToTab(1) },
-                    icon = {
-                        Icon(
-                            imageVector = tasksNavIcon,
-                            contentDescription = "Tasks"
-                        )
-                    },
-                    label = { Text("Tasks", style = MaterialTheme.typography.labelSmall) },
-                    colors = NavigationBarItemDefaults.colors(
-                        selectedIconColor = MatrixColors.Primary,
-                        selectedTextColor = MatrixColors.Primary,
-                        indicatorColor = Color.Transparent,
-                        unselectedIconColor = MatrixColors.OnSurfaceVariant,
-                        unselectedTextColor = MatrixColors.OnSurfaceVariant
-                    )
-                )
-                NavigationBarItem(
-                    selected = selectedTab == 2,
-                    onClick = { onNavigateToTab(2) },
-                    icon = {
-                        Icon(
-                            imageVector = habitNavIcon,
-                            contentDescription = "Habit"
-                        )
-                    },
-                    label = { Text("Habit", style = MaterialTheme.typography.labelSmall) },
-                    colors = NavigationBarItemDefaults.colors(
-                        selectedIconColor = MatrixColors.Primary,
-                        selectedTextColor = MatrixColors.Primary,
-                        indicatorColor = Color.Transparent,
-                        unselectedIconColor = MatrixColors.OnSurfaceVariant,
-                        unselectedTextColor = MatrixColors.OnSurfaceVariant
-                    )
-                )
-                NavigationBarItem(
-                    selected = selectedTab == 3,
-                    onClick = { onNavigateToTab(3) },
-                    icon = {
-                        Icon(
-                            imageVector = notesNavIcon,
-                            contentDescription = "Notes"
-                        )
-                    },
-                    label = { Text("Notes", style = MaterialTheme.typography.labelSmall) },
-                    colors = NavigationBarItemDefaults.colors(
-                        selectedIconColor = MatrixColors.Primary,
-                        selectedTextColor = MatrixColors.Primary,
-                        indicatorColor = Color.Transparent,
-                        unselectedIconColor = MatrixColors.OnSurfaceVariant,
-                        unselectedTextColor = MatrixColors.OnSurfaceVariant
-                    )
-                )
-            }
+                    }
+                }
         }
     },
     containerColor = backgroundColor

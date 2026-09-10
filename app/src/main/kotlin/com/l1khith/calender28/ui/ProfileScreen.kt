@@ -49,6 +49,7 @@ fun ProfileScreen(
     onOpenExportTasks: () -> Unit = {},
     onOpenMonthView: () -> Unit,
     onOpenSparkyDetail: () -> Unit = {},
+    onOpenCustomizeNav: () -> Unit = {},
     sparkyViewModel: com.l1khith.calender28.viewmodel.SparkyViewModel = androidx.lifecycle.viewmodel.compose.viewModel(factory = com.l1khith.calender28.viewmodel.AppViewModelProvider.Factory)
 ) {
     val isProActive by SubscriptionManager.isProActive.collectAsStateWithLifecycle()
@@ -412,6 +413,13 @@ fun ProfileScreen(
                             title = "Theme",
                             value = currentTheme.themeName,
                             onClick = { showThemeDialog = true }
+                        )
+                        HorizontalDivider(color = MatrixColors.OutlineVariant, thickness = 1.dp)
+                        ProfileSubtitleRow(
+                            icon = Icons.Default.Tune,
+                            title = "Customize Navigation",
+                            subtitle = "Choose which tabs appear in the bottom bar",
+                            onClick = onOpenCustomizeNav
                         )
                     }
                 }
