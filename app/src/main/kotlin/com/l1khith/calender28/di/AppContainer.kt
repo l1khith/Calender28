@@ -24,6 +24,7 @@ interface AppContainer {
     val userPreferencesRepository: UserPreferencesRepository
     val sparkyRepository: com.l1khith.calender28.repository.SparkyRepository
     val noteRepository: com.l1khith.calender28.repository.NoteRepository
+    val navPreferencesRepository: com.l1khith.calender28.repository.NavPreferencesRepository
 }
 
 /**
@@ -69,5 +70,9 @@ class DefaultAppContainer(private val context: Context) : AppContainer {
 
     override val noteRepository: com.l1khith.calender28.repository.NoteRepository by lazy {
         com.l1khith.calender28.repository.NoteRepositoryImpl(database.noteDao())
+    }
+
+    override val navPreferencesRepository: com.l1khith.calender28.repository.NavPreferencesRepository by lazy {
+        com.l1khith.calender28.repository.NavPreferencesRepositoryImpl(userPreferencesRepository)
     }
 }
