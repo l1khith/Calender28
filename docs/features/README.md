@@ -20,6 +20,7 @@ This documentation provides deep technical architecture, component breakdown, da
 | 08 | **Matrix Dynamic Multi-Theme Engine** | [08_theme_engine.md](08_theme_engine.md) | `ThemeManager`, `MatrixColors`, `MatrixShapes`, 5 Design Themes |
 | 09 | **Jetpack Glance Home Screen Widgets** | [09_glance_home_widgets.md](09_glance_home_widgets.md) | `TodayTaskWidget`, `WidgetUpdater`, Glance Material 3, AppWidgetReceiver |
 | 10 | **Pro Monetization, RevenueCat & Ads** | [10_monetization_and_pro.md](10_monetization_and_pro.md) | `SubscriptionManager`, RevenueCat 10.x, Play Billing 9.x, AdMob Banner |
+| 11 | **Native Notes Module** | [11_notes_system.md](11_notes_system.md) | `NoteEntity`, `NoteDao`, `NoteRepository`, `NotesListScreen`, Plain Text & Markdown |
 
 ---
 
