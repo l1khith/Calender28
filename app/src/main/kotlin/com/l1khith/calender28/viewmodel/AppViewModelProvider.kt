@@ -43,6 +43,13 @@ object AppViewModelProvider {
                 sparkyRepository = app.container.sparkyRepository
             )
         }
+        initializer {
+            val app = matrixApplication()
+            NotesViewModel(
+                application = app,
+                noteRepository = app.container.noteRepository
+            )
+        }
     }
 }
 
