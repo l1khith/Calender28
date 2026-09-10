@@ -23,6 +23,7 @@ interface AppContainer {
     val focusRepository: FocusRepository
     val userPreferencesRepository: UserPreferencesRepository
     val sparkyRepository: com.l1khith.calender28.repository.SparkyRepository
+    val noteRepository: com.l1khith.calender28.repository.NoteRepository
 }
 
 /**
@@ -64,5 +65,9 @@ class DefaultAppContainer(private val context: Context) : AppContainer {
             sparkyDao = database.sparkyDao(),
             coinRepository = coinRepository
         )
+    }
+
+    override val noteRepository: com.l1khith.calender28.repository.NoteRepository by lazy {
+        com.l1khith.calender28.repository.NoteRepositoryImpl(database.noteDao())
     }
 }
