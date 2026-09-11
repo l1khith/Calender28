@@ -52,13 +52,24 @@ fun HabitSection(
     viewModel: FixedCalendarViewModel,
     isProActive: Boolean,
     onOpenPaywall: () -> Unit,
-    sparkyViewModel: com.l1khith.calender28.viewmodel.SparkyViewModel? = null
+    sparkyViewModel: com.l1khith.calender28.viewmodel.SparkyViewModel? = null,
+    createHabitTrigger: Int = 0
 ) {
     val habits by viewModel.habits.collectAsStateWithLifecycle()
     val showConfetti by viewModel.showConfetti.collectAsStateWithLifecycle()
     val confettiTrigger by viewModel.confettiTrigger.collectAsStateWithLifecycle()
     var selectedHabitId by remember { mutableStateOf<String?>(null) }
     var showCreateNewHabitScreen by remember { mutableStateOf(false) }
+
+    LaunchedEffect(createHabitTrigger) {
+        if (createHabitTrigger > 0) {
+            if (isProActive) {
+                showCreateNewHabitScreen = true
+            } else {
+                onOpenPaywall()
+            }
+        }
+    }
 
     val selectedHabit = habits.find { it.id == selectedHabitId }
 

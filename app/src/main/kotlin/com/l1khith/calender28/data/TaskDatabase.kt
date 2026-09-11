@@ -47,7 +47,7 @@ abstract class RoomTaskDatabase : RoomDatabase() {
                     RoomTaskDatabase::class.java,
                     "calender28_room.db"
                 )
-                .fallbackToDestructiveMigration()
+                .fallbackToDestructiveMigration(dropAllTables = true)
                 .build()
                 .also { instance = it }
             }

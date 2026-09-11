@@ -13,12 +13,14 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.activity.compose.BackHandler
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.l1khith.calender28.data.BottomTab
 import com.l1khith.calender28.ui.settings.CustomizeNavScreen
@@ -288,6 +290,9 @@ fun FixedCalendarApp(
     val borderSubtle = MatrixColors.OutlineVariant
 
     var selectedTab by remember { mutableStateOf(0) }
+    var showProfileScreen by rememberSaveable { mutableStateOf(false) }
+    var createHabitTrigger by remember { mutableStateOf(0) }
+    var createNoteTrigger by remember { mutableStateOf(0) }
 
     val visibleTabs = remember(tabOrder, enabledTabs) {
         tabOrder.filter { enabledTabs.contains(it) }
@@ -412,8 +417,78 @@ fun FixedCalendarApp(
                 }
             }
         )
-    }
- else {
+    } else if (showProfileScreen) {
+        BackHandler { showProfileScreen = false }
+        Scaffold(
+            topBar = {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(MatrixColors.Surface)
+                ) {
+                    TopAppBar(
+                        title = {
+                            Text(
+                                text = "Profile & Settings",
+                                style = MaterialTheme.typography.titleLarge.copy(
+                                    fontWeight = FontWeight.Bold,
+                                    color = MatrixColors.Primary
+                                )
+                            )
+                        },
+                        navigationIcon = {
+                            IconButton(onClick = { showProfileScreen = false }) {
+                                Icon(
+                                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                                    contentDescription = "Back",
+                                    tint = MatrixColors.TextHeader
+                                )
+                            }
+                        },
+                        colors = TopAppBarDefaults.topAppBarColors(
+                            containerColor = MatrixColors.Surface,
+                            titleContentColor = MatrixColors.Primary
+                        )
+                    )
+                    AnimatedSparkDivider(
+                        baseColor = Color(0xFF424754),
+                        sparkColor = MatrixColors.Primary,
+                        glowColor = MatrixColors.Secondary,
+                        height = 1.dp,
+                        reverseDirection = true,
+                        durationMillis = 4000
+                    )
+                }
+            },
+            containerColor = backgroundColor
+        ) { innerPadding ->
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(innerPadding)
+                    .background(backgroundColor)
+            ) {
+                ProfileScreen(
+                    onOpenSubscription = { showPaywallDialog = true },
+                    onOpenCustomerCenter = { showCustomerCenterDialog = true },
+                    onOpenSecurity = { showSecurityLockDialog = true },
+                    onOpenNotifications = { launchNotificationPermission() },
+                    onOpenFocusStats = { showFocusStatsDialog = true },
+                    onOpenCoinStore = {
+                        showSparkyShopDirectly = false
+                        showCoinStoreDialog = true
+                    },
+                    onOpenExportTasks = { showExportTasksDialog = true },
+                    onOpenMonthView = {
+                        showProfileScreen = false
+                        onNavigateToTab(0)
+                    },
+                    onOpenSparkyDetail = { showSparkyDetail = true },
+                    sparkyViewModel = sparkyViewModel
+                )
+            }
+        }
+    } else {
 
         Scaffold(
             topBar = {
@@ -446,10 +521,11 @@ fun FixedCalendarApp(
                     title = {
                         Text(
                             text = "Matrix 28",
-                            style = MaterialTheme.typography.titleLarge.copy(
+                            style = MaterialTheme.typography.titleMedium.copy(
                                 fontWeight = FontWeight.Bold,
                                 color = MatrixColors.Primary
-                            )
+                            ),
+                            maxLines = 1
                         )
                     },
 
@@ -471,7 +547,7 @@ fun FixedCalendarApp(
 
                         // Flame wiggle / flicker animation
                         val flameTransition = rememberInfiniteTransition(label = "flame_wiggle")
-                        val flameRotation by flameTransition.animateFloat(
+                        val animatedFlameRotation by flameTransition.animateFloat(
                             initialValue = -8f,
                             targetValue = 8f,
                             animationSpec = infiniteRepeatable(
@@ -480,7 +556,7 @@ fun FixedCalendarApp(
                             ),
                             label = "flame_rot"
                         )
-                        val flameScale by flameTransition.animateFloat(
+                        val animatedFlameScale by flameTransition.animateFloat(
                             initialValue = 0.92f,
                             targetValue = 1.12f,
                             animationSpec = infiniteRepeatable(
@@ -489,6 +565,8 @@ fun FixedCalendarApp(
                             ),
                             label = "flame_scale"
                         )
+                        val flameRotation = if (enableAnimations) animatedFlameRotation else 0f
+                        val flameScale = if (enableAnimations) animatedFlameScale else 1f
 
                         // Mini Sparky Avatar (left of Streak)
                         if (enableSparky) {
@@ -560,7 +638,7 @@ fun FixedCalendarApp(
 
                         // Coin 3D Y-axis flip animation
                         val coinFlipTransition = rememberInfiniteTransition(label = "coin_flip")
-                        val coinRotationY by coinFlipTransition.animateFloat(
+                        val animatedCoinRotationY by coinFlipTransition.animateFloat(
                             initialValue = 0f,
                             targetValue = 360f,
                             animationSpec = infiniteRepeatable(
@@ -569,6 +647,7 @@ fun FixedCalendarApp(
                             ),
                             label = "coin_rot_y"
                         )
+                        val coinRotationY = if (enableAnimations) animatedCoinRotationY else 0f
 
                         // CalCoins Chip
                         Surface(
@@ -649,24 +728,12 @@ fun FixedCalendarApp(
             }
 
         },
-        floatingActionButton = {
-            if (selectedTab == 0) {
-                FloatingActionButton(
-                    onClick = {
-                        taskToEdit = null
-                        showAddTaskDialog = true
-                    },
-                    containerColor = MatrixColors.PrimaryContainer,
-                    contentColor = MatrixColors.OnPrimaryContainer,
-                    shape = MatrixShapes.Xl
-                ) {
-                    Icon(imageVector = Icons.Default.Add, contentDescription = "Add Task")
-                }
-            }
-        },
-
         bottomBar = {
-            Column(modifier = Modifier.fillMaxWidth().background(MatrixColors.Surface)) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(Color.Transparent)
+            ) {
                 if (!isProActive) {
                     BannerAd(modifier = Modifier.fillMaxWidth())
                 }
@@ -744,7 +811,8 @@ fun FixedCalendarApp(
                     viewModel = viewModel,
                     isProActive = isProActive,
                     onOpenPaywall = { showPaywallDialog = true },
-                    sparkyViewModel = sparkyViewModel
+                    sparkyViewModel = sparkyViewModel,
+                    createHabitTrigger = createHabitTrigger
                 )
 
                 3 -> NotesListScreen()
