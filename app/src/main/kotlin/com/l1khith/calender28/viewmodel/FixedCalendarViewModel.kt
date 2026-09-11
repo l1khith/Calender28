@@ -117,17 +117,17 @@ class FixedCalendarViewModel(
         Log.d(TAG, "init: Initializing FixedCalendarViewModel with selected date ${_selectedDate.value}")
         val currentSelDate = _selectedDate.value
         viewModelScope.launch(Dispatchers.IO) {
-            ensureActive()
+            // 1. Immediately render cached data
+            loadState(currentSelDate)
+
+            // 2. Background sync and catch-up
             taskRepository.catchUpRollover(currentSelDate)
-            ensureActive()
             val systemEvents = CalendarSyncHelper.importSystemCalendarEvents(context)
-            ensureActive()
             if (systemEvents.isNotEmpty()) {
                 taskRepository.importSystemCalendarTasks(systemEvents)
+                loadState(currentSelDate) // incremental refresh
             }
-            ensureActive()
             coinRepository.rewardDailyLogin(FixedCalendarHelper.currentFixedDate().toString())
-            loadState(currentSelDate)
         }
     }
 

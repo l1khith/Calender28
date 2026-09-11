@@ -44,8 +44,6 @@ object FocusNotificationHelper {
         isTimerMode: Boolean,
         isPaused: Boolean
     ): Notification {
-        createNotificationChannel(context)
-
         val openAppIntent = Intent(context, MainActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP
             putExtra("navigate_to", "focus_mode")

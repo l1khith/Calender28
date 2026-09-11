@@ -12,6 +12,8 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 
+import kotlinx.coroutines.launch
+
 class MatrixApplication : Application() {
 
     lateinit var container: AppContainer
@@ -23,21 +25,25 @@ class MatrixApplication : Application() {
         super.onCreate()
         container = DefaultAppContainer(this)
 
-        try {
-            MobileAds.initialize(this)
-        } catch (_: Exception) {}
-
+        // These just launch async coroutines — safe on main thread
         SubscriptionManager.initDataStore(this, applicationScope)
-        val revenueCatApiKey = BuildConfig.REVENUECAT_API_KEY
-        if (revenueCatApiKey.isNotBlank()) {
-            SubscriptionManager.configure(this, revenueCatApiKey)
-        }
-
         com.l1khith.calender28.security.AppLockManager.init(this, applicationScope)
         com.l1khith.calender28.utils.AppSettingsManager.init(this, applicationScope)
 
-        NotificationHelper(this).createNotificationChannels()
-        MidnightRolloverWorker.scheduleNextMidnightRollover(this)
-        CalendarContentObserver.register(this)
+        // Heavy SDK inits moved to background thread
+        applicationScope.launch(Dispatchers.IO) {
+            try {
+                MobileAds.initialize(this@MatrixApplication)
+            } catch (_: Exception) {}
+
+            val revenueCatApiKey = BuildConfig.REVENUECAT_API_KEY
+            if (revenueCatApiKey.isNotBlank()) {
+                SubscriptionManager.configure(this@MatrixApplication, revenueCatApiKey)
+            }
+
+            NotificationHelper(this@MatrixApplication).createNotificationChannels()
+            MidnightRolloverWorker.scheduleNextMidnightRollover(this@MatrixApplication)
+            CalendarContentObserver.register(this@MatrixApplication)
+        }
     }
 }

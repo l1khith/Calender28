@@ -15,6 +15,7 @@ class FocusService : Service() {
 
     override fun onCreate() {
         super.onCreate()
+        FocusNotificationHelper.createNotificationChannel(this)
         Log.d(TAG, "onCreate: FocusService created")
     }
 

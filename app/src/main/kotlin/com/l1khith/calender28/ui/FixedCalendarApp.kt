@@ -95,8 +95,9 @@ fun FixedCalendarApp(
     }
 
     LaunchedEffect(Unit) {
-        com.l1khith.calender28.billing.SubscriptionManager.initDataStore(context, coroutineScope)
-        kotlinx.coroutines.delay(600)
+        // Give SubscriptionManager a moment to resolve Pro status from DataStore
+        // (much shorter than the old arbitrary 600ms delay)
+        kotlinx.coroutines.delay(100)
         if (!com.l1khith.calender28.billing.SubscriptionManager.isProActive.value) {
             com.l1khith.calender28.ads.InterstitialAdManager.loadAd(context)
         }
@@ -537,11 +538,11 @@ fun FixedCalendarApp(
                                         .size(16.dp)
                                         .then(
                                             if (enableAnimations) {
-                                                Modifier.graphicsLayer(
-                                                    rotationZ = flameRotation,
-                                                    scaleX = flameScale,
+                                                Modifier.graphicsLayer {
+                                                    rotationZ = flameRotation
+                                                    scaleX = flameScale
                                                     scaleY = flameScale
-                                                )
+                                                }
                                             } else {
                                                 Modifier
                                             }
@@ -593,10 +594,10 @@ fun FixedCalendarApp(
                                         .size(16.dp)
                                         .then(
                                             if (enableAnimations) {
-                                                Modifier.graphicsLayer(
-                                                    rotationY = coinRotationY,
-                                                    cameraDistance = 12f * androidx.compose.ui.platform.LocalDensity.current.density
-                                                )
+                                                Modifier.graphicsLayer {
+                                                    rotationY = coinRotationY
+                                                    cameraDistance = 12f * density
+                                                }
                                             } else {
                                                 Modifier
                                             }

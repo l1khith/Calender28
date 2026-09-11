@@ -40,34 +40,35 @@ class MainActivity : FragmentActivity() {
             var showSplash by rememberSaveable { mutableStateOf(deepLinkIdState == null) }
 
             MatrixTheme {
-                androidx.compose.animation.AnimatedContent(
-                    targetState = showSplash,
-                    transitionSpec = {
-                        androidx.compose.animation.fadeIn(animationSpec = androidx.compose.animation.core.tween(300)) togetherWith
-                                androidx.compose.animation.fadeOut(animationSpec = androidx.compose.animation.core.tween(300))
-                    },
-                    label = "SplashTransition"
-                ) { isSplash ->
-                    if (isSplash) {
-                        com.l1khith.calender28.ui.MatrixSplashScreen(
-                            onEnterWorkspace = { showSplash = false },
-                            onExitApp = { finish() }
-                        )
-                    } else {
-                        FixedCalendarApp(
-                            viewModel = viewModel,
-                            initialTaskId = deepLinkId.value,
-                            onExitApp = { finish() }
-                        )
-                    }
-                }
-
                 if (isLocked) {
+                    // Exclusive branch: don't render splash/workspace underneath opaque lock
                     com.l1khith.calender28.security.AppLockOverlay(
                         onUnlockSuccess = {
                             com.l1khith.calender28.security.AppLockManager.unlock()
                         }
                     )
+                } else {
+                    androidx.compose.animation.AnimatedContent(
+                        targetState = showSplash,
+                        transitionSpec = {
+                            androidx.compose.animation.fadeIn(animationSpec = androidx.compose.animation.core.tween(300)) togetherWith
+                                    androidx.compose.animation.fadeOut(animationSpec = androidx.compose.animation.core.tween(300))
+                        },
+                        label = "SplashTransition"
+                    ) { isSplash ->
+                        if (isSplash) {
+                            com.l1khith.calender28.ui.MatrixSplashScreen(
+                                onEnterWorkspace = { showSplash = false },
+                                onExitApp = { finish() }
+                            )
+                        } else {
+                            FixedCalendarApp(
+                                viewModel = viewModel,
+                                initialTaskId = deepLinkId.value,
+                                onExitApp = { finish() }
+                            )
+                        }
+                    }
                 }
             }
         }
