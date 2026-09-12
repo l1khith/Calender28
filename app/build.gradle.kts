@@ -83,6 +83,15 @@ android {
             }
         }
     }
+
+    testOptions {
+        unitTests.all {
+            it.testLogging {
+                showStandardStreams = true
+                events("passed", "failed", "skipped")
+            }
+        }
+    }
 }
 
 kotlin {

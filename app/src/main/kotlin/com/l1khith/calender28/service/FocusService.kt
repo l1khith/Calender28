@@ -27,13 +27,17 @@ class FocusService : Service() {
         val timeFormatted = if (state is FocusState.Active) state.formattedTime else "00:00"
         val isTimer = if (state is FocusState.Active) state.mode == "timer" else true
         val isPaused = if (state is FocusState.Active) state.isPaused else false
+        val elapsedSeconds = if (state is FocusState.Active) state.elapsedSeconds else 0
+        val remainingSeconds = if (state is FocusState.Active) state.remainingSeconds else 0
 
         val notification = FocusNotificationHelper.buildFocusNotification(
             context = this,
             taskTitle = taskTitle,
             timeFormatted = timeFormatted,
             isTimerMode = isTimer,
-            isPaused = isPaused
+            isPaused = isPaused,
+            elapsedSeconds = elapsedSeconds,
+            remainingSeconds = remainingSeconds
         )
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {

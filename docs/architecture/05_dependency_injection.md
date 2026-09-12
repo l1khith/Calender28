@@ -11,91 +11,46 @@ Calender28 deliberately uses **Pure Kotlin Manual Dependency Injection** instead
 
 ---
 
-## AppModule Implementation
+## Current State (What We Have)
 
+The actual `AppContainer` interface and `DefaultAppContainer` are located in `di/AppContainer.kt`. Note the current architectural issues:
+- Some repositories get DAOs injected (e.g., `CoinRepositoryImpl` ✅)
+- Some repositories take a raw Context and self-resolve their DAOs (`TaskRepositoryImpl` ❌)
+- Global singletons (`AppSettingsManager`, `AppLockManager`, `SubscriptionManager`) bypass DI entirely ❌
+
+## Target State (After Refactoring)
+
+- ALL repositories receive DAOs via constructor parameters
+- ALL singletons converted to container-managed classes
+- Container explicitly provides: database, dispatchers, repositories, and managers
+
+**Target AppContainer Structure:**
 ```kotlin
-package com.l1khith.calender28.di
-
-import android.content.Context
-import androidx.datastore.preferences.preferencesDataStore
-import com.l1khith.calender28.data.local.database.CalenderDatabase
-import com.l1khith.calender28.data.repository.HabitRepositoryImpl
-import com.l1khith.calender28.data.repository.TaskRepositoryImpl
-import com.l1khith.calender28.data.repository.UserRepositoryImpl
-import com.l1khith.calender28.domain.repository.HabitRepository
-import com.l1khith.calender28.domain.repository.TaskRepository
-import com.l1khith.calender28.domain.repository.UserRepository
-import com.l1khith.calender28.domain.usecase.habit.*
-import com.l1khith.calender28.domain.usecase.task.*
-import com.l1khith.calender28.presentation.calendar.CalendarViewModel
-import com.l1khith.calender28.presentation.tasks.TasksViewModel
-
-private val Context.dataStore by preferencesDataStore(name = "user_settings")
-
-class AppModule private constructor(context: Context) {
-
-    val database: CalenderDatabase = CalenderDatabase.getInstance(context)
-    val dispatchers: DispatchersProvider = DefaultDispatchersProvider()
-    val appScopes: AppCoroutineScopes = AppCoroutineScopes()
-
+interface AppContainer {
+    val database: CalenderDatabase
+    val dispatchers: DispatchersProvider
+    
+    // DAOs
+    val taskDao: TaskDao
+    val habitDao: HabitDao
+    
     // Repositories
-    val taskRepository: TaskRepository by lazy {
-        TaskRepositoryImpl(
-            taskDao = database.taskDao(),
-            recurringTaskDao = database.recurringTaskDao(),
-            dispatchers = dispatchers
-        )
-    }
-
-    val habitRepository: HabitRepository by lazy {
-        HabitRepositoryImpl(
-            habitDao = database.habitDao(),
-            habitEntryDao = database.habitEntryDao(),
-            dispatchers = dispatchers
-        )
-    }
-
-    val userRepository: UserRepository by lazy {
-        UserRepositoryImpl(
-            dataStore = context.dataStore,
-            dispatchers = dispatchers
-        )
-    }
-
-    // Task Use Cases
-    val createTaskUseCase by lazy { CreateTaskUseCase(taskRepository) }
-    val getTasksForDateUseCase by lazy { GetTasksForDateUseCase(taskRepository) }
-    val toggleTaskUseCase by lazy { ToggleTaskCompletionUseCase(taskRepository) }
-
-    // Habit Use Cases
-    val createHabitUseCase by lazy { CreateHabitUseCase(habitRepository) }
-    val getHabitsUseCase by lazy { GetHabitsUseCase(habitRepository) }
-    val toggleHabitDayUseCase by lazy { ToggleHabitDayUseCase(habitRepository) }
-
-    // ViewModel Factory Helpers
-    fun provideTasksViewModel() = TasksViewModel(
-        getTasksUseCase = getTasksForDateUseCase,
-        createTaskUseCase = createTaskUseCase,
-        toggleTaskUseCase = toggleTaskUseCase,
-        dispatchers = dispatchers
-    )
-
-    fun provideCalendarViewModel() = CalendarViewModel(
-        getTasksForDateUseCase = getTasksForDateUseCase,
-        dispatchers = dispatchers
-    )
-
-    companion object {
-        @Volatile private var instance: AppModule? = null
-
-        fun getInstance(context: Context): AppModule =
-            instance ?: synchronized(this) {
-                instance ?: AppModule(context.applicationContext).also { instance = it }
-            }
-    }
+    val taskRepository: TaskRepository
+    val habitRepository: HabitRepository
+    
+    // Managers
+    val appSettingsManager: AppSettingsManager
+    val appLockManager: AppLockManager
+    val subscriptionManager: SubscriptionManager
 }
-
-// Extension property for clean syntax across Context / Composables
-val Context.appModule: AppModule
-    get() = AppModule.getInstance(this)
 ```
+
+## Migration Checklist
+
+- [ ] Fix `TaskRepositoryImpl`: take `TaskDao` not `Context`
+- [ ] Fix `HabitRepositoryImpl`: take `HabitDao` not `Context`
+- [ ] Fix `FocusRepositoryImpl`: take `FocusSessionDao` not `Context`
+- [ ] Migrate `AppSettingsManager` to class
+- [ ] Migrate `AppLockManager` to class
+- [ ] Migrate `SubscriptionManager` to class
+- [ ] Migrate `ThemeManager` to `CompositionLocal`

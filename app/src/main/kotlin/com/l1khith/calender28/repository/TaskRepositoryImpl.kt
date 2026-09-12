@@ -21,12 +21,17 @@ import java.util.UUID
 
 private const val TAG = "TaskRepoImpl"
 
-class TaskRepositoryImpl(private val context: Context) : TaskRepository {
+class TaskRepositoryImpl(
+    private val taskDao: com.l1khith.calender28.data.TaskDao,
+    private val recurringTaskDao: com.l1khith.calender28.data.RecurringTaskDao,
+    private val serviceAlarmScheduler: ServiceAlarmScheduler
+) : TaskRepository {
 
-    private val db = RoomTaskDatabase.getInstance(context)
-    private val taskDao = db.taskDao()
-    private val recurringTaskDao = db.recurringTaskDao()
-    private val serviceAlarmScheduler = ServiceAlarmScheduler(context)
+    constructor(context: Context) : this(
+        taskDao = RoomTaskDatabase.getInstance(context).taskDao(),
+        recurringTaskDao = RoomTaskDatabase.getInstance(context).recurringTaskDao(),
+        serviceAlarmScheduler = ServiceAlarmScheduler(context)
+    )
 
     override fun getTasksForDateFlow(dateStr: String): Flow<List<AppTask>> {
         Log.d(TAG, "getTasksForDateFlow: Observing tasks for date=$dateStr")

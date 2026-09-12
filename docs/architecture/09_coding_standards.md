@@ -55,3 +55,42 @@ viewModelScope.launch {
     )
 }
 ```
+
+---
+
+## Composable Rules
+- Max 200 lines per composable file — extract sub-composables
+- Single `@Stable` state parameter per screen composable
+- `remember { }` all callback lambdas passed to children
+- Lambda `graphicsLayer { }` exclusively — NEVER `Modifier.graphicsLayer(param = value)` or `Modifier.scale(value)`. WHY: Non-lambda reads state during composition phase, causing 60fps recomposition storms
+- `collectAsStateWithLifecycle()` always — NEVER `collectAsState()`. WHY: Lifecycle-aware collection prevents zombie collectors
+- No star imports except `androidx.compose.*`
+
+## ViewModel Rules
+- Single `StateFlow<ScreenState>` — use sealed interface, not flat booleans. WHY: Flat booleans create 2^N impossible states
+- `viewModelScope.launch(Dispatchers.IO)` for all repository calls
+- Constructor injection via ViewModelProvider.Factory — never `getInstance()` or `object` access
+- No Android framework imports in ViewModel — pure Kotlin + kotlinx.coroutines
+
+## Repository Rules
+- Accept DAOs via constructor parameters — never resolve internally. WHY: Testability + Dependency Inversion
+- Return `Flow<T>` for observable data, `suspend fun` for one-shot
+- Use `flowOn(Dispatchers.IO)` and `distinctUntilChanged()` on all database flows
+
+## Database Rules (CRITICAL)
+- ZERO `runBlocking` anywhere in the codebase. WHY: `runBlocking` on main thread = ANR. Even on IO thread, it wastes a thread pool slot.
+- `@Entity` with explicit `indices` on all frequently-queried columns
+- `exportSchema = true` — schema JSON committed to VCS
+- Explicit `Migration(from, to)` objects — NEVER `fallbackToDestructiveMigration()` in production. WHY: Destroys all user data
+- `@Transaction` on multi-write operations
+
+## Singleton Rules
+- NO global `object` singletons holding mutable state (MutableStateFlow, MutableState)
+- Use `class` instances managed by AppContainer
+- WHY: Singletons bypass DI, are untestable, create hidden global coupling
+- EXCEPTIONS: Pure utility objects with no state (e.g., `FixedCalendarHelper`, `Constants`)
+
+## Background Component Rules
+- BroadcastReceivers: Use `goAsync()` + `CoroutineScope(Dispatchers.IO).launch { }`. WHY: `onReceive()` runs on main thread, must not block
+- WorkManager: Use `CoroutineWorker`, never `Worker` with `runBlocking`
+- Services: Create notification channels in `onCreate()`, not per-notification. WHY: Channel creation is a Binder IPC

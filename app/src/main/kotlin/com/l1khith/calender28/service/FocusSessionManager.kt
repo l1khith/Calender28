@@ -87,11 +87,7 @@ object FocusSessionManager {
     }
     private val scope = CoroutineScope(Dispatchers.Main + SupervisorJob() + exceptionHandler)
     private var tickerJob: Job? = null
-
-    // Wall-clock tracking variables to avoid sleep drift
-    private var sessionStartTimeMs: Long = 0L
-    private var accumulatedElapsedSeconds: Int = 0
-    private var lastResumeTimestampMs: Long = 0L
+    private var timerEngine: FocusTimerEngine? = null
 
     fun openSetup(task: AppTask) {
         if (_focusState.value is FocusState.Active) return
@@ -109,9 +105,8 @@ object FocusSessionManager {
         if (task.completed) return
         val appContext = context.applicationContext
         val targetSeconds = if (mode == "timer") durationMinutes * 60 else 0
-        sessionStartTimeMs = System.currentTimeMillis()
-        lastResumeTimestampMs = sessionStartTimeMs
-        accumulatedElapsedSeconds = 0
+        val engine = FocusTimerEngine(mode = mode, targetDurationSeconds = targetSeconds)
+        timerEngine = engine
 
         _focusState.value = FocusState.Active(
             task = task,
@@ -119,7 +114,7 @@ object FocusSessionManager {
             targetDurationSeconds = targetSeconds,
             elapsedSeconds = 0,
             isPaused = false,
-            startedAtMs = sessionStartTimeMs,
+            startedAtMs = engine.sessionStartTimeMs,
             isScreenPinned = pinScreen
         )
 
@@ -131,28 +126,30 @@ object FocusSessionManager {
     fun togglePause(context: Context) {
         val appContext = context.applicationContext
         val current = _focusState.value as? FocusState.Active ?: return
+        val engine = timerEngine ?: return
+
         if (current.isPaused) {
             // Resume
-            lastResumeTimestampMs = System.currentTimeMillis()
+            engine.resume()
             _focusState.value = current.copy(isPaused = false)
             vibrate(appContext, 50)
+            updateServiceNotification(appContext)
             startTicker(appContext)
         } else {
             // Pause
-            val now = System.currentTimeMillis()
-            val segmentSec = ((now - lastResumeTimestampMs) / 1000).toInt()
-            accumulatedElapsedSeconds += segmentSec
+            val pausedElapsed = engine.pause()
             tickerJob?.cancel()
-            _focusState.value = current.copy(isPaused = true, elapsedSeconds = accumulatedElapsedSeconds)
+            _focusState.value = current.copy(isPaused = true, elapsedSeconds = pausedElapsed)
             vibrate(appContext, 50)
+            updateServiceNotification(appContext)
         }
-        updateServiceNotification(appContext)
     }
 
     fun stopOrCancelFocus(context: Context, markAsCancelled: Boolean = true) {
         val appContext = context.applicationContext
         val current = _focusState.value as? FocusState.Active
         tickerJob?.cancel()
+        timerEngine = null
         stopForegroundService(appContext)
 
         if (current != null && current.elapsedSeconds > 10) {
@@ -182,6 +179,7 @@ object FocusSessionManager {
         val appContext = context.applicationContext
         val current = _focusState.value as? FocusState.Active ?: return
         tickerJob?.cancel()
+        timerEngine = null
         stopForegroundService(appContext)
 
         val duration = if (current.mode == "timer") {
@@ -263,17 +261,15 @@ object FocusSessionManager {
                 val current = _focusState.value as? FocusState.Active ?: break
                 if (current.isPaused) continue
 
-                val now = System.currentTimeMillis()
-                val currentSegmentSec = ((now - lastResumeTimestampMs) / 1000).toInt()
-                val totalElapsed = accumulatedElapsedSeconds + currentSegmentSec
+                val engine = timerEngine ?: break
+                val totalElapsed = engine.currentElapsedSeconds()
 
-                if (current.mode == "timer" && totalElapsed >= current.targetDurationSeconds) {
+                if (engine.isFinished()) {
                     // Timer finished!
                     finishSessionAsComplete(context)
                     break
                 } else {
                     _focusState.value = current.copy(elapsedSeconds = totalElapsed)
-                    updateServiceNotification(context)
                 }
             }
         }
@@ -301,7 +297,9 @@ object FocusSessionManager {
             taskTitle = current.task.title,
             timeFormatted = current.formattedTime,
             isTimerMode = current.mode == "timer",
-            isPaused = current.isPaused
+            isPaused = current.isPaused,
+            elapsedSeconds = current.elapsedSeconds,
+            remainingSeconds = current.remainingSeconds
         )
         val manager = context.getSystemService(Context.NOTIFICATION_SERVICE) as android.app.NotificationManager
         manager.notify(FocusNotificationHelper.NOTIFICATION_ID, notif)

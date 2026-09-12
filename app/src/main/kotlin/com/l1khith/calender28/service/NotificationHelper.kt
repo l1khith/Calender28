@@ -194,13 +194,13 @@ class NotificationHelper(private val context: Context) {
         }
     }
 
-    fun snoozeNotification(taskId: String, minutes: Int) {
+    suspend fun snoozeNotification(taskId: String, minutes: Int) {
         val notificationId = taskId.hashCode() and 0x7FFFFFFF
         cancelNotification(notificationId)
 
         Log.d(TAG, "snoozeNotification: Snoozing task id=$taskId for $minutes minutes")
         val db = TaskDatabase(context)
-        val task = db.getAllTasks().find { it.id == taskId } ?: return
+        val task = db.getTaskById(taskId) ?: return
 
         val snoozeTime = System.currentTimeMillis() + (minutes * 60_000L)
         val intent = Intent(context, AlarmReceiver::class.java).apply {

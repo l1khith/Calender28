@@ -10,17 +10,24 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 
+import android.app.Application
+import androidx.test.core.app.ApplicationProvider
+import com.l1khith.calender28.viewmodel.FixedCalendarViewModel
+
 @RunWith(AndroidJUnit4::class)
 class TasksScreenTest {
 
     @get:Rule
     val composeTestRule = createComposeRule()
 
+    private val application = ApplicationProvider.getApplicationContext<Application>()
+    private val viewModel by lazy { FixedCalendarViewModel(application) }
+
     @Test
     fun tasksScreen_displaysHeaderTitles() {
         composeTestRule.setContent {
             TasksScreen(
-                viewModel = null,
+                viewModel = viewModel,
                 onEditTask = {},
                 isProActive = true
             )
@@ -35,7 +42,7 @@ class TasksScreenTest {
     fun tasksScreen_displaysEmptyStatesWhenNoTasks() {
         composeTestRule.setContent {
             TasksScreen(
-                viewModel = null,
+                viewModel = viewModel,
                 onEditTask = {},
                 isProActive = true
             )

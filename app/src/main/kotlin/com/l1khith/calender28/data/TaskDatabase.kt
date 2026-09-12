@@ -4,10 +4,24 @@ import android.content.Context
 import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
+import androidx.room.migration.Migration
+import androidx.sqlite.db.SupportSQLiteDatabase
 import com.l1khith.calender28.utils.FixedCalendarHelper
 import com.l1khith.calender28.utils.HabitCycleEngine
 import com.l1khith.calender28.utils.currentTimeMillis
-import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+
+val MIGRATION_8_9 = object : Migration(8, 9) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("CREATE INDEX IF NOT EXISTS `index_tasks_recurring_parent_id` ON `tasks` (`recurring_parent_id`)")
+        db.execSQL("CREATE INDEX IF NOT EXISTS `index_scheduled_alarms_item_id` ON `scheduled_alarms` (`item_id`)")
+        db.execSQL("CREATE INDEX IF NOT EXISTS `index_scheduled_alarms_scheduled_time_utc` ON `scheduled_alarms` (`scheduled_time_utc`)")
+        db.execSQL("CREATE INDEX IF NOT EXISTS `index_coin_transactions_timestamp` ON `coin_transactions` (`timestamp`)")
+        db.execSQL("CREATE INDEX IF NOT EXISTS `index_coin_transactions_reason_note` ON `coin_transactions` (`reason`, `note`)")
+        db.execSQL("CREATE INDEX IF NOT EXISTS `index_notes_linkedType_linkedId` ON `notes` (`linkedType`, `linkedId`)")
+    }
+}
 
 @Database(
     entities = [
@@ -22,7 +36,7 @@ import kotlinx.coroutines.runBlocking
         SparkyEntity::class,
         NoteEntity::class
     ],
-    version = 8,
+    version = 9,
     exportSchema = false
 )
 abstract class RoomTaskDatabase : RoomDatabase() {
@@ -47,7 +61,8 @@ abstract class RoomTaskDatabase : RoomDatabase() {
                     RoomTaskDatabase::class.java,
                     "calender28_room.db"
                 )
-                .fallbackToDestructiveMigration(dropAllTables = true)
+                .addMigrations(MIGRATION_8_9)
+                .fallbackToDestructiveMigration()
                 .build()
                 .also { instance = it }
             }
@@ -68,11 +83,11 @@ class TaskDatabase(private val context: Context) {
         } catch (_: Exception) {}
     }
 
-    fun insertTask(task: AppTask): Boolean = runBlocking {
+    suspend fun insertTask(task: AppTask): Boolean = withContext(Dispatchers.IO) {
         if (task.id.startsWith("sys_")) {
             val sysTitles = db.taskDao().getSysTaskTitlesForDate(task.associatedDate)
             if (sysTitles.contains(task.title.lowercase().trim())) {
-                return@runBlocking false
+                return@withContext false
             }
         }
         val result = db.taskDao().insertTask(AppTaskEntity.fromAppTask(task))
@@ -82,7 +97,7 @@ class TaskDatabase(private val context: Context) {
         } else false
     }
 
-    fun updateTask(task: AppTask): Boolean = runBlocking {
+    suspend fun updateTask(task: AppTask): Boolean = withContext(Dispatchers.IO) {
         val count = db.taskDao().updateTask(AppTaskEntity.fromAppTask(task))
         if (count > 0) {
             notifyWidgetUpdate()
@@ -90,7 +105,7 @@ class TaskDatabase(private val context: Context) {
         } else false
     }
 
-    fun deleteTask(id: String): Boolean = runBlocking {
+    suspend fun deleteTask(id: String): Boolean = withContext(Dispatchers.IO) {
         val count = db.taskDao().deleteTask(id)
         if (count > 0) {
             notifyWidgetUpdate()
@@ -98,19 +113,23 @@ class TaskDatabase(private val context: Context) {
         } else false
     }
 
-    fun getTasksForDate(dateStr: String): List<AppTask> = runBlocking {
+    suspend fun getTaskById(id: String): AppTask? = withContext(Dispatchers.IO) {
+        db.taskDao().getTaskById(id)?.toAppTask()
+    }
+
+    suspend fun getTasksForDate(dateStr: String): List<AppTask> = withContext(Dispatchers.IO) {
         db.taskDao().getTasksForDate(dateStr).map { it.toAppTask() }
     }
 
-    fun getAllTasks(): List<AppTask> = runBlocking {
+    suspend fun getAllTasks(): List<AppTask> = withContext(Dispatchers.IO) {
         db.taskDao().getAllTasks().map { it.toAppTask() }
     }
 
-    fun getDatesWithActiveTasks(): Set<String> = runBlocking {
+    suspend fun getDatesWithActiveTasks(): Set<String> = withContext(Dispatchers.IO) {
         db.taskDao().getDatesWithActiveTasks().toSet()
     }
 
-    fun getTaskCountsPerDate(): Map<String, Int> = runBlocking {
+    suspend fun getTaskCountsPerDate(): Map<String, Int> = withContext(Dispatchers.IO) {
         val rawCounts = db.taskDao().getRawTaskCountsPerDate()
         val map = mutableMapOf<String, Int>()
         for (rc in rawCounts) {
@@ -121,25 +140,25 @@ class TaskDatabase(private val context: Context) {
 
     // --- Recurring Tasks ---
 
-    fun insertRecurringTask(task: RecurringTask): Boolean = runBlocking {
+    suspend fun insertRecurringTask(task: RecurringTask): Boolean = withContext(Dispatchers.IO) {
         val result = db.recurringTaskDao().insertRecurringTask(RecurringTaskEntity.fromRecurringTask(task))
         result != -1L
     }
 
-    fun getAllRecurringTasks(): List<RecurringTask> = runBlocking {
+    suspend fun getAllRecurringTasks(): List<RecurringTask> = withContext(Dispatchers.IO) {
         db.recurringTaskDao().getAllRecurringTasks().map { it.toRecurringTask() }
     }
 
-    fun getActiveRecurringTasks(currentDateStr: String): List<RecurringTask> = runBlocking {
+    suspend fun getActiveRecurringTasks(currentDateStr: String): List<RecurringTask> = withContext(Dispatchers.IO) {
         db.recurringTaskDao().getActiveRecurringTasks(currentDateStr).map { it.toRecurringTask() }
     }
 
-    fun deleteRecurringTask(id: String): Boolean = runBlocking {
+    suspend fun deleteRecurringTask(id: String): Boolean = withContext(Dispatchers.IO) {
         val count = db.recurringTaskDao().deleteRecurringTask(id)
         count > 0
     }
 
-    fun insertGeneratedTask(task: AppTask): Boolean = runBlocking {
+    suspend fun insertGeneratedTask(task: AppTask): Boolean = withContext(Dispatchers.IO) {
         val result = db.taskDao().insertTask(AppTaskEntity.fromAppTask(task))
         if (result != -1L) {
             notifyWidgetUpdate()
@@ -147,39 +166,39 @@ class TaskDatabase(private val context: Context) {
         } else false
     }
 
-    fun hasGeneratedInstanceForDate(dateStr: String, recurringParentId: String): Boolean = runBlocking {
+    suspend fun hasGeneratedInstanceForDate(dateStr: String, recurringParentId: String): Boolean = withContext(Dispatchers.IO) {
         db.taskDao().countGeneratedInstanceForDate(dateStr, recurringParentId) > 0
     }
 
-    fun deleteIncompleteGeneratedTasks(recurringParentId: String): Boolean = runBlocking {
+    suspend fun deleteIncompleteGeneratedTasks(recurringParentId: String): Boolean = withContext(Dispatchers.IO) {
         db.taskDao().deleteIncompleteGeneratedTasks(recurringParentId) > 0
     }
 
-    fun catchUpRollover(targetDateStr: String) = runBlocking {
+    suspend fun catchUpRollover(targetDateStr: String) = withContext(Dispatchers.IO) {
         db.taskDao().purgePastUncompletedGeneratedTasks(targetDateStr)
-        val targetFixedDate = FixedCalendarHelper.parseDateStr(targetDateStr) ?: return@runBlocking
+        val targetFixedDate = FixedCalendarHelper.parseDateStr(targetDateStr) ?: return@withContext
         val oldCutoff = FixedCalendarHelper.addMonths(targetFixedDate, -3).toString()
         db.taskDao().purgeOldUncompletedTasks(oldCutoff)
     }
 
     // --- Habit Operations (28-day Habit Cycles) ---
 
-    fun insertHabit(habit: Habit): Boolean = runBlocking {
+    suspend fun insertHabit(habit: Habit): Boolean = withContext(Dispatchers.IO) {
         val result = db.habitDao().insertHabit(HabitEntity.fromHabit(habit))
         result != -1L
     }
 
-    fun updateHabit(habit: Habit): Boolean = runBlocking {
+    suspend fun updateHabit(habit: Habit): Boolean = withContext(Dispatchers.IO) {
         val count = db.habitDao().updateHabit(HabitEntity.fromHabit(habit))
         count > 0
     }
 
-    fun deleteHabit(id: String): Boolean = runBlocking {
+    suspend fun deleteHabit(id: String): Boolean = withContext(Dispatchers.IO) {
         val count = db.habitDao().deleteHabit(id)
         count > 0
     }
 
-    fun getAllHabits(): List<Habit> = runBlocking {
+    suspend fun getAllHabits(): List<Habit> = withContext(Dispatchers.IO) {
         val habits = db.habitDao().getAllHabits()
         val todayEpochDay = HabitCycleEngine.currentEpochDay()
 
@@ -207,7 +226,7 @@ class TaskDatabase(private val context: Context) {
         result
     }
 
-    fun upsertHabitEntry(habitId: String, cycleIndex: Long, dayInCycle: Int, isCompleted: Boolean): Boolean = runBlocking {
+    suspend fun upsertHabitEntry(habitId: String, cycleIndex: Long, dayInCycle: Int, isCompleted: Boolean): Boolean = withContext(Dispatchers.IO) {
         val result = db.habitEntryDao().upsertHabitEntry(
             HabitEntryEntity(
                 id = "${habitId}_${cycleIndex}_$dayInCycle",
@@ -221,7 +240,7 @@ class TaskDatabase(private val context: Context) {
         result != -1L
     }
 
-    fun getCurrentCycleProgress(habitId: String, cycleIndex: Long): Int = runBlocking {
+    suspend fun getCurrentCycleProgress(habitId: String, cycleIndex: Long): Int = withContext(Dispatchers.IO) {
         db.habitEntryDao().getCurrentCycleProgress(habitId, cycleIndex)
     }
 

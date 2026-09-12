@@ -159,10 +159,10 @@ class HabitDaoTest {
         val cycle1Result = habitEntryDao.getHabitEntries("h1", 1L)
 
         assertEquals(1, cycle0Result.size)
-        assertEquals(0L, cycle0Result[0].cycle_index)
+        assertEquals(1, cycle0Result[0].day_in_cycle)
 
         assertEquals(1, cycle1Result.size)
-        assertEquals(1L, cycle1Result[0].cycle_index)
+        assertEquals(1, cycle1Result[0].day_in_cycle)
     }
 
     @Test

@@ -20,6 +20,10 @@ This documentation suite serves as the principal blueprint for engineering desig
 | **08** | [Notification & Alarm System](./08_notification_system.md) | Local Notification Channels, `AlarmManager` integration, receivers, and exact alarms |
 | **09** | [Coding Standards](./09_coding_standards.md) | Naming conventions, package rules, error handling standard (`Result<T>`), and layer boundaries |
 | **10** | [Development Roadmap](./10_development_roadmap.md) | 5-phase engineering roadmap from project foundation to 14-dev closed beta testing |
+| **11** | [SOLID/DRY/KISS Audit](./11_solid_dry_kiss_audit.md) | The definitive audit document outlining core architectural violations and fixes |
+| **12** | [State Machine Patterns](./12_state_machines.md) | Specifications for AppLock and Focus Timer state machines |
+| **13** | [Compose Performance](./13_compose_performance.md) | Jetpack Compose performance rules, recomposition strategies, and anti-patterns |
+| **14** | [Performance Benchmark Suite](../../benchmark/README.md) | Official performance budgets, empirical benchmarks, and profiling recipes |
 
 ---
 

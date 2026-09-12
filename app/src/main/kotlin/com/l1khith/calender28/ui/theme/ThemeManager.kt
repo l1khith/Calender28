@@ -1,9 +1,14 @@
 package com.l1khith.calender28.ui.theme
 
 import androidx.compose.ui.graphics.Color
+import android.content.Context
+import com.l1khith.calender28.repository.UserPreferencesRepository
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
 
 enum class AppTheme(val themeName: String, val isProOnly: Boolean) {
     DEFAULT("Default Dark", false),
@@ -30,8 +35,32 @@ object ThemeManager {
     private val _currentTheme = MutableStateFlow(AppTheme.DEFAULT)
     val currentTheme: StateFlow<AppTheme> = _currentTheme.asStateFlow()
 
+    private var prefsRepo: UserPreferencesRepository? = null
+    private var scope: CoroutineScope? = null
+    private var isInitialized = false
+
+    fun init(context: Context, coroutineScope: CoroutineScope) {
+        if (isInitialized) return
+        isInitialized = true
+        val repo = UserPreferencesRepository.getInstance(context.applicationContext)
+        prefsRepo = repo
+        scope = coroutineScope
+
+        coroutineScope.launch(Dispatchers.Default) {
+            repo.selectedTheme.collect { themeName ->
+                val theme = runCatching { AppTheme.valueOf(themeName) }.getOrDefault(AppTheme.DEFAULT)
+                _currentTheme.value = theme
+            }
+        }
+    }
+
     fun setTheme(theme: AppTheme) {
         _currentTheme.value = theme
+        scope?.launch(Dispatchers.IO) {
+            try {
+                prefsRepo?.updateSelectedTheme(theme.name)
+            } catch (_: Exception) {}
+        }
     }
 
     fun getColors(theme: AppTheme): ThemeColors {

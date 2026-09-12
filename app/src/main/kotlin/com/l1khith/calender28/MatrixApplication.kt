@@ -29,6 +29,7 @@ class MatrixApplication : Application() {
         SubscriptionManager.initDataStore(this, applicationScope)
         com.l1khith.calender28.security.AppLockManager.init(this, applicationScope)
         com.l1khith.calender28.utils.AppSettingsManager.init(this, applicationScope)
+        com.l1khith.calender28.ui.theme.ThemeManager.init(this, applicationScope)
 
         // Heavy SDK inits moved to background thread
         applicationScope.launch(Dispatchers.IO) {

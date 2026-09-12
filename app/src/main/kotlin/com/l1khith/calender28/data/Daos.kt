@@ -93,6 +93,12 @@ interface RecurringTaskDao {
 
     @Query("DELETE FROM recurring_tasks WHERE id = :id")
     suspend fun deleteRecurringTask(id: String): Int
+
+    @Query("SELECT * FROM recurring_tasks WHERE id = :id")
+    suspend fun getRecurringTaskById(id: String): RecurringTaskEntity?
+
+    @Query("SELECT COUNT(*) FROM recurring_tasks")
+    suspend fun getRecurringTaskCount(): Int
 }
 
 @Dao
@@ -105,6 +111,9 @@ interface HabitDao {
 
     @Query("SELECT * FROM habits WHERE id = :id")
     suspend fun getHabitById(id: String): HabitEntity?
+
+    @Query("SELECT COUNT(*) FROM habits")
+    suspend fun getHabitCount(): Int
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertHabit(habit: HabitEntity): Long
@@ -126,6 +135,9 @@ interface HabitEntryDao {
 
     @Query("SELECT COUNT(*) FROM habit_entries WHERE habit_id = :habitId AND cycle_index = :cycleIndex AND is_completed = 1")
     suspend fun getCurrentCycleProgress(habitId: String, cycleIndex: Long): Int
+
+    @Query("DELETE FROM habit_entries WHERE habit_id = :habitId")
+    suspend fun deleteEntriesForHabit(habitId: String): Int
 }
 
 data class HabitEntryPair(

@@ -42,7 +42,9 @@ object FocusNotificationHelper {
         taskTitle: String,
         timeFormatted: String,
         isTimerMode: Boolean,
-        isPaused: Boolean
+        isPaused: Boolean,
+        elapsedSeconds: Int = 0,
+        remainingSeconds: Int = 0
     ): Notification {
         val openAppIntent = Intent(context, MainActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP
@@ -76,15 +78,15 @@ object FocusNotificationHelper {
         )
 
         val title = if (isPaused) "Focus Mode (Paused)" else "Focus Mode"
-        val subtitle = if (isTimerMode) {
-            "$taskTitle • $timeFormatted remaining"
+        val subtitle = if (isPaused) {
+            if (isTimerMode) "$taskTitle • $timeFormatted remaining" else "$taskTitle • $timeFormatted elapsed"
         } else {
-            "$taskTitle • $timeFormatted elapsed"
+            taskTitle
         }
 
         val toggleActionTitle = if (isPaused) "Resume" else "Pause"
 
-        return NotificationCompat.Builder(context, CHANNEL_FOCUS)
+        val builder = NotificationCompat.Builder(context, CHANNEL_FOCUS)
             .setSmallIcon(R.drawable.ic_stopwatch)
             .setContentTitle(title)
             .setContentText(subtitle)
@@ -103,7 +105,22 @@ object FocusNotificationHelper {
                 "Stop",
                 stopActionPending
             )
-            .build()
+
+        if (!isPaused) {
+            builder.setUsesChronometer(true)
+            builder.setShowWhen(true)
+            if (isTimerMode && Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                builder.setChronometerCountDown(true)
+                builder.setWhen(System.currentTimeMillis() + remainingSeconds * 1000L)
+            } else {
+                builder.setWhen(System.currentTimeMillis() - elapsedSeconds * 1000L)
+            }
+        } else {
+            builder.setUsesChronometer(false)
+            builder.setShowWhen(false)
+        }
+
+        return builder.build()
     }
 
     fun showCompletionNotification(context: Context, taskTitle: String, durationFormatted: String) {

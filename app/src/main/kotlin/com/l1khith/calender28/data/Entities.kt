@@ -9,7 +9,8 @@ import androidx.room.PrimaryKey
     tableName = "tasks",
     indices = [
         Index("associated_date"),
-        Index("is_completed")
+        Index("is_completed"),
+        Index("recurring_parent_id")
     ]
 )
 data class AppTaskEntity(
@@ -177,7 +178,13 @@ data class HabitEntryEntity(
     val completed_at_ms: Long? = null
 )
 
-@Entity(tableName = "scheduled_alarms")
+@Entity(
+    tableName = "scheduled_alarms",
+    indices = [
+        Index("item_id"),
+        Index("scheduled_time_utc")
+    ]
+)
 data class ScheduledAlarmEntity(
     @PrimaryKey val alarm_id: Int,
     val item_id: String,

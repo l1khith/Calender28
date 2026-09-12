@@ -17,11 +17,17 @@ import java.util.UUID
 
 private const val TAG = "HabitRepoImpl"
 
-class HabitRepositoryImpl(private val context: Context) : HabitRepository {
+class HabitRepositoryImpl(
+    private val habitDao: com.l1khith.calender28.data.HabitDao,
+    private val habitEntryDao: com.l1khith.calender28.data.HabitEntryDao,
+    private val alarmScheduler: com.l1khith.calender28.service.AlarmScheduler? = null
+) : HabitRepository {
 
-    private val db = RoomTaskDatabase.getInstance(context)
-    private val habitDao = db.habitDao()
-    private val habitEntryDao = db.habitEntryDao()
+    constructor(context: Context) : this(
+        habitDao = RoomTaskDatabase.getInstance(context).habitDao(),
+        habitEntryDao = RoomTaskDatabase.getInstance(context).habitEntryDao(),
+        alarmScheduler = com.l1khith.calender28.service.AlarmScheduler(context)
+    )
 
     override fun getAllHabitsFlow(): Flow<List<Habit>> {
         Log.d(TAG, "getAllHabitsFlow: Observing habits flow")
@@ -121,7 +127,7 @@ class HabitRepositoryImpl(private val context: Context) : HabitRepository {
             createdAtMs = System.currentTimeMillis()
         )
         if (!reminderTime.isNullOrEmpty()) {
-            com.l1khith.calender28.service.AlarmScheduler(context).scheduleHabitReminder(savedHabit)
+            alarmScheduler?.scheduleHabitReminder(savedHabit)
         }
         savedHabit
     }
