@@ -46,7 +46,8 @@ fun BannerAd(modifier: Modifier = Modifier) {
                 adUnitId = configuredAdUnitId
                 loadAd(AdRequest.Builder().build())
             }
-        }
+        },
+        onRelease = { it.destroy() }
     )
 }
 

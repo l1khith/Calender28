@@ -11,12 +11,15 @@ import com.l1khith.calender28.data.TaskDatabase
 import com.l1khith.calender28.widget.WidgetUpdater
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 object CalendarContentObserver {
     private var observer: ContentObserver? = null
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private var syncJob: Job? = null
 
     fun register(context: Context) {
         if (observer != null) return
@@ -27,7 +30,9 @@ object CalendarContentObserver {
                 override fun onChange(selfChange: Boolean, uri: Uri?) {
                     super.onChange(selfChange, uri)
                     Log.d("CalendarObserver", "System calendar update detected: $uri")
-                    scope.launch {
+                    syncJob?.cancel()
+                    syncJob = scope.launch {
+                        delay(1500L) // debounce sync bursts
                         try {
                             val systemEvents = importSystemCalendarEvents(appContext)
                             if (systemEvents.isNotEmpty()) {

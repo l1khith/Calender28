@@ -8,6 +8,7 @@ import android.os.VibrationEffect
 import android.os.Vibrator
 import android.os.VibratorManager
 import android.util.Log
+import com.l1khith.calender28.R
 
 /**
  * Helper to safely play sound effects (e.g. fire crackle on streak tap, coin clink on coin tap).
@@ -37,15 +38,8 @@ object SoundEffectHelper {
                 .setAudioAttributes(audioAttributes)
                 .build()
 
-            val fireResId = context.resources.getIdentifier("fire_sound", "raw", context.packageName)
-            if (fireResId != 0) {
-                fireSoundId = soundPool?.load(context, fireResId, 1) ?: 0
-            }
-
-            val coinResId = context.resources.getIdentifier("coin_sound", "raw", context.packageName)
-            if (coinResId != 0) {
-                coinSoundId = soundPool?.load(context, coinResId, 1) ?: 0
-            }
+            fireSoundId = soundPool?.load(context, R.raw.fire_sound, 1) ?: 0
+            coinSoundId = soundPool?.load(context, R.raw.coin_sound, 1) ?: 0
 
             isInitialized = true
         } catch (e: Exception) {
@@ -57,27 +51,9 @@ object SoundEffectHelper {
         if (!AppSettingsManager.enableSounds.value) return
         init(context)
         try {
-            var played = false
             if (fireSoundId != 0) {
-                val streamId = soundPool?.play(fireSoundId, 1f, 1f, 1, 0, 1f) ?: 0
-                played = streamId != 0
-            }
-
-            // If soundPool hasn't finished loading or stream failed, play via MediaPlayer fallback
-            if (!played) {
-                val fireResId = context.resources.getIdentifier("fire_sound", "raw", context.packageName)
-                if (fireResId != 0) {
-                    val mp = android.media.MediaPlayer.create(context.applicationContext, fireResId)
-                    mp?.apply {
-                        setVolume(1.0f, 1.0f)
-                        setOnCompletionListener { it.release() }
-                        start()
-                    }
-                    played = true
-                }
-            }
-
-            if (!played) {
+                soundPool?.play(fireSoundId, 1f, 1f, 1, 0, 1f)
+            } else {
                 val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as? android.media.AudioManager
                 audioManager?.playSoundEffect(android.media.AudioManager.FX_KEYPRESS_STANDARD, 1.0f)
             }
@@ -91,27 +67,9 @@ object SoundEffectHelper {
         if (!AppSettingsManager.enableSounds.value) return
         init(context)
         try {
-            var played = false
             if (coinSoundId != 0) {
-                val streamId = soundPool?.play(coinSoundId, 1f, 1f, 1, 0, 1f) ?: 0
-                played = streamId != 0
-            }
-
-            // If soundPool hasn't finished loading or stream failed, play via MediaPlayer fallback
-            if (!played) {
-                val coinResId = context.resources.getIdentifier("coin_sound", "raw", context.packageName)
-                if (coinResId != 0) {
-                    val mp = android.media.MediaPlayer.create(context.applicationContext, coinResId)
-                    mp?.apply {
-                        setVolume(1.0f, 1.0f)
-                        setOnCompletionListener { it.release() }
-                        start()
-                    }
-                    played = true
-                }
-            }
-
-            if (!played) {
+                soundPool?.play(coinSoundId, 1f, 1f, 1, 0, 1f)
+            } else {
                 val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as? android.media.AudioManager
                 audioManager?.playSoundEffect(android.media.AudioManager.FX_KEY_CLICK, 1.0f)
             }

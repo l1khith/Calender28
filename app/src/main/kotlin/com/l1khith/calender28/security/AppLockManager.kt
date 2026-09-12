@@ -68,6 +68,7 @@ object AppLockManager {
                 Log.d(TAG, "App was in background for ${elapsed}ms (timeout=${lockTimeoutMillis}ms), locking app")
                 _isLocked.value = true
             }
+            lastBackgroundTimestamp = 0L
         }
     }
 
@@ -76,6 +77,7 @@ object AppLockManager {
     }
 
     fun unlock() {
+        lastBackgroundTimestamp = 0L
         _isLocked.value = false
     }
 
