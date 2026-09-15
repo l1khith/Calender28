@@ -10,7 +10,8 @@ import androidx.room.PrimaryKey
     indices = [
         Index("associated_date"),
         Index("is_completed"),
-        Index("recurring_parent_id")
+        Index("recurring_parent_id"),
+        Index("end_date")
     ]
 )
 data class AppTaskEntity(
@@ -29,7 +30,12 @@ data class AppTaskEntity(
     val total_focus_time: Int = 0,
     val focus_count: Int = 0,
     val last_focus_duration: Int = 0,
-    val last_focus_mode: String? = null
+    val last_focus_mode: String? = null,
+    val end_date: String? = null,
+    val end_time: String? = null,
+    val is_all_day: Int = 0,
+    val reminder_offset_min: Int? = null,
+    val end_utc_timestamp: Long? = null
 ) {
     fun toAppTask(): AppTask = AppTask(
         id = id,
@@ -47,7 +53,12 @@ data class AppTaskEntity(
         totalFocusTime = total_focus_time,
         focusCount = focus_count,
         lastFocusDuration = last_focus_duration,
-        lastFocusMode = last_focus_mode
+        lastFocusMode = last_focus_mode,
+        endDate = end_date,
+        endTime = end_time,
+        isAllDay = is_all_day,
+        reminderOffsetMin = reminder_offset_min,
+        endUtcTimestamp = end_utc_timestamp
     )
 
     companion object {
@@ -67,7 +78,12 @@ data class AppTaskEntity(
             total_focus_time = task.totalFocusTime,
             focus_count = task.focusCount,
             last_focus_duration = task.lastFocusDuration,
-            last_focus_mode = task.lastFocusMode
+            last_focus_mode = task.lastFocusMode,
+            end_date = task.endDate,
+            end_time = task.endTime,
+            is_all_day = task.isAllDay,
+            reminder_offset_min = task.reminderOffsetMin,
+            end_utc_timestamp = task.endUtcTimestamp
         )
     }
 }

@@ -19,11 +19,35 @@ data class AppTask(
     val totalFocusTime: Int = 0,     // Total focus duration in seconds
     val focusCount: Int = 0,         // Total focus sessions completed
     val lastFocusDuration: Int = 0,  // Last session duration in seconds
-    val lastFocusMode: String? = null // "timer" or "stopwatch"
+    val lastFocusMode: String? = null, // "timer" or "stopwatch"
+    val endDate: String? = null,     // "YYYY-MM-DD" in 13-month format (null = same as associatedDate)
+    val endTime: String? = null,     // "HH:mm" (null = point-in-time)
+    val isAllDay: Int = 0,           // 1 = all-day task
+    val reminderOffsetMin: Int? = null, // Reminder offset in minutes before start
+    val endUtcTimestamp: Long? = null // Absolute Unix Milliseconds for end
 ) {
     val completed: Boolean get() = isCompleted == 1
     val reminder: Boolean get() = isReminder == 1
+    val allDay: Boolean get() = isAllDay == 1
+    val isTimeBounded: Boolean get() = !reminderTime.isNullOrEmpty() && !endTime.isNullOrEmpty() && !allDay
+    val spansMidnight: Boolean get() = endDate != null && endDate != associatedDate
     val hasEverFocused: Boolean get() = totalFocusTime > 0 || focusCount > 0
+
+    val durationMinutes: Long
+        get() {
+            if (utcTimestamp != null && endUtcTimestamp != null && endUtcTimestamp > utcTimestamp) {
+                return (endUtcTimestamp - utcTimestamp) / 60_000L
+            }
+            return 0L
+        }
+
+    val formattedTimeRange: String
+        get() = when {
+            allDay -> "All Day"
+            !reminderTime.isNullOrEmpty() && !endTime.isNullOrEmpty() -> "$reminderTime → $endTime"
+            !reminderTime.isNullOrEmpty() -> reminderTime
+            else -> ""
+        }
 
     val formattedFocusDuration: String
         get() {

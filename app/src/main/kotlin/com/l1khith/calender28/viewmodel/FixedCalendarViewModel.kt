@@ -188,7 +188,11 @@ class FixedCalendarViewModel(
         isReminder: Boolean,
         reminderTime: String?,
         priority: Int = 1,
-        associatedDateStr: String? = null
+        associatedDateStr: String? = null,
+        endDate: String? = null,
+        endTime: String? = null,
+        isAllDay: Boolean = false,
+        reminderOffsetMin: Int? = null
     ) {
         val targetDate = if (associatedDateStr != null) {
             FixedCalendarHelper.parseDateStr(associatedDateStr) ?: _selectedDate.value
@@ -205,7 +209,11 @@ class FixedCalendarViewModel(
                 associatedDate = targetDate,
                 isReminder = isReminder,
                 reminderTime = reminderTime,
-                priority = priority
+                priority = priority,
+                endDate = endDate,
+                endTime = endTime,
+                isAllDay = isAllDay,
+                reminderOffsetMin = reminderOffsetMin
             )
             loadState(targetDate)
         }

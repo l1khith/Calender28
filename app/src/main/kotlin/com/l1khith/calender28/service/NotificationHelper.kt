@@ -120,11 +120,22 @@ class NotificationHelper(private val context: Context) {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
+        val timeSubText = when {
+            task.formattedTimeRange.isNotEmpty() -> task.formattedTimeRange
+            !task.reminderTime.isNullOrEmpty() -> task.reminderTime
+            else -> ""
+        }
+        val contentText = when {
+            !task.description.isNullOrEmpty() -> task.description
+            timeSubText.isNotEmpty() -> "Scheduled for $timeSubText"
+            else -> "Task reminder"
+        }
+
         val builder = NotificationCompat.Builder(context, CHANNEL_TASK_REMINDERS)
             .setSmallIcon(android.R.drawable.ic_lock_idle_alarm)
             .setContentTitle(task.title)
-            .setContentText(task.description ?: "Task reminder")
-            .setSubText(task.reminderTime ?: "")
+            .setContentText(contentText)
+            .setSubText(timeSubText)
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setCategory(NotificationCompat.CATEGORY_REMINDER)
             .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)

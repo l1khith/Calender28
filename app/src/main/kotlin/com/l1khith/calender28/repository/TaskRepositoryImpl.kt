@@ -81,6 +81,27 @@ class TaskRepositoryImpl(
         list.map { it.toAppTask() }
     }
 
+    override fun getTasksSpanningDateFlow(dateStr: String): Flow<List<AppTask>> {
+        return taskDao.observeTasksSpanningDate(dateStr).map { list: List<AppTaskEntity> ->
+            list.map { it.toAppTask() }
+        }.flowOn(Dispatchers.IO)
+    }
+
+    override suspend fun getTasksSpanningDate(dateStr: String): List<AppTask> = withContext(Dispatchers.IO) {
+        val list: List<AppTaskEntity> = taskDao.getTasksSpanningDate(dateStr)
+        list.map { it.toAppTask() }
+    }
+
+    override suspend fun getTasksOverlapping(startDate: String, endDate: String): List<AppTask> = withContext(Dispatchers.IO) {
+        val list: List<AppTaskEntity> = taskDao.getTasksOverlapping(startDate, endDate)
+        list.map { it.toAppTask() }
+    }
+
+    override suspend fun getAllDayTasksForDate(dateStr: String): List<AppTask> = withContext(Dispatchers.IO) {
+        val list: List<AppTaskEntity> = taskDao.getAllDayTasksForDate(dateStr)
+        list.map { it.toAppTask() }
+    }
+
     override suspend fun getAllTasks(): List<AppTask> = withContext(Dispatchers.IO) {
         Log.d(TAG, "getAllTasks: Querying all tasks")
         val list: List<AppTaskEntity> = taskDao.getAllTasks()
@@ -119,13 +140,32 @@ class TaskRepositoryImpl(
         associatedDate: FixedDate,
         isReminder: Boolean,
         reminderTime: String?,
-        priority: Int
+        priority: Int,
+        endDate: String?,
+        endTime: String?,
+        isAllDay: Boolean,
+        reminderOffsetMin: Int?
     ): AppTask = withContext(Dispatchers.IO) {
-        Log.d(TAG, "saveTask: Saving task id=$id, title=$title, date=$associatedDate, isReminder=$isReminder")
+        Log.d(TAG, "saveTask: Saving task id=$id, title=$title, date=$associatedDate, isReminder=$isReminder, isAllDay=$isAllDay")
         val isRem = if (isReminder) 1 else 0
-        val utcTimestamp = if (isReminder && reminderTime != null) {
-            FixedCalendarHelper.toTimestamp(associatedDate, reminderTime)
-        } else null
+        
+        val utcTimestamp = when {
+            isAllDay -> FixedCalendarHelper.toTimestamp(associatedDate, "00:00")
+            reminderTime != null -> FixedCalendarHelper.toTimestamp(associatedDate, reminderTime)
+            else -> null
+        }
+
+        val endUtcTimestamp = when {
+            isAllDay -> {
+                val targetEndDate = if (endDate != null) (FixedCalendarHelper.parseDateStr(endDate) ?: associatedDate) else associatedDate
+                FixedCalendarHelper.toTimestamp(targetEndDate, "23:59")
+            }
+            endTime != null -> {
+                val targetEndDate = if (endDate != null) (FixedCalendarHelper.parseDateStr(endDate) ?: associatedDate) else associatedDate
+                FixedCalendarHelper.toTimestamp(targetEndDate, endTime)
+            }
+            else -> null
+        }
 
         val task = AppTask(
             id = id ?: UUID.randomUUID().toString(),
@@ -133,12 +173,17 @@ class TaskRepositoryImpl(
             description = description?.ifEmpty { null },
             associatedDate = associatedDate.toString(),
             isReminder = isRem,
-            reminderTime = if (isReminder) reminderTime else null,
+            reminderTime = if (isAllDay) null else reminderTime,
             utcTimestamp = utcTimestamp,
             isCompleted = 0,
             priority = priority,
             recurringParentId = null,
-            isGenerated = 0
+            isGenerated = 0,
+            endDate = if (endDate == associatedDate.toString()) null else endDate,
+            endTime = if (isAllDay) null else endTime,
+            isAllDay = if (isAllDay) 1 else 0,
+            reminderOffsetMin = reminderOffsetMin,
+            endUtcTimestamp = endUtcTimestamp
         )
 
         if (id != null) {

@@ -10,6 +10,7 @@ interface FocusRepository {
     fun getFocusSessionsForTaskFlow(taskId: String): Flow<List<FocusSession>>
     fun getTotalFocusSecondsFlow(): Flow<Long>
     fun getCompletedSessionCountFlow(): Flow<Int>
+    suspend fun getSessionsInRange(startMs: Long, endMs: Long): List<FocusSession>
     suspend fun deleteFocusSession(sessionId: Long): Int
     suspend fun clearAllFocusSessions(): Int
 }

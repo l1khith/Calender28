@@ -23,6 +23,17 @@ val MIGRATION_8_9 = object : Migration(8, 9) {
     }
 }
 
+val MIGRATION_9_10 = object : Migration(9, 10) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("ALTER TABLE `tasks` ADD COLUMN `end_date` TEXT")
+        db.execSQL("ALTER TABLE `tasks` ADD COLUMN `end_time` TEXT")
+        db.execSQL("ALTER TABLE `tasks` ADD COLUMN `is_all_day` INTEGER NOT NULL DEFAULT 0")
+        db.execSQL("ALTER TABLE `tasks` ADD COLUMN `reminder_offset_min` INTEGER")
+        db.execSQL("ALTER TABLE `tasks` ADD COLUMN `end_utc_timestamp` INTEGER")
+        db.execSQL("CREATE INDEX IF NOT EXISTS `index_tasks_end_date` ON `tasks` (`end_date`)")
+    }
+}
+
 @Database(
     entities = [
         AppTaskEntity::class,
@@ -36,7 +47,7 @@ val MIGRATION_8_9 = object : Migration(8, 9) {
         SparkyEntity::class,
         NoteEntity::class
     ],
-    version = 9,
+    version = 10,
     exportSchema = false
 )
 abstract class RoomTaskDatabase : RoomDatabase() {
@@ -61,7 +72,7 @@ abstract class RoomTaskDatabase : RoomDatabase() {
                     RoomTaskDatabase::class.java,
                     "calender28_room.db"
                 )
-                .addMigrations(MIGRATION_8_9)
+                .addMigrations(MIGRATION_8_9, MIGRATION_9_10)
                 .fallbackToDestructiveMigration()
                 .build()
                 .also { instance = it }

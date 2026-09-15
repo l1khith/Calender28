@@ -74,6 +74,10 @@ class FocusRepositoryImpl(
         return focusSessionDao.observeCompletedSessionCount().flowOn(Dispatchers.IO)
     }
 
+    override suspend fun getSessionsInRange(startMs: Long, endMs: Long): List<FocusSession> = withContext(Dispatchers.IO) {
+        focusSessionDao.getSessionsInRange(startMs, endMs).map { it.toDomain() }
+    }
+
     override suspend fun deleteFocusSession(sessionId: Long): Int = withContext(Dispatchers.IO) {
         focusSessionDao.deleteSession(sessionId)
     }

@@ -44,7 +44,8 @@ class AlarmScheduler(private val context: Context) {
             return false
         }
 
-        var triggerTime = task.utcTimestamp
+        val offsetMillis = (task.reminderOffsetMin ?: 0) * 60_000L
+        var triggerTime = task.utcTimestamp - offsetMillis
         val now = System.currentTimeMillis()
 
         // For generated recurring tasks whose time passed today, roll forward 24h

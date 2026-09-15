@@ -23,6 +23,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.l1khith.calender28.data.BottomTab
+import com.l1khith.calender28.ui.daydetail.DayDetailScreen
 import com.l1khith.calender28.ui.settings.CustomizeNavScreen
 import com.l1khith.calender28.viewmodel.AppViewModelProvider
 import com.l1khith.calender28.viewmodel.CoinViewModel
@@ -112,6 +113,9 @@ fun FixedCalendarApp(
 
     var showAddTaskDialog by remember { mutableStateOf(false) }
     var taskToEdit by remember { mutableStateOf<AppTask?>(null) }
+    var dayDetailDateStr by rememberSaveable { mutableStateOf<String?>(null) }
+    var createTaskInitialHour by remember { mutableStateOf<Int?>(null) }
+    var createTaskInitialDateStr by remember { mutableStateOf<String?>(null) }
     var showRecurringManager by remember { mutableStateOf(false) }
     var showSyncDialog by remember { mutableStateOf(false) }
     var showIcsImportDialog by remember { mutableStateOf(false) }
@@ -332,90 +336,103 @@ fun FixedCalendarApp(
                 viewModel = customizeNavViewModel,
                 onBack = { showCustomizeNavScreen = false }
             )
-        } else if (showProfileScreen) {
-            androidx.activity.compose.BackHandler { showProfileScreen = false }
-            Scaffold(
-                topBar = {
-                    TopAppBar(
-                        title = {
-                            Text(
-                                text = "Profile & Settings",
-                                style = MaterialTheme.typography.titleLarge.copy(
-                                    fontWeight = FontWeight.Bold,
-                                    color = MatrixColors.Primary
-                                )
-                            )
-                        },
-                        navigationIcon = {
-                            IconButton(onClick = { showProfileScreen = false }) {
-                                Icon(
-                                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                                    contentDescription = "Back",
-                                    tint = MatrixColors.TextHeader
-                                )
-                            }
-                        },
-                        colors = TopAppBarDefaults.topAppBarColors(
-                            containerColor = MatrixColors.Surface,
-                            titleContentColor = MatrixColors.Primary
-                        )
-                    )
-                },
-                containerColor = MatrixColors.Surface
-            ) { innerPad ->
-                Box(modifier = Modifier.padding(innerPad)) {
-                    ProfileScreen(
-                        onOpenSubscription = { showPaywallDialog = true },
-                        onOpenCustomerCenter = { showCustomerCenterDialog = true },
-                        onOpenSecurity = { showSecurityLockDialog = true },
-                        onOpenNotifications = { launchNotificationPermission() },
-                        onOpenFocusStats = { showFocusStatsDialog = true },
-                        onOpenCoinStore = {
-                            showSparkyShopDirectly = false
-                            showCoinStoreDialog = true
-                        },
-                        onOpenExportTasks = { showExportTasksDialog = true },
-                        onOpenMonthView = { showProfileScreen = false },
-                        onOpenSparkyDetail = { showSparkyDetail = true },
-                        onOpenCustomizeNav = { showCustomizeNavScreen = true },
-                        sparkyViewModel = sparkyViewModel
-                    )
-                }
-            }
         } else if (showAddTaskDialog) {
-        CreateTaskScreen(
-            task = taskToEdit,
-            onDismiss = { showAddTaskDialog = false },
-            onSave = { id, title, desc, isReminder, time, priority ->
-                if (isReminder) {
-                    pendingNotificationSaveAction = {
-                        viewModel.saveTask(id, title, desc, isReminder, time, priority)
-                        showAddTaskDialog = false
-                    }
-                    launchNotificationPermission()
-                } else {
-                    viewModel.saveTask(id, title, desc, isReminder, time, priority)
+            CreateTaskScreen(
+                task = taskToEdit,
+                onDismiss = {
                     showAddTaskDialog = false
+                    createTaskInitialHour = null
+                    createTaskInitialDateStr = null
+                },
+                onSave = { id, title, desc, isReminder, time, priority, endDate, endTime, isAllDay, reminderOffsetMin ->
+                    val targetDate = createTaskInitialDateStr ?: selectedDate.toString()
+                    if (isReminder) {
+                        pendingNotificationSaveAction = {
+                            viewModel.saveTask(
+                                id = id,
+                                title = title,
+                                description = desc,
+                                isReminder = isReminder,
+                                reminderTime = time,
+                                priority = priority,
+                                associatedDateStr = targetDate,
+                                endDate = endDate,
+                                endTime = endTime,
+                                isAllDay = isAllDay,
+                                reminderOffsetMin = reminderOffsetMin
+                            )
+                            showAddTaskDialog = false
+                            createTaskInitialHour = null
+                            createTaskInitialDateStr = null
+                        }
+                        launchNotificationPermission()
+                    } else {
+                        viewModel.saveTask(
+                            id = id,
+                            title = title,
+                            description = desc,
+                            isReminder = isReminder,
+                            reminderTime = time,
+                            priority = priority,
+                            associatedDateStr = targetDate,
+                            endDate = endDate,
+                            endTime = endTime,
+                            isAllDay = isAllDay,
+                            reminderOffsetMin = reminderOffsetMin
+                        )
+                        showAddTaskDialog = false
+                        createTaskInitialHour = null
+                        createTaskInitialDateStr = null
+                    }
+                },
+                onSaveRecurring = { id, title, desc, recType, recDays, interval, priority, isActive, endDate, reminderTime ->
+                    viewModel.saveRecurringTask(id, title, desc, recType, recDays, interval, priority, isActive, endDate, reminderTime)
+                    showAddTaskDialog = false
+                    createTaskInitialHour = null
+                    createTaskInitialDateStr = null
+                },
+                existingRecurringCount = recurringTasks.size,
+                isProActive = isProActive,
+                onOpenPaywall = { showPaywallDialog = true },
+                onDeleteTask = { task ->
+                    viewModel.deleteTask(task)
+                    showAddTaskDialog = false
+                    createTaskInitialHour = null
+                    createTaskInitialDateStr = null
+                },
+                onDeleteRecurring = { recId ->
+                    viewModel.deleteRecurringTask(recId)
+                    showAddTaskDialog = false
+                    createTaskInitialHour = null
+                    createTaskInitialDateStr = null
+                },
+                onStartFocus = { task ->
+                    if (!task.completed) {
+                        com.l1khith.calender28.service.FocusSessionManager.openSetup(task)
+                    }
+                },
+                initialDateStr = createTaskInitialDateStr,
+                initialHour = createTaskInitialHour,
+                existingTasks = tasks
+            )
+        } else if (dayDetailDateStr != null) {
+            BackHandler { dayDetailDateStr = null }
+            DayDetailScreen(
+                dateStr = dayDetailDateStr!!,
+                onBack = { dayDetailDateStr = null },
+                onOpenCreateTask = { targetDate, hour ->
+                    createTaskInitialDateStr = targetDate
+                    createTaskInitialHour = hour
+                    taskToEdit = null
+                    showAddTaskDialog = true
+                },
+                onEditTask = { task ->
+                    taskToEdit = task
+                    createTaskInitialHour = null
+                    createTaskInitialDateStr = task.associatedDate
+                    showAddTaskDialog = true
                 }
-            },
-            onSaveRecurring = { id, title, desc, recType, recDays, interval, priority, isActive, endDate, reminderTime ->
-                viewModel.saveRecurringTask(id, title, desc, recType, recDays, interval, priority, isActive, endDate, reminderTime)
-                showAddTaskDialog = false
-            },
-            onDeleteTask = { task ->
-                viewModel.deleteTask(task)
-                showAddTaskDialog = false
-            },
-            onDeleteRecurring = { recId ->
-                viewModel.deleteRecurringTask(recId)
-                showAddTaskDialog = false
-            },
-            onStartFocus = { task ->
-                if (!task.completed) {
-                    com.l1khith.calender28.service.FocusSessionManager.openSetup(task)
-                }
-            }
-        )
+            )
     } else if (showProfileScreen) {
         BackHandler { showProfileScreen = false }
         Scaffold(
@@ -595,7 +612,10 @@ fun FixedCalendarApp(
                 activeDates = activeDates,
                 taskCounts = taskCounts,
                 todayFixed = todayFixed,
-                onDateSelect = { viewModel.selectDate(it) },
+                onDateSelect = { cellDate ->
+                    viewModel.selectDate(cellDate)
+                    dayDetailDateStr = cellDate.toString()
+                },
                 primaryColor = primaryAccent,
                 orangeDotColor = secondaryAccent,
                 cardBg = cardBackground,
@@ -613,7 +633,11 @@ fun FixedCalendarApp(
             Spacer(modifier = Modifier.height(12.dp))
 
             Row(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(8.dp))
+                    .clickable { dayDetailDateStr = selectedDate.toString() }
+                    .padding(vertical = 4.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Box(
@@ -624,19 +648,27 @@ fun FixedCalendarApp(
                         .background(Color(0xFF3B82F6))
                 )
                 Spacer(modifier = Modifier.width(8.dp))
-                Text(
-                    text = "${FixedCalendarHelper.getMonthName(selectedDate.month)} ${selectedDate.day}, ${selectedDate.year}",
-                    color = textColorPrimary,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 18.sp
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(
-                    text = "• ${FixedCalendarHelper.getDayOfWeek(selectedDate)}",
-                    color = textColorSecondary,
-                    fontWeight = FontWeight.Normal,
-                    fontSize = 14.sp
-                )
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = "${FixedCalendarHelper.getMonthName(selectedDate.month)} ${selectedDate.day}, ${selectedDate.year}",
+                        color = textColorPrimary,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 18.sp
+                    )
+                    Text(
+                        text = "• ${FixedCalendarHelper.getDayOfWeek(selectedDate)} — Tap for 24h Day Timeline",
+                        color = textColorSecondary,
+                        fontWeight = FontWeight.Normal,
+                        fontSize = 12.sp
+                    )
+                }
+                IconButton(onClick = { dayDetailDateStr = selectedDate.toString() }) {
+                    Icon(
+                        imageVector = Icons.Default.Schedule,
+                        contentDescription = "Day Timeline",
+                        tint = MatrixColors.Primary
+                    )
+                }
             }
 
             Spacer(modifier = Modifier.height(8.dp))
