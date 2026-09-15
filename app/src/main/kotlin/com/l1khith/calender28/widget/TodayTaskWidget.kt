@@ -53,8 +53,7 @@ class ToggleTaskAction : ActionCallback {
     ) {
         val taskId = parameters[TaskIdKey] ?: return
         val db = TaskDatabase(context)
-        val tasks = db.getAllTasks()
-        val task = tasks.find { it.id == taskId }
+        val task = db.getTaskById(taskId)
         if (task != null) {
             val updated = task.copy(isCompleted = if (task.completed) 0 else 1)
             db.updateTask(updated)

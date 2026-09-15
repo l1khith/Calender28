@@ -36,7 +36,7 @@ class NotificationActionReceiver : BroadcastReceiver() {
                         val recurringId = intent.getStringExtra("recurring_id")
 
                         taskId?.let { id ->
-                            val task = db.getAllTasks().find { it.id == id }
+                            val task = db.getTaskById(id)
                             if (task != null) {
                                 db.updateTask(task.copy(isCompleted = 1))
                                 notificationHelper.cancelNotification(id.hashCode() and 0x7FFFFFFF)

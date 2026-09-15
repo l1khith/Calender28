@@ -120,11 +120,22 @@ class NotificationHelper(private val context: Context) {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
+        val timeSubText = when {
+            task.formattedTimeRange.isNotEmpty() -> task.formattedTimeRange
+            !task.reminderTime.isNullOrEmpty() -> task.reminderTime
+            else -> ""
+        }
+        val contentText = when {
+            !task.description.isNullOrEmpty() -> task.description
+            timeSubText.isNotEmpty() -> "Scheduled for $timeSubText"
+            else -> "Task reminder"
+        }
+
         val builder = NotificationCompat.Builder(context, CHANNEL_TASK_REMINDERS)
             .setSmallIcon(android.R.drawable.ic_lock_idle_alarm)
             .setContentTitle(task.title)
-            .setContentText(task.description ?: "Task reminder")
-            .setSubText(task.reminderTime ?: "")
+            .setContentText(contentText)
+            .setSubText(timeSubText)
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setCategory(NotificationCompat.CATEGORY_REMINDER)
             .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
@@ -194,13 +205,13 @@ class NotificationHelper(private val context: Context) {
         }
     }
 
-    fun snoozeNotification(taskId: String, minutes: Int) {
+    suspend fun snoozeNotification(taskId: String, minutes: Int) {
         val notificationId = taskId.hashCode() and 0x7FFFFFFF
         cancelNotification(notificationId)
 
         Log.d(TAG, "snoozeNotification: Snoozing task id=$taskId for $minutes minutes")
         val db = TaskDatabase(context)
-        val task = db.getAllTasks().find { it.id == taskId } ?: return
+        val task = db.getTaskById(taskId) ?: return
 
         val snoozeTime = System.currentTimeMillis() + (minutes * 60_000L)
         val intent = Intent(context, AlarmReceiver::class.java).apply {

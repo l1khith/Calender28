@@ -251,3 +251,38 @@ abstract class CalenderDatabase : RoomDatabase() {
     }
 }
 ```
+
+---
+
+## Required Indexes
+
+The following indexes MUST exist to ensure query performance:
+
+| Table | Column(s) | Index Name | WHY |
+|-------|-----------|------------|-----|
+| `tasks` | `associated_date` | `index_tasks_associated_date` | all task lookups are by date |
+| `tasks` | `recurring_parent_id` | `index_tasks_recurring_parent_id` | child task lookups |
+| `tasks` | `is_completed` | `index_tasks_is_completed` | filtering active/completed |
+| `coin_transactions` | `timestamp` | `index_coin_transactions_timestamp` | time-range queries |
+| `coin_transactions` | `reason, note` | `index_coin_transactions_reason_note` | idempotency checks |
+| `scheduled_alarms` | `item_id` | `index_scheduled_alarms_item_id` | alarm lookups by task/habit |
+| `scheduled_alarms` | `scheduled_time_utc` | `index_scheduled_alarms_scheduled_time_utc` | chronological alarm queries |
+| `notes` | `updatedAt` | `index_notes_updatedAt` | sort by recent |
+| `notes` | `isPinned` | `index_notes_isPinned` | pinned-first sorting |
+| `notes` | `linkedType, linkedId` | `index_notes_linkedType_linkedId` | entity-linked note lookups |
+
+---
+
+## Migration Safety Rules
+- Always use `exportSchema = true`
+- Commit schema JSON to version control
+- Write explicit `Migration(from, to)` — NEVER destructive (`fallbackToDestructiveMigration()`) in production
+- Test migrations with Room's `MigrationTestHelper`
+
+---
+
+## Query Performance Rules
+- NEVER use `getAllItems().find { }` for single lookups — use `@Query WHERE id = :id`
+- NEVER use `LEFT JOIN DISTINCT` when a simple `SELECT` suffices
+- Use `@Transaction` for related multi-table reads
+- Use `GROUP BY` aggregates instead of loading all rows and counting in Kotlin

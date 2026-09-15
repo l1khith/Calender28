@@ -13,11 +13,15 @@ import kotlinx.coroutines.withContext
 
 private const val TAG = "FocusRepoImpl"
 
-class FocusRepositoryImpl(private val context: Context) : FocusRepository {
+class FocusRepositoryImpl(
+    private val focusSessionDao: com.l1khith.calender28.data.FocusSessionDao,
+    private val taskDao: com.l1khith.calender28.data.TaskDao
+) : FocusRepository {
 
-    private val db = RoomTaskDatabase.getInstance(context)
-    private val focusSessionDao = db.focusSessionDao()
-    private val taskDao = db.taskDao()
+    constructor(context: Context) : this(
+        focusSessionDao = RoomTaskDatabase.getInstance(context).focusSessionDao(),
+        taskDao = RoomTaskDatabase.getInstance(context).taskDao()
+    )
 
     override suspend fun saveFocusSession(session: FocusSession): Long = withContext(Dispatchers.IO) {
         Log.d(TAG, "saveFocusSession: Saving session for task=${session.taskTitle}, duration=${session.durationSeconds}s, mode=${session.mode}")
@@ -68,6 +72,10 @@ class FocusRepositoryImpl(private val context: Context) : FocusRepository {
 
     override fun getCompletedSessionCountFlow(): Flow<Int> {
         return focusSessionDao.observeCompletedSessionCount().flowOn(Dispatchers.IO)
+    }
+
+    override suspend fun getSessionsInRange(startMs: Long, endMs: Long): List<FocusSession> = withContext(Dispatchers.IO) {
+        focusSessionDao.getSessionsInRange(startMs, endMs).map { it.toDomain() }
     }
 
     override suspend fun deleteFocusSession(sessionId: Long): Int = withContext(Dispatchers.IO) {

@@ -2,6 +2,7 @@ package com.l1khith.calender28.data
 
 import androidx.compose.runtime.Immutable
 import androidx.room.Entity
+import androidx.room.Index
 import androidx.room.PrimaryKey
 
 @Immutable
@@ -12,7 +13,13 @@ data class CoinBalanceEntity(
 )
 
 @Immutable
-@Entity(tableName = "coin_transactions")
+@Entity(
+    tableName = "coin_transactions",
+    indices = [
+        Index("timestamp"),
+        Index(value = ["reason", "note"])
+    ]
+)
 data class CoinTransactionEntity(
     @PrimaryKey val id: String,
     val amount: Int,

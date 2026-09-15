@@ -158,3 +158,25 @@ sealed class TasksEvent {
     object TaskDeleted : TasksEvent()
 }
 ```
+
+---
+
+## Dispatcher Assignment Table
+
+| Component | Thread | Dispatcher | Rule |
+|-----------|--------|------------|------|
+| Application.onCreate() | Main | None (return in <15ms) | Offload heavy work to IO |
+| ViewModel mutations | Main | viewModelScope | launch(IO) for repo calls |
+| Room DAOs | IO | Room auto-dispatches suspend | Never wrap in runBlocking |
+| DataStore reads | IO | flowOn(IO) | Use distinctUntilChanged() |
+| BroadcastReceivers | Main | goAsync() + IO coroutine | Never block onReceive() |
+| WorkManager | Worker thread | CoroutineWorker.doWork() | Already suspended |
+| ContentObserver | Main | IO coroutine with debounce | Cancel previous Job on new change |
+
+---
+
+## Anti-Patterns
+- ❌ `runBlocking` in ANY production code — causes ANR
+- ❌ `GlobalScope.launch` — unscoped, leaked coroutines
+- ❌ Multiple DataStore collectors for the same store — use single collector + map
+- ❌ `delay()` for synchronization — use proper Flow operators

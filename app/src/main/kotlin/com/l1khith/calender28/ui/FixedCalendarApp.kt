@@ -23,6 +23,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.l1khith.calender28.data.BottomTab
+import com.l1khith.calender28.ui.daydetail.DayDetailScreen
 import com.l1khith.calender28.ui.settings.CustomizeNavScreen
 import com.l1khith.calender28.viewmodel.AppViewModelProvider
 import com.l1khith.calender28.viewmodel.CoinViewModel
@@ -112,6 +113,9 @@ fun FixedCalendarApp(
 
     var showAddTaskDialog by remember { mutableStateOf(false) }
     var taskToEdit by remember { mutableStateOf<AppTask?>(null) }
+    var dayDetailDateStr by rememberSaveable { mutableStateOf<String?>(null) }
+    var createTaskInitialHour by remember { mutableStateOf<Int?>(null) }
+    var createTaskInitialDateStr by remember { mutableStateOf<String?>(null) }
     var showRecurringManager by remember { mutableStateOf(false) }
     var showSyncDialog by remember { mutableStateOf(false) }
     var showIcsImportDialog by remember { mutableStateOf(false) }
@@ -147,7 +151,6 @@ fun FixedCalendarApp(
     val enableAnimations by com.l1khith.calender28.utils.AppSettingsManager.enableAnimations.collectAsStateWithLifecycle()
     val enabledTabs by com.l1khith.calender28.utils.AppSettingsManager.enabledTabs.collectAsStateWithLifecycle()
     val tabOrder by com.l1khith.calender28.utils.AppSettingsManager.tabOrder.collectAsStateWithLifecycle()
-    var showProfileScreen by remember { mutableStateOf(false) }
     var showCustomizeNavScreen by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
@@ -333,90 +336,103 @@ fun FixedCalendarApp(
                 viewModel = customizeNavViewModel,
                 onBack = { showCustomizeNavScreen = false }
             )
-        } else if (showProfileScreen) {
-            androidx.activity.compose.BackHandler { showProfileScreen = false }
-            Scaffold(
-                topBar = {
-                    TopAppBar(
-                        title = {
-                            Text(
-                                text = "Profile & Settings",
-                                style = MaterialTheme.typography.titleLarge.copy(
-                                    fontWeight = FontWeight.Bold,
-                                    color = MatrixColors.Primary
-                                )
-                            )
-                        },
-                        navigationIcon = {
-                            IconButton(onClick = { showProfileScreen = false }) {
-                                Icon(
-                                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                                    contentDescription = "Back",
-                                    tint = MatrixColors.TextHeader
-                                )
-                            }
-                        },
-                        colors = TopAppBarDefaults.topAppBarColors(
-                            containerColor = MatrixColors.Surface,
-                            titleContentColor = MatrixColors.Primary
-                        )
-                    )
-                },
-                containerColor = MatrixColors.Surface
-            ) { innerPad ->
-                Box(modifier = Modifier.padding(innerPad)) {
-                    ProfileScreen(
-                        onOpenSubscription = { showPaywallDialog = true },
-                        onOpenCustomerCenter = { showCustomerCenterDialog = true },
-                        onOpenSecurity = { showSecurityLockDialog = true },
-                        onOpenNotifications = { launchNotificationPermission() },
-                        onOpenFocusStats = { showFocusStatsDialog = true },
-                        onOpenCoinStore = {
-                            showSparkyShopDirectly = false
-                            showCoinStoreDialog = true
-                        },
-                        onOpenExportTasks = { showExportTasksDialog = true },
-                        onOpenMonthView = { showProfileScreen = false },
-                        onOpenSparkyDetail = { showSparkyDetail = true },
-                        onOpenCustomizeNav = { showCustomizeNavScreen = true },
-                        sparkyViewModel = sparkyViewModel
-                    )
-                }
-            }
         } else if (showAddTaskDialog) {
-        CreateTaskScreen(
-            task = taskToEdit,
-            onDismiss = { showAddTaskDialog = false },
-            onSave = { id, title, desc, isReminder, time, priority ->
-                if (isReminder) {
-                    pendingNotificationSaveAction = {
-                        viewModel.saveTask(id, title, desc, isReminder, time, priority)
-                        showAddTaskDialog = false
-                    }
-                    launchNotificationPermission()
-                } else {
-                    viewModel.saveTask(id, title, desc, isReminder, time, priority)
+            CreateTaskScreen(
+                task = taskToEdit,
+                onDismiss = {
                     showAddTaskDialog = false
+                    createTaskInitialHour = null
+                    createTaskInitialDateStr = null
+                },
+                onSave = { id, title, desc, isReminder, time, priority, endDate, endTime, isAllDay, reminderOffsetMin ->
+                    val targetDate = createTaskInitialDateStr ?: selectedDate.toString()
+                    if (isReminder) {
+                        pendingNotificationSaveAction = {
+                            viewModel.saveTask(
+                                id = id,
+                                title = title,
+                                description = desc,
+                                isReminder = isReminder,
+                                reminderTime = time,
+                                priority = priority,
+                                associatedDateStr = targetDate,
+                                endDate = endDate,
+                                endTime = endTime,
+                                isAllDay = isAllDay,
+                                reminderOffsetMin = reminderOffsetMin
+                            )
+                            showAddTaskDialog = false
+                            createTaskInitialHour = null
+                            createTaskInitialDateStr = null
+                        }
+                        launchNotificationPermission()
+                    } else {
+                        viewModel.saveTask(
+                            id = id,
+                            title = title,
+                            description = desc,
+                            isReminder = isReminder,
+                            reminderTime = time,
+                            priority = priority,
+                            associatedDateStr = targetDate,
+                            endDate = endDate,
+                            endTime = endTime,
+                            isAllDay = isAllDay,
+                            reminderOffsetMin = reminderOffsetMin
+                        )
+                        showAddTaskDialog = false
+                        createTaskInitialHour = null
+                        createTaskInitialDateStr = null
+                    }
+                },
+                onSaveRecurring = { id, title, desc, recType, recDays, interval, priority, isActive, endDate, reminderTime ->
+                    viewModel.saveRecurringTask(id, title, desc, recType, recDays, interval, priority, isActive, endDate, reminderTime)
+                    showAddTaskDialog = false
+                    createTaskInitialHour = null
+                    createTaskInitialDateStr = null
+                },
+                existingRecurringCount = recurringTasks.size,
+                isProActive = isProActive,
+                onOpenPaywall = { showPaywallDialog = true },
+                onDeleteTask = { task ->
+                    viewModel.deleteTask(task)
+                    showAddTaskDialog = false
+                    createTaskInitialHour = null
+                    createTaskInitialDateStr = null
+                },
+                onDeleteRecurring = { recId ->
+                    viewModel.deleteRecurringTask(recId)
+                    showAddTaskDialog = false
+                    createTaskInitialHour = null
+                    createTaskInitialDateStr = null
+                },
+                onStartFocus = { task ->
+                    if (!task.completed) {
+                        com.l1khith.calender28.service.FocusSessionManager.openSetup(task)
+                    }
+                },
+                initialDateStr = createTaskInitialDateStr,
+                initialHour = createTaskInitialHour,
+                existingTasks = tasks
+            )
+        } else if (dayDetailDateStr != null) {
+            BackHandler { dayDetailDateStr = null }
+            DayDetailScreen(
+                dateStr = dayDetailDateStr!!,
+                onBack = { dayDetailDateStr = null },
+                onOpenCreateTask = { targetDate, hour ->
+                    createTaskInitialDateStr = targetDate
+                    createTaskInitialHour = hour
+                    taskToEdit = null
+                    showAddTaskDialog = true
+                },
+                onEditTask = { task ->
+                    taskToEdit = task
+                    createTaskInitialHour = null
+                    createTaskInitialDateStr = task.associatedDate
+                    showAddTaskDialog = true
                 }
-            },
-            onSaveRecurring = { id, title, desc, recType, recDays, interval, priority, isActive, endDate, reminderTime ->
-                viewModel.saveRecurringTask(id, title, desc, recType, recDays, interval, priority, isActive, endDate, reminderTime)
-                showAddTaskDialog = false
-            },
-            onDeleteTask = { task ->
-                viewModel.deleteTask(task)
-                showAddTaskDialog = false
-            },
-            onDeleteRecurring = { recId ->
-                viewModel.deleteRecurringTask(recId)
-                showAddTaskDialog = false
-            },
-            onStartFocus = { task ->
-                if (!task.completed) {
-                    com.l1khith.calender28.service.FocusSessionManager.openSetup(task)
-                }
-            }
-        )
+            )
     } else if (showProfileScreen) {
         BackHandler { showProfileScreen = false }
         Scaffold(
@@ -492,294 +508,36 @@ fun FixedCalendarApp(
 
         Scaffold(
             topBar = {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .background(MatrixColors.Surface)
-                ) {
-
-                TopAppBar(
-                    navigationIcon = {
-                        Box(
-                            modifier = Modifier
-                                .padding(start = 12.dp)
-                                .size(38.dp)
-                                .clip(CircleShape)
-                                .background(cardBackground)
-                                .border(BorderStroke(1.dp, borderSubtle), CircleShape)
-                                .clickable { showProfileScreen = true },
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                imageVector = profileNavIcon,
-                                contentDescription = "Profile",
-                                tint = Color(0xFFC2C6D6),
-                                modifier = Modifier.size(20.dp)
-                            )
-                        }
-                    },
-                    title = {
-                        Text(
-                            text = "Matrix 28",
-                            style = MaterialTheme.typography.titleMedium.copy(
-                                fontWeight = FontWeight.Bold,
-                                color = MatrixColors.Primary
-                            ),
-                            maxLines = 1
-                        )
-                    },
-
-                    actions = {
-                        val downloadedSyncIcon = remember {
-                            androidx.compose.ui.graphics.vector.ImageVector.Builder(
-                                name = "DownloadedSyncIcon",
-                                defaultWidth = 32.dp,
-                                defaultHeight = 37.dp,
-                                viewportWidth = 32f,
-                                viewportHeight = 37f
-                            ).addPath(
-                                pathData = androidx.compose.ui.graphics.vector.PathParser().parsePathString(
-                                    "M9 22.3333V20.6667H11.2917L10.9583 20.375C10.2361 19.7361 9.72917 19.0069 9.4375 18.1875C9.14583 17.3681 9 16.5417 9 15.7083C9 14.1667 9.46181 12.7951 10.3854 11.5938C11.309 10.3924 12.5139 9.59722 14 9.20833V10.9583C13 11.3194 12.1944 11.934 11.5833 12.8021C10.9722 13.6701 10.6667 14.6389 10.6667 15.7083C10.6667 16.3333 10.7847 16.941 11.0208 17.5312C11.2569 18.1215 11.625 18.6667 12.125 19.1667L12.3333 19.375V17.3333H14V22.3333H9V22.3333M17.3333 22.125V20.375C18.3333 20.0139 19.1389 19.3993 19.75 18.5312C20.3611 17.6632 20.6667 16.6944 20.6667 15.625C20.6667 15 20.5486 14.3924 20.3125 13.8021C20.0764 13.2118 19.7083 12.6667 19.2083 12.1667L19 11.9583V14H17.3333V9H22.3333V10.6667H20.0417L20.375 10.9583C21.0556 11.6389 21.5521 12.3785 21.8646 13.1771C22.1771 13.9757 22.3333 14.7917 22.3333 15.625C22.3333 17.1667 21.8715 18.5382 20.9479 19.7396C20.0243 20.941 18.8194 21.7361 17.3333 22.125V22.125"
-                                ).toNodes(),
-                                fill = androidx.compose.ui.graphics.SolidColor(Color(0xFFC2C6D6))
-                            ).build()
-                        }
-
-                        // Flame wiggle / flicker animation
-                        val flameTransition = rememberInfiniteTransition(label = "flame_wiggle")
-                        val animatedFlameRotation by flameTransition.animateFloat(
-                            initialValue = -8f,
-                            targetValue = 8f,
-                            animationSpec = infiniteRepeatable(
-                                animation = tween(durationMillis = 180, easing = LinearEasing),
-                                repeatMode = RepeatMode.Reverse
-                            ),
-                            label = "flame_rot"
-                        )
-                        val animatedFlameScale by flameTransition.animateFloat(
-                            initialValue = 0.92f,
-                            targetValue = 1.12f,
-                            animationSpec = infiniteRepeatable(
-                                animation = tween(durationMillis = 240, easing = FastOutSlowInEasing),
-                                repeatMode = RepeatMode.Reverse
-                            ),
-                            label = "flame_scale"
-                        )
-                        val flameRotation = if (enableAnimations) animatedFlameRotation else 0f
-                        val flameScale = if (enableAnimations) animatedFlameScale else 1f
-
-                        // Mini Sparky Avatar (left of Streak)
-                        if (enableSparky) {
-                            Surface(
-                                shape = CircleShape,
-                                color = MatrixColors.SurfaceContainerHigh,
-                                border = BorderStroke(1.dp, MatrixColors.Primary.copy(alpha = 0.5f)),
-                                modifier = Modifier
-                                    .padding(end = 6.dp)
-                                    .size(34.dp)
-                                    .clickable {
-                                        showSparkyDetail = true
-                                    }
-                            ) {
-                                Box(contentAlignment = Alignment.Center) {
-                                    SparkyAnimation(
-                                        mood = sparkyMood,
-                                        stage = sparkyState.stage,
-                                        size = 28.dp,
-                                        equippedSkin = sparkyState.equippedSkin
-                                    )
-                                }
-                            }
-                        }
-
-                        // Overall Streak Chip (to the left of Coins)
-                        Surface(
-                            shape = RoundedCornerShape(20.dp),
-                            color = MatrixColors.SurfaceContainerHigh,
-                            border = BorderStroke(1.dp, Color(0xFFF97316).copy(alpha = 0.5f)),
-                            modifier = Modifier
-                                .padding(end = 6.dp)
-                                .clickable {
-                                    SoundEffectHelper.playFireSound(context)
-                                    showStreakInfoDialog = true
-                                }
-                        ) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
-                            ) {
-                                Icon(
-                                    imageVector = AppIcons.Fire,
-                                    contentDescription = "Streak",
-                                    tint = Color.Unspecified,
-                                    modifier = Modifier
-                                        .size(16.dp)
-                                        .then(
-                                            if (enableAnimations) {
-                                                Modifier.graphicsLayer {
-                                                    rotationZ = flameRotation
-                                                    scaleX = flameScale
-                                                    scaleY = flameScale
-                                                }
-                                            } else {
-                                                Modifier
-                                            }
-                                        )
-                                )
-                                Spacer(modifier = Modifier.width(4.dp))
-                                Text(
-                                    text = "$overallStreak",
-                                    fontWeight = FontWeight.Bold,
-                                    fontSize = 13.sp,
-                                    color = MatrixColors.TextHeader
-                                )
-                            }
-                        }
-
-                        // Coin 3D Y-axis flip animation
-                        val coinFlipTransition = rememberInfiniteTransition(label = "coin_flip")
-                        val animatedCoinRotationY by coinFlipTransition.animateFloat(
-                            initialValue = 0f,
-                            targetValue = 360f,
-                            animationSpec = infiniteRepeatable(
-                                animation = tween(durationMillis = 1800, easing = LinearEasing),
-                                repeatMode = RepeatMode.Restart
-                            ),
-                            label = "coin_rot_y"
-                        )
-                        val coinRotationY = if (enableAnimations) animatedCoinRotationY else 0f
-
-                        // CalCoins Chip
-                        Surface(
-                            shape = RoundedCornerShape(20.dp),
-                            color = MatrixColors.SurfaceContainerHigh,
-                            border = BorderStroke(1.dp, MatrixColors.Primary.copy(alpha = 0.5f)),
-                            modifier = Modifier
-                                .padding(end = 8.dp)
-                                .clickable {
-                                    SoundEffectHelper.playCoinSound(context)
-                                    showCoinStoreDialog = true
-                                }
-                        ) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
-                            ) {
-                                Icon(
-                                    imageVector = AppIcons.Coin,
-                                    contentDescription = "Coins",
-                                    tint = Color.Unspecified,
-                                    modifier = Modifier
-                                        .size(16.dp)
-                                        .then(
-                                            if (enableAnimations) {
-                                                Modifier.graphicsLayer {
-                                                    rotationY = coinRotationY
-                                                    cameraDistance = 12f * density
-                                                }
-                                            } else {
-                                                Modifier
-                                            }
-                                        )
-                                )
-                                Spacer(modifier = Modifier.width(4.dp))
-                                Text(
-                                    text = "$coinBalance",
-                                    fontWeight = FontWeight.Bold,
-                                    fontSize = 13.sp,
-                                    color = MatrixColors.TextHeader
-                                )
-                            }
-                        }
-
-                        Box(
-                            modifier = Modifier
-                                .padding(end = 12.dp)
-                                .size(40.dp)
-                                .clip(CircleShape)
-                                .background(cardBackground)
-                                .border(BorderStroke(1.dp, borderSubtle), CircleShape)
-                                .clickable { showSyncDialog = true },
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                imageVector = downloadedSyncIcon,
-                                contentDescription = "Sync",
-                                tint = Color(0xFFC2C6D6),
-                                modifier = Modifier.size(24.dp)
-                            )
-                        }
-                    },
-                    colors = TopAppBarDefaults.topAppBarColors(
-                        containerColor = MatrixColors.Surface,
-                        titleContentColor = Color(0xFF3B82F6)
-                    )
+                MatrixTopAppBar(
+                    context = context,
+                    profileNavIcon = profileNavIcon,
+                    overallStreak = overallStreak,
+                    coinBalance = coinBalance,
+                    enableSparky = enableSparky,
+                    enableAnimations = enableAnimations,
+                    sparkyMood = sparkyMood,
+                    sparkyStage = sparkyState.stage,
+                    sparkyEquippedSkin = sparkyState.equippedSkin,
+                    onOpenProfile = { showProfileScreen = true },
+                    onOpenStreakInfo = { showStreakInfoDialog = true },
+                    onOpenCoinStore = { showCoinStoreDialog = true },
+                    onOpenSparkyDetail = { showSparkyDetail = true },
+                    onOpenSync = { showSyncDialog = true }
                 )
-
-                AnimatedSparkDivider(
-                    baseColor = Color(0xFF424754),
-                    sparkColor = MatrixColors.Primary,
-                    glowColor = MatrixColors.Secondary,
-                    height = 1.dp,
-                    reverseDirection = true,
-                    durationMillis = 4000,
-                    enableSparkle = enableAnimations
+            },
+            bottomBar = {
+                MatrixBottomNav(
+                    selectedTab = selectedTab,
+                    visibleTabs = visibleTabs,
+                    isProActive = isProActive,
+                    enableAnimations = enableAnimations,
+                    monthNavIcon = monthNavIcon,
+                    tasksNavIcon = tasksNavIcon,
+                    habitNavIcon = habitNavIcon,
+                    notesNavIcon = notesNavIcon,
+                    onNavigateToTab = onNavigateToTab
                 )
-            }
-
-        },
-        bottomBar = {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(Color.Transparent)
-            ) {
-                if (!isProActive) {
-                    BannerAd(modifier = Modifier.fillMaxWidth())
-                }
-                AnimatedSparkDivider(
-                    baseColor = MatrixColors.OutlineVariant,
-                    sparkColor = MatrixColors.Primary,
-                    glowColor = MatrixColors.Secondary,
-                    height = 1.dp,
-                    reverseDirection = false,
-                    durationMillis = 4000,
-                    enableSparkle = enableAnimations
-                )
-                NavigationBar(
-                    containerColor = MatrixColors.Surface,
-                    contentColor = MatrixColors.OnSurface,
-                    tonalElevation = 0.dp
-                ) {
-                    visibleTabs.forEach { tab ->
-                        val icon = when (tab) {
-                            BottomTab.MONTH -> monthNavIcon
-                            BottomTab.TASKS -> tasksNavIcon
-                            BottomTab.HABIT -> habitNavIcon
-                            BottomTab.NOTES -> notesNavIcon
-                        }
-                        NavigationBarItem(
-                            selected = selectedTab == tab.tabIndex,
-                            onClick = { onNavigateToTab(tab.tabIndex) },
-                            icon = {
-                                Icon(
-                                    imageVector = icon,
-                                    contentDescription = tab.label
-                                )
-                            },
-                            label = { Text(tab.label, style = MaterialTheme.typography.labelSmall) },
-                            colors = NavigationBarItemDefaults.colors(
-                                selectedIconColor = MatrixColors.Primary,
-                                selectedTextColor = MatrixColors.Primary,
-                                indicatorColor = Color.Transparent,
-                                unselectedIconColor = MatrixColors.OnSurfaceVariant,
-                                unselectedTextColor = MatrixColors.OnSurfaceVariant
-                            )
-                        )
-                    }
-                }
-        }
-    },
+            },
     containerColor = backgroundColor
 
     ) { innerPadding ->
@@ -854,7 +612,10 @@ fun FixedCalendarApp(
                 activeDates = activeDates,
                 taskCounts = taskCounts,
                 todayFixed = todayFixed,
-                onDateSelect = { viewModel.selectDate(it) },
+                onDateSelect = { cellDate ->
+                    viewModel.selectDate(cellDate)
+                    dayDetailDateStr = cellDate.toString()
+                },
                 primaryColor = primaryAccent,
                 orangeDotColor = secondaryAccent,
                 cardBg = cardBackground,
@@ -872,7 +633,11 @@ fun FixedCalendarApp(
             Spacer(modifier = Modifier.height(12.dp))
 
             Row(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(8.dp))
+                    .clickable { dayDetailDateStr = selectedDate.toString() }
+                    .padding(vertical = 4.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Box(
@@ -883,19 +648,27 @@ fun FixedCalendarApp(
                         .background(Color(0xFF3B82F6))
                 )
                 Spacer(modifier = Modifier.width(8.dp))
-                Text(
-                    text = "${FixedCalendarHelper.getMonthName(selectedDate.month)} ${selectedDate.day}, ${selectedDate.year}",
-                    color = textColorPrimary,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 18.sp
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(
-                    text = "• ${FixedCalendarHelper.getDayOfWeek(selectedDate)}",
-                    color = textColorSecondary,
-                    fontWeight = FontWeight.Normal,
-                    fontSize = 14.sp
-                )
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = "${FixedCalendarHelper.getMonthName(selectedDate.month)} ${selectedDate.day}, ${selectedDate.year}",
+                        color = textColorPrimary,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 18.sp
+                    )
+                    Text(
+                        text = "• ${FixedCalendarHelper.getDayOfWeek(selectedDate)} — Tap for 24h Day Timeline",
+                        color = textColorSecondary,
+                        fontWeight = FontWeight.Normal,
+                        fontSize = 12.sp
+                    )
+                }
+                IconButton(onClick = { dayDetailDateStr = selectedDate.toString() }) {
+                    Icon(
+                        imageVector = Icons.Default.Schedule,
+                        contentDescription = "Day Timeline",
+                        tint = MatrixColors.Primary
+                    )
+                }
             }
 
             Spacer(modifier = Modifier.height(8.dp))
@@ -1236,374 +1009,7 @@ fun FixedCalendarApp(
     }
 }
 
-@Composable
-fun MonthYearSelector(
-    selectedDate: FixedDate,
-    onDateChange: (FixedDate) -> Unit,
-    primaryColor: Color,
-    textColor: Color
-) {
-    fun navigateMonth(delta: Int) {
-        var newM = selectedDate.month + delta
-        var newY = selectedDate.year
-        if (newM < 1) {
-            newM = 13
-            newY -= 1
-        } else if (newM > 13) {
-            newM = 1
-            newY += 1
-        }
-        val newDay = if (selectedDate.day == 29 && newM != 6 && newM != 13) 28 else selectedDate.day
-        val isLD = newM == 6 && newDay == 29
-        val isYD = newM == 13 && newDay == 29
-        onDateChange(FixedDate(newY, newM, newDay, isLeapDay = isLD, isYearDay = isYD))
-    }
 
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        // Month Selector with Arrow Marks
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            IconButton(onClick = { navigateMonth(-1) }) {
-                Icon(
-                    imageVector = Icons.AutoMirrored.Filled.KeyboardArrowLeft,
-                    contentDescription = "Previous Month",
-                    tint = primaryColor
-                )
-            }
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Text(
-                    text = FixedCalendarHelper.getMonthName(selectedDate.month),
-                    color = textColor,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 18.sp
-                )
-                Text(
-                    text = "Month ${selectedDate.month} of 13",
-                    color = MatrixColors.TextSecondary,
-                    fontWeight = FontWeight.Normal,
-                    fontSize = 11.sp
-                )
-            }
-            IconButton(onClick = { navigateMonth(1) }) {
-                Icon(
-                    imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                    contentDescription = "Next Month",
-                    tint = primaryColor
-                )
-            }
-        }
-
-        // Year Selector with Arrow Marks
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            IconButton(onClick = {
-                onDateChange(selectedDate.copy(year = selectedDate.year - 1))
-            }) {
-                Icon(
-                    imageVector = Icons.AutoMirrored.Filled.KeyboardArrowLeft,
-                    contentDescription = "Prev Year",
-                    tint = primaryColor
-                )
-            }
-            Text(
-                text = selectedDate.year.toString(),
-                color = textColor,
-                fontWeight = FontWeight.Bold,
-                fontSize = 18.sp,
-                modifier = Modifier.padding(horizontal = 4.dp)
-            )
-            IconButton(onClick = {
-                onDateChange(selectedDate.copy(year = selectedDate.year + 1))
-            }) {
-                Icon(
-                    imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                    contentDescription = "Next Year",
-                    tint = primaryColor
-                )
-            }
-        }
-    }
-}
-
-@Composable
-fun CalendarMatrix(
-    selectedDate: FixedDate,
-    activeDates: Set<String>,
-    taskCounts: Map<String, Int>,
-    todayFixed: FixedDate,
-    onDateSelect: (FixedDate) -> Unit,
-    primaryColor: Color,
-    orangeDotColor: Color,
-    cardBg: Color,
-    borderColor: Color,
-    textColor: Color
-) {
-    val weekDays = arrayOf("Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat")
-    val isLeap = FixedCalendarHelper.isLeapYear(selectedDate.year)
-    val headerHeight = 38.dp
-    val rowHeight = 52.dp
-    val gridLineColor = borderColor
-
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = MatrixShapes.Lg,
-        colors = CardDefaults.cardColors(containerColor = MatrixColors.SurfaceContainerLow),
-        border = BorderStroke(1.dp, gridLineColor)
-    ) {
-        Column(modifier = Modifier.fillMaxWidth()) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .drawBehind {
-                        val strokeWidth = 1.dp.toPx()
-                        val colWidth = size.width / 7f
-                        val headerHeightPx = headerHeight.toPx()
-                        val rowHeightPx = rowHeight.toPx()
-
-                        // ─── 1. Continuous Vertical Grid Lines (Top to Bottom) ───
-                        for (col in 1..6) {
-                            val x = col * colWidth
-                            drawLine(
-                                color = gridLineColor,
-                                start = Offset(x, 0f),
-                                end = Offset(x, size.height),
-                                strokeWidth = strokeWidth
-                            )
-                        }
-
-                        // ─── 2. Horizontal Divider below Weekday Header ───
-                        drawLine(
-                            color = gridLineColor,
-                            start = Offset(0f, headerHeightPx),
-                            end = Offset(size.width, headerHeightPx),
-                            strokeWidth = strokeWidth
-                        )
-
-                        // ─── 3. Horizontal Dividers between Date Rows ─────
-                        for (r in 1..3) {
-                            val y = headerHeightPx + (r * rowHeightPx)
-                            drawLine(
-                                color = gridLineColor,
-                                start = Offset(0f, y),
-                                end = Offset(size.width, y),
-                                strokeWidth = strokeWidth
-                            )
-                        }
-                    }
-            ) {
-                // Weekday Header Row
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(headerHeight),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    for (day in weekDays) {
-                        Box(
-                            modifier = Modifier
-                                .weight(1f)
-                                .fillMaxHeight(),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text(
-                                text = day,
-                                textAlign = TextAlign.Center,
-                                color = MatrixColors.TextSecondary,
-                                fontWeight = FontWeight.Medium,
-                                fontSize = 13.sp
-                            )
-                        }
-                    }
-                }
-
-                // Date Grid (4 rows x 7 columns)
-                for (row in 0 until 4) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(rowHeight)
-                    ) {
-                        for (col in 1..7) {
-                            val dayNum = row * 7 + col
-                            val cellDate = FixedDate(selectedDate.year, selectedDate.month, dayNum)
-                            val cellDateStr = cellDate.toString()
-                            val taskCount = taskCounts[cellDateStr] ?: if (activeDates.contains(cellDateStr)) 1 else 0
-                            val isCellSelected = selectedDate.month == cellDate.month && selectedDate.day == dayNum
-                            val isCellToday = todayFixed.year == cellDate.year && todayFixed.month == cellDate.month && todayFixed.day == dayNum
-
-                            Box(
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .fillMaxHeight()
-                                    .clickable { onDateSelect(cellDate) },
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Column(
-                                    horizontalAlignment = Alignment.CenterHorizontally,
-                                    verticalArrangement = Arrangement.Center
-                                ) {
-                                    Box(
-                                        modifier = Modifier
-                                            .size(30.dp)
-                                            .clip(CircleShape)
-                                            .background(if (isCellSelected) Color(0xFF3B82F6) else Color.Transparent)
-                                            .border(
-                                                width = if (isCellToday && !isCellSelected) 1.dp else 0.dp,
-                                                color = if (isCellToday && !isCellSelected) Color(0xFF3B82F6) else Color.Transparent,
-                                                shape = CircleShape
-                                            ),
-                                        contentAlignment = Alignment.Center
-                                    ) {
-                                        Text(
-                                            text = dayNum.toString(),
-                                            color = if (isCellSelected) Color.White else if (taskCount > 0) MatrixColors.TextHeader else MatrixColors.TextSecondary,
-                                            fontWeight = if (isCellSelected || isCellToday || taskCount > 0) FontWeight.Bold else FontWeight.Normal,
-                                            fontSize = 14.sp
-                                        )
-                                    }
-
-                                    if (taskCount > 0) {
-                                        Spacer(modifier = Modifier.height(2.dp))
-                                        Row(
-                                            horizontalArrangement = Arrangement.spacedBy(2.dp),
-                                            verticalAlignment = Alignment.CenterVertically
-                                        ) {
-                                            val dotsToShow = taskCount.coerceAtMost(3)
-                                            for (i in 0 until dotsToShow) {
-                                                Box(
-                                                    modifier = Modifier
-                                                        .size(4.dp)
-                                                        .clip(CircleShape)
-                                                        .background(
-                                                            if (i % 2 == 0) MatrixColors.Tertiary else MatrixColors.Secondary
-                                                        )
-                                                )
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-
-            if (selectedDate.month == 6 && isLeap) {
-                HorizontalDivider(color = gridLineColor, thickness = 1.dp)
-                Spacer(modifier = Modifier.height(8.dp))
-                val leapDay = FixedDate(selectedDate.year, 6, 29, isLeapDay = true)
-                val isLeapSelected = selectedDate.month == 6 && selectedDate.day == 29
-                val isLeapToday = todayFixed.year == selectedDate.year && todayFixed.month == 6 && todayFixed.day == 29
-                val hasTasks = activeDates.contains(leapDay.toString())
-
-                Box(modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)) {
-                    SpecialDayCard(
-                        label = "Leap Day — Leave Day (June 29)",
-                        isSelected = isLeapSelected,
-                        isToday = isLeapToday,
-                        hasTasks = hasTasks,
-                        onClick = { onDateSelect(leapDay) },
-                        primaryColor = primaryColor,
-                        orangeDotColor = orangeDotColor,
-                        textColor = textColor
-                    )
-                }
-                Spacer(modifier = Modifier.height(6.dp))
-            }
-
-            if (selectedDate.month == 13) {
-                HorizontalDivider(color = gridLineColor, thickness = 1.dp)
-                Spacer(modifier = Modifier.height(8.dp))
-                val yearDay = FixedDate(selectedDate.year, 13, 29, isYearDay = true)
-                val isYearSelected = selectedDate.month == 13 && selectedDate.day == 29
-                val isYearToday = todayFixed.year == selectedDate.year && todayFixed.month == 13 && todayFixed.day == 29
-                val hasTasks = activeDates.contains(yearDay.toString())
-
-                Box(modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)) {
-                    SpecialDayCard(
-                        label = "Sol Day — Leave Day (December 29)",
-                        isSelected = isYearSelected,
-                        isToday = isYearToday,
-                        hasTasks = hasTasks,
-                        onClick = { onDateSelect(yearDay) },
-                        primaryColor = primaryColor,
-                        orangeDotColor = orangeDotColor,
-                        textColor = textColor
-                    )
-                }
-                Spacer(modifier = Modifier.height(6.dp))
-            }
-        }
-    }
-}
-
-
-@Composable
-fun SpecialDayCard(
-    label: String,
-    isSelected: Boolean,
-    isToday: Boolean,
-    hasTasks: Boolean,
-    onClick: () -> Unit,
-    primaryColor: Color,
-    orangeDotColor: Color,
-    textColor: Color
-) {
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable { onClick() },
-        shape = RoundedCornerShape(10.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = if (isSelected) primaryColor else Color.Black
-        ),
-        border = BorderStroke(
-            width = if (isToday && !isSelected) 1.dp else 0.dp,
-            color = if (isToday && !isSelected) primaryColor else Color.Transparent
-        )
-    ) {
-        Row(
-            modifier = Modifier
-                .padding(10.dp)
-                .fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    text = label,
-                    color = if (isSelected) Color.White else textColor,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 13.sp
-                )
-                Spacer(modifier = Modifier.width(6.dp))
-                Surface(
-                    shape = RoundedCornerShape(12.dp),
-                    color = if (isSelected) Color.White.copy(alpha = 0.2f) else Color(0xFF1E293B)
-                ) {
-                    Text(
-                        text = "LEAVE DAY",
-                        color = if (isSelected) Color.White else Color(0xFF60A5FA),
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 10.sp,
-                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
-                    )
-                }
-            }
-
-            if (hasTasks) {
-                Box(
-                    modifier = Modifier
-                        .size(6.dp)
-                        .clip(CircleShape)
-                        .background(if (isSelected) Color.White else orangeDotColor)
-                )
-            }
-        }
-    }
-}
 
 
 @Composable

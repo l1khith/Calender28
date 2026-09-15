@@ -19,12 +19,17 @@ object TestDataFactory {
         description: String? = null,
         associatedDate: String = "2026-08-14",
         isReminder: Int = 1,
-        reminderTime: String? = "09:00 AM",
+        reminderTime: String? = "09:00",
         utcTimestamp: Long? = System.currentTimeMillis() + 3600000,
         isCompleted: Int = 0,
         priority: Int = 1,
         recurringParentId: String? = null,
-        isGenerated: Int = 0
+        isGenerated: Int = 0,
+        endDate: String? = null,
+        endTime: String? = null,
+        isAllDay: Int = 0,
+        reminderOffsetMin: Int? = null,
+        endUtcTimestamp: Long? = null
     ) = AppTask(
         id = id,
         title = title,
@@ -36,7 +41,12 @@ object TestDataFactory {
         isCompleted = isCompleted,
         priority = priority,
         recurringParentId = recurringParentId,
-        isGenerated = isGenerated
+        isGenerated = isGenerated,
+        endDate = endDate,
+        endTime = endTime,
+        isAllDay = isAllDay,
+        reminderOffsetMin = reminderOffsetMin,
+        endUtcTimestamp = endUtcTimestamp
     )
 
     fun createAppTaskEntity(
@@ -45,12 +55,17 @@ object TestDataFactory {
         description: String? = null,
         associated_date: String = "2026-08-14",
         is_reminder: Int = 1,
-        reminder_time: String? = "09:00 AM",
+        reminder_time: String? = "09:00",
         utc_timestamp: Long? = System.currentTimeMillis() + 3600000,
         is_completed: Int = 0,
         priority: Int = 1,
         recurring_parent_id: String? = null,
-        is_generated: Int = 0
+        is_generated: Int = 0,
+        end_date: String? = null,
+        end_time: String? = null,
+        is_all_day: Int = 0,
+        reminder_offset_min: Int? = null,
+        end_utc_timestamp: Long? = null
     ) = AppTaskEntity(
         id = id,
         title = title,
@@ -62,7 +77,12 @@ object TestDataFactory {
         is_completed = is_completed,
         priority = priority,
         recurring_parent_id = recurring_parent_id,
-        is_generated = is_generated
+        is_generated = is_generated,
+        end_date = end_date,
+        end_time = end_time,
+        is_all_day = is_all_day,
+        reminder_offset_min = reminder_offset_min,
+        end_utc_timestamp = end_utc_timestamp
     )
 
     fun createHabit(

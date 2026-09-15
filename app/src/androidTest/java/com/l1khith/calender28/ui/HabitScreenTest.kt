@@ -9,18 +9,26 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 
+import android.app.Application
+import androidx.test.core.app.ApplicationProvider
+import com.l1khith.calender28.viewmodel.FixedCalendarViewModel
+
 @RunWith(AndroidJUnit4::class)
 class HabitScreenTest {
 
     @get:Rule
     val composeTestRule = createComposeRule()
 
+    private val application = ApplicationProvider.getApplicationContext<Application>()
+    private val viewModel by lazy { FixedCalendarViewModel(application) }
+
     @Test
     fun habitSection_displaysHeader() {
         composeTestRule.setContent {
             HabitSection(
-                viewModel = null,
-                isProActive = true
+                viewModel = viewModel,
+                isProActive = true,
+                onOpenPaywall = {}
             )
         }
 
@@ -32,8 +40,9 @@ class HabitScreenTest {
     fun habitSection_displaysEmptyStateWhenNoHabits() {
         composeTestRule.setContent {
             HabitSection(
-                viewModel = null,
-                isProActive = true
+                viewModel = viewModel,
+                isProActive = true,
+                onOpenPaywall = {}
             )
         }
 

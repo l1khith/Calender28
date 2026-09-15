@@ -14,6 +14,10 @@ interface TaskRepository {
     fun getRecurringTasksFlow(): Flow<List<RecurringTask>>
 
     suspend fun getTasksForDate(dateStr: String): List<AppTask>
+    fun getTasksSpanningDateFlow(dateStr: String): Flow<List<AppTask>>
+    suspend fun getTasksSpanningDate(dateStr: String): List<AppTask>
+    suspend fun getTasksOverlapping(startDate: String, endDate: String): List<AppTask>
+    suspend fun getAllDayTasksForDate(dateStr: String): List<AppTask>
     suspend fun getAllTasks(): List<AppTask>
     suspend fun getDatesWithActiveTasks(): Set<String>
     suspend fun getTaskCountsPerDate(): Map<String, Int>
@@ -26,7 +30,11 @@ interface TaskRepository {
         associatedDate: FixedDate,
         isReminder: Boolean,
         reminderTime: String?,
-        priority: Int
+        priority: Int = 1,
+        endDate: String? = null,
+        endTime: String? = null,
+        isAllDay: Boolean = false,
+        reminderOffsetMin: Int? = null
     ): AppTask
 
     suspend fun importSystemCalendarTasks(tasks: List<AppTask>)

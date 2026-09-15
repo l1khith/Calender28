@@ -40,7 +40,7 @@ class RecurringTaskDaoTest {
     @Test
     fun saveRecurringTask_insertsNewTask() = runBlocking {
         val recurring = TestDataFactory.createRecurringTaskEntity(id = "r1", title = "Daily Standup")
-        recurringTaskDao.saveRecurringTask(recurring)
+        recurringTaskDao.insertRecurringTask(recurring)
 
         val tasks = recurringTaskDao.getAllRecurringTasks()
         assertEquals(1, tasks.size)
@@ -50,10 +50,10 @@ class RecurringTaskDaoTest {
     @Test
     fun saveRecurringTask_replacesDuplicate() = runBlocking {
         val original = TestDataFactory.createRecurringTaskEntity(id = "r2", title = "Original Meeting")
-        recurringTaskDao.saveRecurringTask(original)
+        recurringTaskDao.insertRecurringTask(original)
 
         val updated = original.copy(title = "Updated Meeting")
-        recurringTaskDao.saveRecurringTask(updated)
+        recurringTaskDao.insertRecurringTask(updated)
 
         val tasks = recurringTaskDao.getAllRecurringTasks()
         assertEquals(1, tasks.size)
@@ -63,7 +63,7 @@ class RecurringTaskDaoTest {
     @Test
     fun getRecurringTaskById_returnsMatching() = runBlocking {
         val recurring = TestDataFactory.createRecurringTaskEntity(id = "r3", title = "Weekly Review")
-        recurringTaskDao.saveRecurringTask(recurring)
+        recurringTaskDao.insertRecurringTask(recurring)
 
         val result = recurringTaskDao.getRecurringTaskById("r3")
         assertNotNull(result)
@@ -79,7 +79,7 @@ class RecurringTaskDaoTest {
     @Test
     fun observeAllRecurringTasks_emitsFlow() = runBlocking {
         val recurring = TestDataFactory.createRecurringTaskEntity(id = "r4", title = "Flow Meeting")
-        recurringTaskDao.saveRecurringTask(recurring)
+        recurringTaskDao.insertRecurringTask(recurring)
 
         val flowResult = recurringTaskDao.observeAllRecurringTasks().first()
         assertEquals(1, flowResult.size)
@@ -89,7 +89,7 @@ class RecurringTaskDaoTest {
     @Test
     fun deleteRecurringTask_removesTemplate() = runBlocking {
         val recurring = TestDataFactory.createRecurringTaskEntity(id = "r5")
-        recurringTaskDao.saveRecurringTask(recurring)
+        recurringTaskDao.insertRecurringTask(recurring)
 
         val deletedCount = recurringTaskDao.deleteRecurringTask("r5")
         assertEquals(1, deletedCount)
@@ -102,8 +102,8 @@ class RecurringTaskDaoTest {
     fun getActiveRecurringTasks_filtersInactive() = runBlocking {
         val active = TestDataFactory.createRecurringTaskEntity(id = "r-active", is_active = 1, created_at = 1000L)
         val inactive = TestDataFactory.createRecurringTaskEntity(id = "r-inactive", is_active = 0, created_at = 1000L)
-        recurringTaskDao.saveRecurringTask(active)
-        recurringTaskDao.saveRecurringTask(inactive)
+        recurringTaskDao.insertRecurringTask(active)
+        recurringTaskDao.insertRecurringTask(inactive)
 
         val activeList = recurringTaskDao.getActiveRecurringTasks("2026-08-14")
         assertEquals(1, activeList.size)
@@ -114,8 +114,8 @@ class RecurringTaskDaoTest {
     fun getActiveRecurringTasks_respectsEndDate() = runBlocking {
         val endedTask = TestDataFactory.createRecurringTaskEntity(id = "r-ended", is_active = 1, created_at = 1000L, end_date = "2026-08-10")
         val ongoingTask = TestDataFactory.createRecurringTaskEntity(id = "r-ongoing", is_active = 1, created_at = 1000L, end_date = null)
-        recurringTaskDao.saveRecurringTask(endedTask)
-        recurringTaskDao.saveRecurringTask(ongoingTask)
+        recurringTaskDao.insertRecurringTask(endedTask)
+        recurringTaskDao.insertRecurringTask(ongoingTask)
 
         val activeList = recurringTaskDao.getActiveRecurringTasks("2026-08-14")
         assertEquals(1, activeList.size)
@@ -125,9 +125,9 @@ class RecurringTaskDaoTest {
     @Test
     fun toggleRecurringTaskActive_updatesStatus() = runBlocking {
         val recurring = TestDataFactory.createRecurringTaskEntity(id = "r-toggle", is_active = 1)
-        recurringTaskDao.saveRecurringTask(recurring)
+        recurringTaskDao.insertRecurringTask(recurring)
 
-        recurringTaskDao.toggleRecurringTaskActive("r-toggle", 0)
+        recurringTaskDao.insertRecurringTask(recurring.copy(is_active = 0))
 
         val result = recurringTaskDao.getRecurringTaskById("r-toggle")
         assertEquals(0, result?.is_active)
@@ -135,8 +135,8 @@ class RecurringTaskDaoTest {
 
     @Test
     fun getRecurringTaskCount_returnsTotal() = runBlocking {
-        recurringTaskDao.saveRecurringTask(TestDataFactory.createRecurringTaskEntity(id = "cnt-1"))
-        recurringTaskDao.saveRecurringTask(TestDataFactory.createRecurringTaskEntity(id = "cnt-2"))
+        recurringTaskDao.insertRecurringTask(TestDataFactory.createRecurringTaskEntity(id = "cnt-1"))
+        recurringTaskDao.insertRecurringTask(TestDataFactory.createRecurringTaskEntity(id = "cnt-2"))
 
         val count = recurringTaskDao.getRecurringTaskCount()
         assertEquals(2, count)

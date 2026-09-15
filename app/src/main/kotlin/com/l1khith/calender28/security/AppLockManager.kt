@@ -21,7 +21,18 @@ import kotlinx.coroutines.launch
 
 private const val TAG = "AppLockManager"
 
+sealed interface LockState {
+    object Initializing : LockState
+    object Unlocked : LockState
+    object Locked : LockState
+    object Authenticating : LockState
+    data class Backgrounded(val timestampMs: Long) : LockState
+}
+
 object AppLockManager {
+
+    private val _lockState = MutableStateFlow<LockState>(LockState.Unlocked)
+    val lockState: StateFlow<LockState> = _lockState.asStateFlow()
 
     private val _isAppLockEnabled = MutableStateFlow(false)
     val isAppLockEnabled: StateFlow<Boolean> = _isAppLockEnabled.asStateFlow()
@@ -30,15 +41,24 @@ object AppLockManager {
     val isLocked: StateFlow<Boolean> = _isLocked.asStateFlow()
 
     private var prefsRepo: UserPreferencesRepository? = null
-    private var lastBackgroundTimestamp: Long = 0L
     private var isInitialized = false
 
     // Timeout: 0 means lock immediately when app goes to background
     var lockTimeoutMillis: Long = 0L
 
+    private fun transitionTo(newState: LockState) {
+        _lockState.value = newState
+        _isLocked.value = when (newState) {
+            is LockState.Locked, is LockState.Authenticating -> true
+            is LockState.Unlocked, is LockState.Initializing -> false
+            is LockState.Backgrounded -> _isLocked.value
+        }
+    }
+
     fun init(context: Context, scope: CoroutineScope) {
         if (isInitialized) return
         isInitialized = true
+        transitionTo(LockState.Initializing)
 
         val repo = UserPreferencesRepository.getInstance(context.applicationContext)
         prefsRepo = repo
@@ -47,9 +67,10 @@ object AppLockManager {
             repo.isAppLockEnabled.collect { enabled ->
                 Log.d(TAG, "isAppLockEnabled observed from DataStore: $enabled")
                 _isAppLockEnabled.value = enabled
-                // If enabled on app start and not already unlocked, lock the app
-                if (enabled && lastBackgroundTimestamp == 0L) {
-                    _isLocked.value = true
+                if (enabled && _lockState.value is LockState.Initializing) {
+                    transitionTo(LockState.Locked)
+                } else if (!enabled) {
+                    transitionTo(LockState.Unlocked)
                 }
             }
         }
@@ -57,33 +78,35 @@ object AppLockManager {
 
     fun onActivityResumed() {
         if (!_isAppLockEnabled.value) {
-            _isLocked.value = false
+            transitionTo(LockState.Unlocked)
             return
         }
 
-        val now = System.currentTimeMillis()
-        if (lastBackgroundTimestamp > 0L) {
-            val elapsed = now - lastBackgroundTimestamp
+        val currentState = _lockState.value
+        if (currentState is LockState.Backgrounded) {
+            val elapsed = System.currentTimeMillis() - currentState.timestampMs
             if (elapsed >= lockTimeoutMillis) {
                 Log.d(TAG, "App was in background for ${elapsed}ms (timeout=${lockTimeoutMillis}ms), locking app")
-                _isLocked.value = true
+                transitionTo(LockState.Locked)
+            } else {
+                transitionTo(LockState.Unlocked)
             }
-            lastBackgroundTimestamp = 0L
         }
     }
 
     fun onActivityPaused() {
-        lastBackgroundTimestamp = System.currentTimeMillis()
+        if (_isAppLockEnabled.value && _lockState.value !is LockState.Locked) {
+            transitionTo(LockState.Backgrounded(System.currentTimeMillis()))
+        }
     }
 
     fun unlock() {
-        lastBackgroundTimestamp = 0L
-        _isLocked.value = false
+        transitionTo(LockState.Unlocked)
     }
 
     fun lockNow() {
         if (_isAppLockEnabled.value) {
-            _isLocked.value = true
+            transitionTo(LockState.Locked)
         }
     }
 
@@ -147,18 +170,23 @@ object AppLockManager {
 
         val promptInfo = promptInfoBuilder.build()
 
+        transitionTo(LockState.Authenticating)
+
         val biometricPrompt = BiometricPrompt(
             activity,
             executor,
             object : BiometricPrompt.AuthenticationCallback() {
                 override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
                     Log.d(TAG, "Biometric authentication succeeded")
-                    _isLocked.value = false
+                    transitionTo(LockState.Unlocked)
                     onSuccess()
                 }
 
                 override fun onAuthenticationError(errorCode: Int, errString: CharSequence) {
                     Log.e(TAG, "Biometric authentication error $errorCode: $errString")
+                    if (_isAppLockEnabled.value) {
+                        transitionTo(LockState.Locked)
+                    }
                     if (errorCode != BiometricPrompt.ERROR_USER_CANCELED &&
                         errorCode != BiometricPrompt.ERROR_NEGATIVE_BUTTON &&
                         errorCode != BiometricPrompt.ERROR_CANCELED
@@ -170,6 +198,9 @@ object AppLockManager {
 
                 override fun onAuthenticationFailed() {
                     Log.w(TAG, "Biometric authentication failed")
+                    if (_isAppLockEnabled.value) {
+                        transitionTo(LockState.Locked)
+                    }
                     onError("Authentication failed")
                 }
             }

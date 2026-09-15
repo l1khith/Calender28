@@ -8,6 +8,18 @@ interface TaskDao {
     @Query("SELECT * FROM tasks WHERE associated_date = :dateStr ORDER BY priority DESC, is_reminder DESC, reminder_time ASC")
     suspend fun getTasksForDate(dateStr: String): List<AppTaskEntity>
 
+    @Query("SELECT * FROM tasks WHERE (associated_date <= :dateStr AND COALESCE(end_date, associated_date) >= :dateStr) ORDER BY is_all_day DESC, reminder_time ASC, priority DESC")
+    suspend fun getTasksSpanningDate(dateStr: String): List<AppTaskEntity>
+
+    @Query("SELECT * FROM tasks WHERE (associated_date <= :dateStr AND COALESCE(end_date, associated_date) >= :dateStr) ORDER BY is_all_day DESC, reminder_time ASC, priority DESC")
+    fun observeTasksSpanningDate(dateStr: String): Flow<List<AppTaskEntity>>
+
+    @Query("SELECT * FROM tasks WHERE is_completed = 0 AND (associated_date <= :endDate AND COALESCE(end_date, associated_date) >= :startDate)")
+    suspend fun getTasksOverlapping(startDate: String, endDate: String): List<AppTaskEntity>
+
+    @Query("SELECT * FROM tasks WHERE associated_date = :dateStr AND is_all_day = 1 ORDER BY priority DESC")
+    suspend fun getAllDayTasksForDate(dateStr: String): List<AppTaskEntity>
+
     @Query("SELECT * FROM tasks WHERE associated_date = :dateStr ORDER BY priority DESC, is_reminder DESC, reminder_time ASC")
     fun observeTasksForDate(dateStr: String): Flow<List<AppTaskEntity>>
 
@@ -93,6 +105,12 @@ interface RecurringTaskDao {
 
     @Query("DELETE FROM recurring_tasks WHERE id = :id")
     suspend fun deleteRecurringTask(id: String): Int
+
+    @Query("SELECT * FROM recurring_tasks WHERE id = :id")
+    suspend fun getRecurringTaskById(id: String): RecurringTaskEntity?
+
+    @Query("SELECT COUNT(*) FROM recurring_tasks")
+    suspend fun getRecurringTaskCount(): Int
 }
 
 @Dao
@@ -105,6 +123,9 @@ interface HabitDao {
 
     @Query("SELECT * FROM habits WHERE id = :id")
     suspend fun getHabitById(id: String): HabitEntity?
+
+    @Query("SELECT COUNT(*) FROM habits")
+    suspend fun getHabitCount(): Int
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertHabit(habit: HabitEntity): Long
@@ -126,6 +147,9 @@ interface HabitEntryDao {
 
     @Query("SELECT COUNT(*) FROM habit_entries WHERE habit_id = :habitId AND cycle_index = :cycleIndex AND is_completed = 1")
     suspend fun getCurrentCycleProgress(habitId: String, cycleIndex: Long): Int
+
+    @Query("DELETE FROM habit_entries WHERE habit_id = :habitId")
+    suspend fun deleteEntriesForHabit(habitId: String): Int
 }
 
 data class HabitEntryPair(
@@ -149,12 +173,18 @@ interface ScheduledAlarmDao {
 
     @Query("SELECT * FROM scheduled_alarms WHERE scheduled_time_utc > :now")
     suspend fun getActiveAlarms(now: Long = System.currentTimeMillis()): List<ScheduledAlarmEntity>
+
+    @Query("SELECT * FROM scheduled_alarms WHERE scheduled_time_utc BETWEEN :startMs AND :endMs ORDER BY scheduled_time_utc ASC")
+    suspend fun getAlarmsInRange(startMs: Long, endMs: Long): List<ScheduledAlarmEntity>
 }
 
 @Dao
 interface FocusSessionDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertSession(session: FocusSessionEntity): Long
+
+    @Query("SELECT * FROM focus_sessions WHERE startedAt BETWEEN :startMs AND :endMs ORDER BY startedAt ASC")
+    suspend fun getSessionsInRange(startMs: Long, endMs: Long): List<FocusSessionEntity>
 
     @Query("SELECT * FROM focus_sessions ORDER BY startedAt DESC")
     fun observeAllSessions(): Flow<List<FocusSessionEntity>>

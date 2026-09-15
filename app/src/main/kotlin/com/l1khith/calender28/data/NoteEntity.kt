@@ -10,7 +10,8 @@ import androidx.room.PrimaryKey
     indices = [
         Index("updatedAt"),
         Index("title"),
-        Index("isPinned")
+        Index("isPinned"),
+        Index(value = ["linkedType", "linkedId"])
     ]
 )
 data class NoteEntity(

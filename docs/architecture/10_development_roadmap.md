@@ -41,3 +41,14 @@
 - [x] Write Integration Tests for Room Database DAOs and Migrations.
 - [x] Run Jetpack Compose UI Flow & E2E Navigation tests.
 - [x] Launch Closed Beta Testing program with 14 verified developers.
+
+---
+
+## Refactoring Roadmap (Post-Audit)
+| Phase | Focus | Files | Risk | Status |
+|---|---|---|---|---|
+| 1 | Database Safety | TaskDatabase, Entities, DAOs, Receivers | Low | Complete |
+| 2 | DI Cleanup | AppContainer, all Repositories | Low | Complete |
+| 3 | Composable Decomposition | FixedCalendarApp → 5+ files | Medium | Complete |
+| 4 | Singleton Elimination | Settings, Lock, Billing, Theme managers | Medium | Complete |
+| 5 | Background Hardening | FocusSessionManager, dead code | Low | Complete |

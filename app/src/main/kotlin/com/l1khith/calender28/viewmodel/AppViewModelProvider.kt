@@ -57,6 +57,15 @@ object AppViewModelProvider {
                 navRepository = app.container.navPreferencesRepository
             )
         }
+        initializer {
+            val app = matrixApplication()
+            com.l1khith.calender28.ui.daydetail.DayDetailViewModel(
+                application = app,
+                getDayDetailUseCase = app.container.getDayDetailUseCase,
+                getDayConflictsUseCase = app.container.getDayConflictsUseCase,
+                taskRepository = app.container.taskRepository
+            )
+        }
     }
 }
 

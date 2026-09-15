@@ -27,6 +27,13 @@ interface AppContainer {
     val sparkyRepository: com.l1khith.calender28.repository.SparkyRepository
     val noteRepository: com.l1khith.calender28.repository.NoteRepository
     val navPreferencesRepository: com.l1khith.calender28.repository.NavPreferencesRepository
+    val appLockManager: com.l1khith.calender28.security.AppLockManager
+    val appSettingsManager: com.l1khith.calender28.utils.AppSettingsManager
+    val subscriptionManager: com.l1khith.calender28.billing.SubscriptionManager
+    val themeManager: com.l1khith.calender28.ui.theme.ThemeManager
+    val getDayDetailUseCase: com.l1khith.calender28.domain.usecase.GetDayDetailUseCase
+    val detectTaskConflictsUseCase: com.l1khith.calender28.domain.usecase.DetectTaskConflictsUseCase
+    val getDayConflictsUseCase: com.l1khith.calender28.domain.usecase.GetDayConflictsUseCase
 }
 
 /**
@@ -45,11 +52,19 @@ class DefaultAppContainer(private val context: Context) : AppContainer {
     }
 
     override val taskRepository: TaskRepository by lazy {
-        TaskRepositoryImpl(appContext)
+        TaskRepositoryImpl(
+            taskDao = database.taskDao(),
+            recurringTaskDao = database.recurringTaskDao(),
+            serviceAlarmScheduler = com.l1khith.calender28.service.AlarmScheduler(appContext)
+        )
     }
 
     override val habitRepository: HabitRepository by lazy {
-        HabitRepositoryImpl(appContext)
+        HabitRepositoryImpl(
+            habitDao = database.habitDao(),
+            habitEntryDao = database.habitEntryDao(),
+            alarmScheduler = com.l1khith.calender28.service.AlarmScheduler(appContext)
+        )
     }
 
     override val coinRepository: CoinRepository by lazy {
@@ -60,7 +75,10 @@ class DefaultAppContainer(private val context: Context) : AppContainer {
     }
 
     override val focusRepository: FocusRepository by lazy {
-        FocusRepositoryImpl(appContext)
+        FocusRepositoryImpl(
+            focusSessionDao = database.focusSessionDao(),
+            taskDao = database.taskDao()
+        )
     }
 
     override val sparkyRepository: com.l1khith.calender28.repository.SparkyRepository by lazy {
@@ -76,5 +94,34 @@ class DefaultAppContainer(private val context: Context) : AppContainer {
 
     override val navPreferencesRepository: com.l1khith.calender28.repository.NavPreferencesRepository by lazy {
         com.l1khith.calender28.repository.NavPreferencesRepositoryImpl(userPreferencesRepository)
+    }
+
+    override val appLockManager: com.l1khith.calender28.security.AppLockManager
+        get() = com.l1khith.calender28.security.AppLockManager
+
+    override val appSettingsManager: com.l1khith.calender28.utils.AppSettingsManager
+        get() = com.l1khith.calender28.utils.AppSettingsManager
+
+    override val subscriptionManager: com.l1khith.calender28.billing.SubscriptionManager
+        get() = com.l1khith.calender28.billing.SubscriptionManager
+
+    override val themeManager: com.l1khith.calender28.ui.theme.ThemeManager
+        get() = com.l1khith.calender28.ui.theme.ThemeManager
+
+    override val getDayDetailUseCase: com.l1khith.calender28.domain.usecase.GetDayDetailUseCase by lazy {
+        com.l1khith.calender28.domain.usecase.GetDayDetailUseCase(
+            taskRepo = taskRepository,
+            habitRepo = habitRepository,
+            focusRepo = focusRepository,
+            scheduledAlarmDao = database.scheduledAlarmDao()
+        )
+    }
+
+    override val detectTaskConflictsUseCase: com.l1khith.calender28.domain.usecase.DetectTaskConflictsUseCase by lazy {
+        com.l1khith.calender28.domain.usecase.DetectTaskConflictsUseCase(taskRepository)
+    }
+
+    override val getDayConflictsUseCase: com.l1khith.calender28.domain.usecase.GetDayConflictsUseCase by lazy {
+        com.l1khith.calender28.domain.usecase.GetDayConflictsUseCase(taskRepository)
     }
 }

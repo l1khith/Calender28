@@ -16,5 +16,13 @@ class AppLockTest {
     fun `test unlock sets isLocked to false`() {
         AppLockManager.unlock()
         assertFalse(AppLockManager.isLocked.value)
+        assertEquals(com.l1khith.calender28.security.LockState.Unlocked, AppLockManager.lockState.value)
+    }
+
+    @Test
+    fun `test state machine transitions`() {
+        AppLockManager.unlock()
+        assertEquals(com.l1khith.calender28.security.LockState.Unlocked, AppLockManager.lockState.value)
+        assertFalse(AppLockManager.isLocked.value)
     }
 }

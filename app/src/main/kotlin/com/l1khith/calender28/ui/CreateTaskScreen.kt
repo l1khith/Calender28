@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -43,7 +44,11 @@ fun CreateTaskScreen(
         description: String?,
         isReminder: Boolean,
         reminderTime: String?,
-        priority: Int
+        priority: Int,
+        endDate: String?,
+        endTime: String?,
+        isAllDay: Boolean,
+        reminderOffsetMin: Int?
     ) -> Unit,
     onSaveRecurring: (
         id: String?,
@@ -62,7 +67,10 @@ fun CreateTaskScreen(
     onOpenPaywall: () -> Unit = {},
     onDeleteTask: (AppTask) -> Unit = {},
     onDeleteRecurring: (String) -> Unit = {},
-    onStartFocus: ((AppTask) -> Unit)? = null
+    onStartFocus: ((AppTask) -> Unit)? = null,
+    initialDateStr: String? = null,
+    initialHour: Int? = null,
+    existingTasks: List<AppTask> = emptyList()
 ) {
     var title by remember { mutableStateOf(task?.title ?: "") }
     var description by remember { mutableStateOf(task?.description ?: "") }
@@ -76,10 +84,93 @@ fun CreateTaskScreen(
         )
     }
     var isReminder by remember { mutableStateOf(task?.reminder ?: false) }
-    var reminderTime by remember { mutableStateOf(task?.reminderTime ?: "12:00") }
     var priority by remember { mutableStateOf(task?.priority ?: 1) }
     var recurrenceType by remember { mutableStateOf(RecurrenceType.DAILY) }
-    var showTimePicker by remember { mutableStateOf(false) }
+
+    val initialDate = remember(task, initialDateStr) {
+        task?.associatedDate ?: initialDateStr ?: com.l1khith.calender28.utils.FixedCalendarHelper.currentFixedDate().toString()
+    }
+    var startDateStr by remember { mutableStateOf(initialDate) }
+    var startTimeStr by remember {
+        mutableStateOf(
+            task?.reminderTime ?: if (initialHour != null) "%02d:00".format(initialHour) else "09:00"
+        )
+    }
+    var sameDayAsStart by remember {
+        mutableStateOf(task?.endDate == null || task.endDate == task.associatedDate)
+    }
+    var endDateStr by remember {
+        mutableStateOf(task?.endDate ?: initialDate)
+    }
+    var endTimeStr by remember {
+        mutableStateOf(
+            task?.endTime ?: if (initialHour != null) "%02d:00".format((initialHour + 1) % 24) else "10:00"
+        )
+    }
+    var isAllDay by remember { mutableStateOf(task?.allDay ?: false) }
+    var reminderOffsetMin by remember { mutableStateOf(task?.reminderOffsetMin ?: 0) }
+
+    var showStartDatePicker by remember { mutableStateOf(false) }
+    var showEndDatePicker by remember { mutableStateOf(false) }
+    var showStartTimePicker by remember { mutableStateOf(false) }
+    var showEndTimePicker by remember { mutableStateOf(false) }
+
+    val parsedStartDate = remember(startDateStr) {
+        com.l1khith.calender28.utils.FixedCalendarHelper.parseDateStr(startDateStr)
+            ?: com.l1khith.calender28.utils.FixedCalendarHelper.currentFixedDate()
+    }
+    val effectiveEndDateStr = if (sameDayAsStart) startDateStr else endDateStr
+    val parsedEndDate = remember(effectiveEndDateStr) {
+        com.l1khith.calender28.utils.FixedCalendarHelper.parseDateStr(effectiveEndDateStr)
+            ?: parsedStartDate
+    }
+
+    val startMs = remember(parsedStartDate, startTimeStr, isAllDay) {
+        if (isAllDay) com.l1khith.calender28.utils.FixedCalendarHelper.toTimestamp(parsedStartDate, "00:00")
+        else com.l1khith.calender28.utils.FixedCalendarHelper.toTimestamp(parsedStartDate, startTimeStr)
+    }
+
+    val endMs = remember(parsedEndDate, endTimeStr, isAllDay) {
+        if (isAllDay) com.l1khith.calender28.utils.FixedCalendarHelper.toTimestamp(parsedEndDate, "23:59")
+        else com.l1khith.calender28.utils.FixedCalendarHelper.toTimestamp(parsedEndDate, endTimeStr)
+    }
+
+    val isTimeOrderValid = remember(startMs, endMs, isAllDay) {
+        isAllDay || endMs >= startMs
+    }
+
+    val durationMinutes = remember(startMs, endMs, isAllDay) {
+        if (isAllDay) 1440L
+        else if (endMs > startMs) (endMs - startMs) / 60_000L
+        else 0L
+    }
+
+    val formattedDuration = remember(durationMinutes, isAllDay) {
+        when {
+            isAllDay -> "All-Day Event"
+            durationMinutes >= 60 -> {
+                val h = durationMinutes / 60
+                val m = durationMinutes % 60
+                if (m > 0) "${h}h ${m}m" else "${h}h"
+            }
+            durationMinutes > 0 -> "${durationMinutes}m"
+            else -> "Point-in-time"
+        }
+    }
+
+    // Live Conflict Detection against existingTasks
+    val detectedConflict = remember(startMs, endMs, isAllDay, existingTasks, task) {
+        if (isAllDay || startMs >= endMs) null
+        else {
+            existingTasks.firstOrNull { other ->
+                other.id != task?.id && !other.allDay && other.utcTimestamp != null && run {
+                    val otherStart = other.utcTimestamp!!
+                    val otherEnd = other.endUtcTimestamp ?: (otherStart + 60 * 60_000L)
+                    startMs < otherEnd && otherStart < endMs
+                }
+            }
+        }
+    }
 
     var showAddCategoryDialog by remember { mutableStateOf(false) }
     var newCategoryName by remember { mutableStateOf("") }
@@ -90,7 +181,7 @@ fun CreateTaskScreen(
             "[Category: $customCategoryName] ${description.trim()}"
         } else description.trim()
 
-        Log.d(TAG, "performSave: Saving task title=${title.trim()}, type=$taskTypeLabel, isReminder=$isReminder")
+        Log.d(TAG, "performSave: Saving task title=${title.trim()}, type=$taskTypeLabel, isReminder=$isReminder, isAllDay=$isAllDay")
 
         if (taskTypeLabel == "Recurring") {
             if (!isProActive && existingRecurringCount >= 1 && task == null) {
@@ -108,17 +199,28 @@ fun CreateTaskScreen(
                     1,
                     priority,
                     true,
-                    null,
-                    if (isReminder) reminderTime else null
+                    if (sameDayAsStart) null else effectiveEndDateStr,
+                    if (isReminder && !isAllDay) startTimeStr else null
                 )
                 onDismiss()
             }
         } else {
             Log.d(TAG, "performSave: Saving normal/scheduled task with id=${task?.id}")
-            onSave(task?.id, title.trim(), finalDesc, isReminder, reminderTime, priority)
+            onSave(
+                task?.id,
+                title.trim(),
+                finalDesc,
+                isReminder || taskTypeLabel == "Scheduled",
+                if (isAllDay) null else startTimeStr,
+                priority,
+                if (sameDayAsStart) null else effectiveEndDateStr,
+                if (isAllDay) null else endTimeStr,
+                isAllDay,
+                reminderOffsetMin
+            )
+            onDismiss()
         }
     }
-
 
     val notifPermissionLauncher = com.l1khith.calender28.utils.rememberNotificationPermissionLauncher(
         onGranted = { performSave() },
@@ -193,19 +295,19 @@ fun CreateTaskScreen(
 
                     TextButton(
                         onClick = {
-                            if (title.trim().isNotEmpty()) {
-                                if (isReminder && !reminderTime.isNullOrEmpty()) {
+                            if (title.trim().isNotEmpty() && isTimeOrderValid) {
+                                if (isReminder && !isAllDay && !startTimeStr.isNullOrEmpty()) {
                                     notifPermissionLauncher()
                                 } else {
                                     performSave()
                                 }
                             }
                         },
-                        enabled = title.trim().isNotEmpty()
+                        enabled = title.trim().isNotEmpty() && isTimeOrderValid
                     ) {
                         Text(
                             text = "Save",
-                            color = if (title.trim().isNotEmpty()) MatrixColors.Primary else MatrixColors.TextSecondary,
+                            color = if (title.trim().isNotEmpty() && isTimeOrderValid) MatrixColors.Primary else MatrixColors.TextSecondary,
                             fontWeight = FontWeight.Bold,
                             fontSize = 15.sp
                         )
@@ -383,34 +485,279 @@ fun CreateTaskScreen(
                             }
                         }
 
-                        if (isReminder || taskTypeLabel == "Scheduled" || taskTypeLabel == "Recurring") {
+                        // All-Day Switch
+                        Spacer(modifier = Modifier.height(14.dp))
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(MatrixShapes.Sm)
+                                .background(MatrixColors.Surface)
+                                .padding(horizontal = 12.dp, vertical = 8.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = "All-Day Event",
+                                color = MatrixColors.TextHeader,
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                            Switch(
+                                checked = isAllDay,
+                                onCheckedChange = { isAllDay = it },
+                                colors = SwitchDefaults.colors(
+                                    checkedThumbColor = MatrixColors.OnPrimary,
+                                    checkedTrackColor = MatrixColors.Primary
+                                )
+                            )
+                        }
+
+                        if (!isAllDay) {
                             Spacer(modifier = Modifier.height(12.dp))
+
+                            // ── START TIME & DATE ──
                             Card(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .clickable { showTimePicker = true },
+                                modifier = Modifier.fillMaxWidth(),
                                 shape = MatrixShapes.Md,
                                 colors = CardDefaults.cardColors(containerColor = MatrixColors.Surface),
                                 border = BorderStroke(1.dp, MatrixColors.OutlineVariant)
                             ) {
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(14.dp),
-                                    horizontalArrangement = Arrangement.SpaceBetween,
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Row(verticalAlignment = Alignment.CenterVertically) {
-                                        Icon(
-                                            imageVector = Icons.Default.DateRange,
-                                            contentDescription = "Time",
-                                            tint = MatrixColors.TextSecondary,
-                                            modifier = Modifier.size(18.dp)
-                                        )
-                                        Spacer(modifier = Modifier.width(8.dp))
-                                        Text("Scheduled Time", color = MatrixColors.TextSecondary, fontSize = 13.sp)
+                                Column(modifier = Modifier.padding(12.dp)) {
+                                    Text(
+                                        text = "START",
+                                        color = MatrixColors.TextSecondary,
+                                        fontSize = 11.sp,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                    Spacer(modifier = Modifier.height(6.dp))
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        TextButton(onClick = { showStartDatePicker = true }) {
+                                            Icon(Icons.Default.DateRange, contentDescription = null, modifier = Modifier.size(16.dp), tint = MatrixColors.Primary)
+                                            Spacer(modifier = Modifier.width(6.dp))
+                                            Text(startDateStr, color = MatrixColors.TextHeader, fontWeight = FontWeight.SemiBold)
+                                        }
+
+                                        TextButton(onClick = { showStartTimePicker = true }) {
+                                            Text(startTimeStr, color = MatrixColors.Primary, fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                                        }
                                     }
-                                    Text(reminderTime, color = MatrixColors.Primary, fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                                }
+                            }
+
+                            Spacer(modifier = Modifier.height(8.dp))
+
+                            // ── END TIME & DATE ──
+                            Card(
+                                modifier = Modifier.fillMaxWidth(),
+                                shape = MatrixShapes.Md,
+                                colors = CardDefaults.cardColors(containerColor = MatrixColors.Surface),
+                                border = BorderStroke(1.dp, if (!isTimeOrderValid) MatrixColors.Error else MatrixColors.OutlineVariant)
+                            ) {
+                                Column(modifier = Modifier.padding(12.dp)) {
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Text(
+                                            text = "END",
+                                            color = MatrixColors.TextSecondary,
+                                            fontSize = 11.sp,
+                                            fontWeight = FontWeight.Bold
+                                        )
+
+                                        Row(
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            modifier = Modifier.clickable {
+                                                sameDayAsStart = !sameDayAsStart
+                                                if (sameDayAsStart) endDateStr = startDateStr
+                                            }
+                                        ) {
+                                            Checkbox(
+                                                checked = sameDayAsStart,
+                                                onCheckedChange = {
+                                                    sameDayAsStart = it
+                                                    if (it) endDateStr = startDateStr
+                                                },
+                                                modifier = Modifier.size(24.dp)
+                                            )
+                                            Spacer(modifier = Modifier.width(4.dp))
+                                            Text(
+                                                text = "Same day as start",
+                                                color = MatrixColors.TextSecondary,
+                                                fontSize = 12.sp
+                                            )
+                                        }
+                                    }
+
+                                    Spacer(modifier = Modifier.height(6.dp))
+
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        if (!sameDayAsStart) {
+                                            TextButton(onClick = { showEndDatePicker = true }) {
+                                                Icon(Icons.Default.DateRange, contentDescription = null, modifier = Modifier.size(16.dp), tint = MatrixColors.Secondary)
+                                                Spacer(modifier = Modifier.width(6.dp))
+                                                Text(endDateStr, color = MatrixColors.TextHeader, fontWeight = FontWeight.SemiBold)
+                                            }
+                                        } else {
+                                            Text(
+                                                text = "(Ends on $startDateStr)",
+                                                color = MatrixColors.TextSecondary,
+                                                fontSize = 12.sp,
+                                                modifier = Modifier.padding(start = 8.dp)
+                                            )
+                                        }
+
+                                        TextButton(onClick = { showEndTimePicker = true }) {
+                                            Text(endTimeStr, color = MatrixColors.Secondary, fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                                        }
+                                    }
+                                }
+                            }
+
+                            // Duration and Validation Error
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .clip(RoundedCornerShape(6.dp))
+                                        .background(MatrixColors.Primary.copy(alpha = 0.15f))
+                                        .padding(horizontal = 8.dp, vertical = 4.dp)
+                                ) {
+                                    Text(
+                                        text = "Duration: $formattedDuration",
+                                        color = MatrixColors.Primary,
+                                        fontSize = 11.sp,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                }
+
+                                if (!isTimeOrderValid) {
+                                    Text(
+                                        text = "⚠️ End time must be after start",
+                                        color = MatrixColors.Error,
+                                        fontSize = 11.sp,
+                                        fontWeight = FontWeight.SemiBold
+                                    )
+                                }
+                            }
+
+                            // ── REMINDER OFFSET ──
+                            Spacer(modifier = Modifier.height(10.dp))
+                            Text(
+                                text = "Remind Me",
+                                color = MatrixColors.TextSecondary,
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Medium
+                            )
+                            Spacer(modifier = Modifier.height(6.dp))
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
+                                val offsetOptions = listOf(
+                                    0 to "At event",
+                                    10 to "10m before",
+                                    15 to "15m before",
+                                    30 to "30m before",
+                                    60 to "1h before"
+                                )
+                                offsetOptions.forEach { (mins, label) ->
+                                    val isSelected = reminderOffsetMin == mins
+                                    Card(
+                                        modifier = Modifier
+                                            .weight(1f)
+                                            .clickable { reminderOffsetMin = mins },
+                                        shape = MatrixShapes.Sm,
+                                        colors = CardDefaults.cardColors(
+                                            containerColor = if (isSelected) MatrixColors.PrimaryContainer else Color.Transparent
+                                        ),
+                                        border = BorderStroke(1.dp, if (isSelected) MatrixColors.Primary else MatrixColors.OutlineVariant)
+                                    ) {
+                                        Box(
+                                            modifier = Modifier.padding(vertical = 6.dp, horizontal = 2.dp).fillMaxWidth(),
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            Text(
+                                                text = label,
+                                                color = if (isSelected) MatrixColors.OnPrimaryContainer else MatrixColors.TextSecondary,
+                                                fontSize = 9.sp,
+                                                fontWeight = FontWeight.Medium,
+                                                maxLines = 1
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        // ── LIVE CONFLICT DETECTION CARD ──
+                        if (detectedConflict != null && !isAllDay) {
+                            Spacer(modifier = Modifier.height(12.dp))
+                            Card(
+                                shape = MatrixShapes.Md,
+                                colors = CardDefaults.cardColors(containerColor = MatrixColors.Error.copy(alpha = 0.12f)),
+                                border = BorderStroke(1.dp, MatrixColors.Error.copy(alpha = 0.4f)),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Column(modifier = Modifier.padding(12.dp)) {
+                                    Text(
+                                        text = "⚠️ Conflict detected",
+                                        color = MatrixColors.Error,
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 13.sp
+                                    )
+                                    Text(
+                                        text = "Overlaps with '${detectedConflict.title}' (${detectedConflict.formattedTimeRange})",
+                                        color = MatrixColors.TextHeader,
+                                        fontSize = 12.sp
+                                    )
+                                    Spacer(modifier = Modifier.height(8.dp))
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        FilledTonalButton(
+                                            onClick = {
+                                                val freeSlot = com.l1khith.calender28.utils.ConflictResolver.findConflictFreeSlot(
+                                                    candidateDate = startDateStr,
+                                                    durationMinutes = if (durationMinutes > 0) durationMinutes else 60L,
+                                                    existingTasks = existingTasks,
+                                                    ignoreTaskId = task?.id
+                                                )
+                                                if (freeSlot != null) {
+                                                    startTimeStr = freeSlot
+                                                    val durMs = if (durationMinutes > 0) durationMinutes * 60_000L else 60 * 60_000L
+                                                    val newEndMs = com.l1khith.calender28.utils.FixedCalendarHelper.toTimestamp(parsedStartDate, freeSlot) + durMs
+                                                    val endMinTotal = (newEndMs / 60_000L) % 1440L
+                                                    endTimeStr = "%02d:%02d".format((endMinTotal / 60).toInt(), (endMinTotal % 60).toInt())
+                                                }
+                                            },
+                                            contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp),
+                                            modifier = Modifier.height(32.dp)
+                                        ) {
+                                            Text("Auto-Adjust Time", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                                        }
+                                        Text(
+                                            text = "Save Anyway",
+                                            color = MatrixColors.TextSecondary,
+                                            fontSize = 11.sp,
+                                            modifier = Modifier.padding(end = 4.dp)
+                                        )
+                                    }
                                 }
                             }
                         }
@@ -637,13 +984,48 @@ fun CreateTaskScreen(
         }
     }
 
+    if (showStartDatePicker) {
+        FixedDatePickerDialog(
+            initialDateStr = startDateStr,
+            onDismiss = { showStartDatePicker = false },
+            onDateSelected = { selectedDate ->
+                startDateStr = selectedDate
+                if (sameDayAsStart) {
+                    endDateStr = selectedDate
+                }
+                showStartDatePicker = false
+            }
+        )
+    }
+
+    if (showEndDatePicker) {
+        FixedDatePickerDialog(
+            initialDateStr = endDateStr,
+            onDismiss = { showEndDatePicker = false },
+            onDateSelected = { selectedDate ->
+                endDateStr = selectedDate
+                showEndDatePicker = false
+            }
+        )
+    }
+
     PlatformTimePicker(
-        show = showTimePicker,
-        initialTime = reminderTime,
-        onDismiss = { showTimePicker = false },
+        show = showStartTimePicker,
+        initialTime = startTimeStr,
+        onDismiss = { showStartTimePicker = false },
         onTimeSelected = { time: String ->
-            reminderTime = time
-            showTimePicker = false
+            startTimeStr = time
+            showStartTimePicker = false
+        }
+    )
+
+    PlatformTimePicker(
+        show = showEndTimePicker,
+        initialTime = endTimeStr,
+        onDismiss = { showEndTimePicker = false },
+        onTimeSelected = { time: String ->
+            endTimeStr = time
+            showEndTimePicker = false
         }
     )
 }
