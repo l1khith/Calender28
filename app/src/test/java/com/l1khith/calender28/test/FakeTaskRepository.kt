@@ -133,4 +133,32 @@ class FakeTaskRepository(
     override suspend fun deleteRecurringTask(id: String) {}
 
     override suspend fun catchUpRollover(targetDate: FixedDate) {}
+
+    override fun getTodayCountFlow(dateStr: String): Flow<Int> =
+        flowOf(tasks.count { task ->
+            val start = task.associatedDate
+            val end = task.endDate ?: task.associatedDate
+            start <= dateStr && dateStr <= end
+        })
+
+    override fun getTodayPendingCountFlow(dateStr: String): Flow<Int> =
+        flowOf(tasks.count { task ->
+            val start = task.associatedDate
+            val end = task.endDate ?: task.associatedDate
+            start <= dateStr && dateStr <= end && !task.completed
+        })
+
+    override suspend fun getTodayCount(dateStr: String): Int =
+        tasks.count { task ->
+            val start = task.associatedDate
+            val end = task.endDate ?: task.associatedDate
+            start <= dateStr && dateStr <= end
+        }
+
+    override suspend fun getTodayPendingCount(dateStr: String): Int =
+        tasks.count { task ->
+            val start = task.associatedDate
+            val end = task.endDate ?: task.associatedDate
+            start <= dateStr && dateStr <= end && !task.completed
+        }
 }

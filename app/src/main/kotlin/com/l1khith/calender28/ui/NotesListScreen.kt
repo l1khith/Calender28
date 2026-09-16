@@ -40,6 +40,7 @@ fun NotesListScreen(
     val searchQuery by notesViewModel.searchQuery.collectAsStateWithLifecycle()
 
     val activeNote by notesViewModel.activeNote.collectAsStateWithLifecycle()
+    val draftTitle by notesViewModel.draftTitle.collectAsStateWithLifecycle()
     val draftContent by notesViewModel.draftContent.collectAsStateWithLifecycle()
     val draftFormat by notesViewModel.draftFormat.collectAsStateWithLifecycle()
     val isPreviewMode by notesViewModel.isPreviewMode.collectAsStateWithLifecycle()
@@ -63,6 +64,7 @@ fun NotesListScreen(
     // ─── 1. Sub-Screen: Note Preview Screen ──────────────────────────────
     if (activeNote != null && isPreviewMode) {
         val previewDraft = activeNote!!.copy(
+            title = draftTitle,
             content = draftContent,
             format = draftFormat
         )
@@ -81,14 +83,17 @@ fun NotesListScreen(
     if (activeNote != null) {
         val isExisting = notes.any { it.id == activeNote!!.id }
         val noteForMenu = activeNote!!.copy(
+            title = draftTitle,
             content = draftContent,
             format = draftFormat
         )
         NoteEditorScreen(
+            title = draftTitle,
             content = draftContent,
             format = draftFormat,
             isExistingNote = isExisting,
             noteForMenu = noteForMenu,
+            onTitleChange = { notesViewModel.updateTitle(it) },
             onContentChange = { notesViewModel.updateContent(it) },
             onToggleFormat = { notesViewModel.toggleFormat() },
             onPreviewClick = { notesViewModel.setPreviewMode(true) },

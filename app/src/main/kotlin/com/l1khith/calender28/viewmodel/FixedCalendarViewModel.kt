@@ -39,14 +39,20 @@ class FixedCalendarViewModel(
     application: Application,
     private val taskRepository: TaskRepository,
     private val habitRepository: HabitRepository,
-    private val coinRepository: CoinRepository
+    private val coinRepository: CoinRepository,
+    private val getBetStatusUseCase: com.l1khith.calender28.domain.usecase.bet.GetBetStatusUseCase? = null,
+    private val placeBetUseCase: com.l1khith.calender28.domain.usecase.bet.PlaceBetUseCase? = null,
+    private val evaluateBetUseCase: com.l1khith.calender28.domain.usecase.bet.EvaluateBetUseCase? = null
 ) : AndroidViewModel(application) {
 
     constructor(application: Application) : this(
         application,
         TaskRepositoryImpl(application.applicationContext),
         HabitRepositoryImpl(application.applicationContext),
-        CoinRepositoryImpl(application.applicationContext)
+        CoinRepositoryImpl(application.applicationContext),
+        null,
+        null,
+        null
     )
 
     private val context = application.applicationContext
@@ -71,6 +77,43 @@ class FixedCalendarViewModel(
 
     val recurringTasks: StateFlow<List<RecurringTask>> = taskRepository.getRecurringTasksFlow()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    val todayDateStr: String = FixedCalendarHelper.currentFixedDate().toString()
+
+    val todayTaskCount: StateFlow<Int> = taskRepository.getTodayCountFlow(todayDateStr)
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
+
+    val todayPendingCount: StateFlow<Int> = taskRepository.getTodayPendingCountFlow(todayDateStr)
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
+
+    val betStatus: StateFlow<com.l1khith.calender28.domain.model.BetStatus> = (
+        getBetStatusUseCase?.observe(todayDateStr)
+            ?: kotlinx.coroutines.flow.flowOf(
+                com.l1khith.calender28.domain.model.BetStatus.Unavailable(
+                    com.l1khith.calender28.domain.model.BetUnavailableReason.NO_TASKS,
+                    "No tasks scheduled"
+                )
+            )
+    ).stateIn(
+        viewModelScope,
+        SharingStarted.WhileSubscribed(5000),
+        com.l1khith.calender28.domain.model.BetStatus.Unavailable(
+            com.l1khith.calender28.domain.model.BetUnavailableReason.NO_TASKS,
+            "Loading..."
+        )
+    )
+
+    fun placeConfidenceBet(tier: com.l1khith.calender28.domain.model.ConfidenceTier) {
+        viewModelScope.launch {
+            placeBetUseCase?.invoke(todayDateStr, tier)
+        }
+    }
+
+    fun evaluateConfidenceBet() {
+        viewModelScope.launch {
+            evaluateBetUseCase?.invoke(todayDateStr)
+        }
+    }
 
     val allTasks: StateFlow<List<AppTask>> = taskRepository.getAllTasksFlow()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())

@@ -24,12 +24,14 @@ class NotificationHelper(private val context: Context) {
         const val CHANNEL_TASK_REMINDERS = "task_reminders"
         const val CHANNEL_RECURRING_REMINDERS = "recurring_reminders"
         const val CHANNEL_HABIT_REMINDERS = "habit_reminders"
+        const val CHANNEL_DAILY_TASK_REMINDER = "daily_task_reminder"
         const val CHANNEL_SYSTEM = "system"
 
         const val ACTION_MARK_COMPLETE = "com.l1khith.calender28.ACTION_MARK_COMPLETE"
         const val ACTION_SNOOZE = "com.l1khith.calender28.ACTION_SNOOZE"
         const val ACTION_LOG_HABIT = "com.l1khith.calender28.ACTION_LOG_HABIT"
         const val ACTION_DISMISS = "com.l1khith.calender28.ACTION_DISMISS"
+        const val DAILY_REMINDER_NOTIFICATION_ID = 88888
     }
 
     private val notificationManager = NotificationManagerCompat.from(context)
@@ -63,6 +65,15 @@ class NotificationHelper(private val context: Context) {
                     NotificationManager.IMPORTANCE_DEFAULT
                 ).apply {
                     description = "Daily reminders to build your habits"
+                    enableVibration(true)
+                    setShowBadge(true)
+                },
+                NotificationChannel(
+                    CHANNEL_DAILY_TASK_REMINDER,
+                    "Daily Task Reminder",
+                    NotificationManager.IMPORTANCE_HIGH
+                ).apply {
+                    description = "Morning briefing of your scheduled tasks"
                     enableVibration(true)
                     setShowBadge(true)
                 },
@@ -238,5 +249,38 @@ class NotificationHelper(private val context: Context) {
     fun cancelNotification(notificationId: Int) {
         Log.d(TAG, "cancelNotification: Cancelling notification id=$notificationId")
         notificationManager.cancel(notificationId)
+    }
+
+    fun showDailyTaskReminder(title: String, body: String, openBetSheet: Boolean = false) {
+        val contentIntent = context.packageManager.getLaunchIntentForPackage(context.packageName)?.apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+            putExtra("navigate_to", if (openBetSheet) "confidence_contract" else "today")
+        } ?: Intent(context, MainActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+            putExtra("navigate_to", if (openBetSheet) "confidence_contract" else "today")
+        }
+
+        val contentPending = PendingIntent.getActivity(
+            context, DAILY_REMINDER_NOTIFICATION_ID, contentIntent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+
+        val builder = NotificationCompat.Builder(context, CHANNEL_DAILY_TASK_REMINDER)
+            .setSmallIcon(android.R.drawable.ic_lock_idle_alarm)
+            .setContentTitle(title)
+            .setContentText(body)
+            .setStyle(NotificationCompat.BigTextStyle().bigText(body))
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setCategory(NotificationCompat.CATEGORY_REMINDER)
+            .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
+            .setAutoCancel(true)
+            .setContentIntent(contentPending)
+
+        try {
+            notificationManager.notify(DAILY_REMINDER_NOTIFICATION_ID, builder.build())
+            Log.d(TAG, "showDailyTaskReminder: Displayed daily task reminder '$title'")
+        } catch (e: SecurityException) {
+            Log.e(TAG, "Notification permission missing for daily reminder", e)
+        }
     }
 }

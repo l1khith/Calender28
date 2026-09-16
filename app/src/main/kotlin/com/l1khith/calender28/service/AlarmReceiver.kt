@@ -12,6 +12,7 @@ import com.l1khith.calender28.widget.WidgetUpdater
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
 private const val TAG = "ServiceAlarmReceiver"
@@ -90,6 +91,57 @@ class AlarmReceiver : BroadcastReceiver() {
                             }
                             // Schedule tomorrow's habit reminder
                             scheduler.scheduleHabitReminder(habit)
+                        }
+                    }
+
+                    AlarmScheduler.TYPE_DAILY_REMINDER -> {
+                        val app = context.applicationContext as? com.l1khith.calender28.MatrixApplication
+                        val userPrefs = app?.container?.userPreferencesRepository
+                        val taskRepo = app?.container?.taskRepository
+                        val getBetStatus = app?.container?.getBetStatusUseCase
+
+                        val todayStr = FixedCalendarHelper.currentFixedDate().toString()
+
+                        if (userPrefs != null) {
+                            val enabled = userPrefs.dailyReminderEnabled.first()
+                            val lastFired = userPrefs.dailyReminderLastFiredDate.first()
+                            if (!enabled) {
+                                Log.d(TAG, "Daily reminder disabled in prefs, skipping")
+                                return@launch
+                            }
+                            if (lastFired == todayStr) {
+                                Log.d(TAG, "Daily reminder already fired today ($todayStr), skipping")
+                                return@launch
+                            }
+
+                            val userName = userPrefs.optionalUserName.first()
+                            val lossStreak = userPrefs.betLossStreak.first()
+                            val lastPlayedDate = userPrefs.betLastPlayedDate.first()
+                            val isRecoveryDay = (lossStreak >= 3 && lastPlayedDate != todayStr)
+
+                            val tasks = taskRepo?.getTasksSpanningDate(todayStr) ?: emptyList()
+                            val betStatus = getBetStatus?.invoke(todayStr)
+
+                            val content = DailyReminderContentBuilder.build(
+                                userName = userName,
+                                taskCount = tasks.size,
+                                firstTaskTitle = tasks.firstOrNull()?.title,
+                                betStatus = betStatus,
+                                isRecoveryDay = isRecoveryDay
+                            )
+
+                            notificationHelper.showDailyTaskReminder(
+                                title = content.title,
+                                body = content.message,
+                                openBetSheet = content.openBetSheet
+                            )
+
+                            userPrefs.updateDailyReminderLastFiredDate(todayStr)
+
+                            // Reschedule next day's alarm
+                            val hour = userPrefs.dailyReminderHour.first()
+                            val minute = userPrefs.dailyReminderMinute.first()
+                            scheduler.scheduleDailyTaskReminder(hour, minute)
                         }
                     }
 

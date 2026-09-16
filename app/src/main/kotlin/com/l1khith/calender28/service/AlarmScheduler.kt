@@ -15,6 +15,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
+import java.util.Calendar
 
 private const val TAG = "ServiceAlarmScheduler"
 
@@ -33,6 +34,44 @@ class AlarmScheduler(private val context: Context) {
 
         const val TYPE_TASK = "task"
         const val TYPE_HABIT = "habit"
+        const val TYPE_DAILY_REMINDER = "daily_reminder"
+
+        const val DAILY_REMINDER_ALARM_ID = 77777
+        const val DAILY_REMINDER_ITEM_ID = "daily_task_reminder_item"
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // SCHEDULE DAILY TASK REMINDER
+    // ═══════════════════════════════════════════════════════════════════════
+    fun scheduleDailyTaskReminder(hour: Int, minute: Int): Boolean {
+        val now = Calendar.getInstance()
+        val target = Calendar.getInstance().apply {
+            set(Calendar.HOUR_OF_DAY, hour)
+            set(Calendar.MINUTE, minute)
+            set(Calendar.SECOND, 0)
+            set(Calendar.MILLISECOND, 0)
+        }
+        if (target.timeInMillis <= now.timeInMillis) {
+            target.add(Calendar.DAY_OF_YEAR, 1)
+        }
+
+        val triggerMs = target.timeInMillis
+        val intent = createAlarmIntent(
+            itemId = DAILY_REMINDER_ITEM_ID,
+            itemType = TYPE_DAILY_REMINDER,
+            title = "Morning Briefing",
+            description = "Check your tasks for today",
+            isRecurring = true
+        )
+
+        val result = scheduleExactAlarm(DAILY_REMINDER_ALARM_ID, triggerMs, intent)
+        Log.d(TAG, "scheduleDailyTaskReminder: Scheduled daily reminder at $triggerMs ($hour:$minute) result=$result")
+        return result
+    }
+
+    fun cancelDailyTaskReminder() {
+        Log.d(TAG, "cancelDailyTaskReminder: Cancelling daily reminder")
+        cancelAlarm(DAILY_REMINDER_ALARM_ID)
     }
 
     // ═══════════════════════════════════════════════════════════════════════

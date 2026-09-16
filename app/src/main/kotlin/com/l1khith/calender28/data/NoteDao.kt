@@ -31,4 +31,7 @@ interface NoteDao {
 
     @Query("SELECT * FROM notes WHERE linkedType = :type ORDER BY isPinned DESC, updatedAt DESC")
     fun getNotesByType(type: String): Flow<List<NoteEntity>>
+
+    @Query("SELECT title FROM notes WHERE title LIKE :prefix || '%'")
+    suspend fun getTitlesStartingWith(prefix: String): List<String>
 }

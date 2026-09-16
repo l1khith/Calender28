@@ -71,6 +71,10 @@ fun MatrixTopAppBar(
     onOpenCoinStore: () -> Unit,
     onOpenSparkyDetail: () -> Unit,
     onOpenSync: () -> Unit,
+    slotContent: com.l1khith.calender28.domain.model.TopBarSlotContent = com.l1khith.calender28.domain.model.TopBarSlotContent.MATRIX28,
+    userName: String? = null,
+    todayTaskCount: Int = 0,
+    pendingTaskCount: Int = 0,
     modifier: Modifier = Modifier
 ) {
     val density = LocalDensity.current.density
@@ -103,13 +107,11 @@ fun MatrixTopAppBar(
                 }
             },
             title = {
-                Text(
-                    text = "Matrix 28",
-                    style = MaterialTheme.typography.titleMedium.copy(
-                        fontWeight = FontWeight.Bold,
-                        color = MatrixColors.Primary
-                    ),
-                    maxLines = 1
+                com.l1khith.calender28.ui.topbar.TopBarTitle(
+                    slotContent = slotContent,
+                    userName = userName,
+                    todayTaskCount = todayTaskCount,
+                    pendingTaskCount = pendingTaskCount
                 )
             },
             actions = {

@@ -18,7 +18,10 @@ object AppViewModelProvider {
                 application = app,
                 taskRepository = app.container.taskRepository,
                 habitRepository = app.container.habitRepository,
-                coinRepository = app.container.coinRepository
+                coinRepository = app.container.coinRepository,
+                getBetStatusUseCase = app.container.getBetStatusUseCase,
+                placeBetUseCase = app.container.placeBetUseCase,
+                evaluateBetUseCase = app.container.evaluateBetUseCase
             )
         }
         initializer {
@@ -47,7 +50,8 @@ object AppViewModelProvider {
             val app = matrixApplication()
             NotesViewModel(
                 application = app,
-                noteRepository = app.container.noteRepository
+                noteRepository = app.container.noteRepository,
+                generateDefaultNoteTitleUseCase = app.container.generateDefaultNoteTitleUseCase
             )
         }
         initializer {

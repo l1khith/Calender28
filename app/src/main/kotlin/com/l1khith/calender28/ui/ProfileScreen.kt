@@ -27,7 +27,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.l1khith.calender28.billing.SubscriptionManager
+import com.l1khith.calender28.ui.profile.settings.*
 import com.l1khith.calender28.ui.theme.AppIcons
+import kotlinx.coroutines.launch
 import com.l1khith.calender28.ui.theme.AppTheme
 import com.l1khith.calender28.ui.theme.MatrixColors
 import com.l1khith.calender28.ui.theme.MatrixShapes
@@ -62,6 +64,32 @@ fun ProfileScreen(
     val enableAnimations by com.l1khith.calender28.utils.AppSettingsManager.enableAnimations.collectAsStateWithLifecycle()
     val enableSounds by com.l1khith.calender28.utils.AppSettingsManager.enableSounds.collectAsStateWithLifecycle()
 
+    val context = LocalContext.current
+    val app = context.applicationContext as? com.l1khith.calender28.MatrixApplication
+    val userPrefs = app?.container?.userPreferencesRepository
+    val scheduleDailyReminder = app?.container?.scheduleDailyTaskReminderUseCase
+    val cancelDailyReminder = app?.container?.cancelDailyTaskReminderUseCase
+
+    val userName by com.l1khith.calender28.utils.AppSettingsManager.userName.collectAsStateWithLifecycle()
+    val topBarSlot1 by com.l1khith.calender28.utils.AppSettingsManager.topBarSlot1.collectAsStateWithLifecycle()
+
+    val betTierStr by (userPrefs?.betTier
+        ?: kotlinx.coroutines.flow.flowOf("A")).collectAsStateWithLifecycle(initialValue = "A")
+    val currentBetTier =
+        remember(betTierStr) { com.l1khith.calender28.domain.model.ConfidenceTier.fromId(betTierStr) }
+    val betStreak by (userPrefs?.betStreak
+        ?: kotlinx.coroutines.flow.flowOf(0)).collectAsStateWithLifecycle(initialValue = 0)
+    val betLossStreak by (userPrefs?.betLossStreak
+        ?: kotlinx.coroutines.flow.flowOf(0)).collectAsStateWithLifecycle(initialValue = 0)
+
+    val dailyReminderEnabled by (userPrefs?.dailyReminderEnabled ?: kotlinx.coroutines.flow.flowOf(
+        true
+    )).collectAsStateWithLifecycle(initialValue = true)
+    val dailyReminderHour by (userPrefs?.dailyReminderHour
+        ?: kotlinx.coroutines.flow.flowOf(6)).collectAsStateWithLifecycle(initialValue = 6)
+    val dailyReminderMinute by (userPrefs?.dailyReminderMinute
+        ?: kotlinx.coroutines.flow.flowOf(0)).collectAsStateWithLifecycle(initialValue = 0)
+
     if (showAppPreferencesDialog) {
         AppPreferencesDialog(
             onDismiss = { showAppPreferencesDialog = false }
@@ -73,7 +101,7 @@ fun ProfileScreen(
             isProActive = isProActive,
             currentTheme = currentTheme,
             onDismiss = { showThemeDialog = false },
-            onSelectTheme = { theme ->
+            onSelectTheme = { theme: AppTheme ->
                 ThemeManager.setTheme(theme)
                 showThemeDialog = false
             },
@@ -99,428 +127,538 @@ fun ProfileScreen(
                         modifier = Modifier.padding(horizontal = 4.dp)
                     ) {
                         Icon(
-                        imageVector = AppIcons.Sparky,
-                        contentDescription = null,
-                        tint = MatrixColors.Primary,
-                        modifier = Modifier.size(15.dp)
-                    )
+                            imageVector = AppIcons.Sparky,
+                            contentDescription = null,
+                            tint = MatrixColors.Primary,
+                            modifier = Modifier.size(15.dp)
+                        )
+                        Text(
+                            text = "SPARKY COMPANION",
+                            color = MatrixColors.TextSecondary,
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold,
+                            letterSpacing = 1.sp
+                        )
+                    }
+
+                    Card(
+                        shape = MatrixShapes.Lg,
+                        colors = CardDefaults.cardColors(containerColor = MatrixColors.SurfaceContainerLow),
+                        border = BorderStroke(1.dp, MatrixColors.OutlineVariant),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(MatrixShapes.Lg)
+                            .clickable { onOpenSparkyDetail() }
+                    ) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(16.dp),
+                            verticalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                                ) {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(36.dp)
+                                            .clip(CircleShape)
+                                            .background(MatrixColors.PrimaryContainer),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Icon(
+                                            imageVector = AppIcons.Sparky,
+                                            contentDescription = null,
+                                            tint = MatrixColors.Primary,
+                                            modifier = Modifier.size(20.dp)
+                                        )
+                                    }
+
+                                    Column {
+                                        Text(
+                                            text = "${sparkyState.name}'s Profile",
+                                            fontWeight = FontWeight.Bold,
+                                            fontSize = 15.sp,
+                                            color = MatrixColors.TextHeader
+                                        )
+                                        Text(
+                                            text = "${sparkyState.stage.displayName} • Level ${sparkyState.level}",
+                                            fontSize = 12.sp,
+                                            color = MatrixColors.Primary,
+                                            fontWeight = FontWeight.SemiBold
+                                        )
+                                    }
+                                }
+
+                                Icon(
+                                    imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                                    contentDescription = "View",
+                                    tint = MatrixColors.TextSecondary,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            }
+
+                            HorizontalDivider(color = MatrixColors.OutlineVariant.copy(alpha = 0.5f))
+
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Favorite,
+                                        contentDescription = null,
+                                        tint = Color(0xFFF43F5E),
+                                        modifier = Modifier.size(14.dp)
+                                    )
+                                    Text(
+                                        text = "Personality: " + sparkyState.dominantTraits.joinToString(
+                                            ", "
+                                        ) { it.displayName },
+                                        fontSize = 12.sp,
+                                        color = MatrixColors.TextSecondary
+                                    )
+                                }
+
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.EmojiEvents,
+                                        contentDescription = null,
+                                        tint = MatrixColors.Secondary,
+                                        modifier = Modifier.size(14.dp)
+                                    )
+                                    Text(
+                                        text = "${sparkyState.claimedAchievements.size}/25",
+                                        fontSize = 12.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MatrixColors.Secondary
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            // Section: Profile Identity
+            item {
+                Card(
+                    shape = MatrixShapes.Lg,
+                    colors = CardDefaults.cardColors(containerColor = MatrixColors.SurfaceContainerLow),
+                    border = BorderStroke(1.dp, MatrixColors.OutlineVariant),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Box(modifier = Modifier.padding(16.dp)) {
+                        UserNameField(
+                            currentName = userName,
+                            onNameChanged = {
+                                com.l1khith.calender28.utils.AppSettingsManager.setUserName(
+                                    it
+                                )
+                            }
+                        )
+                    }
+                }
+            }
+
+            // Section: Account Settings
+            item {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text(
-                        text = "SPARKY COMPANION",
+                        text = "ACCOUNT SETTINGS",
                         color = MatrixColors.TextSecondary,
                         fontSize = 11.sp,
                         fontWeight = FontWeight.Bold,
-                        letterSpacing = 1.sp
+                        letterSpacing = 1.sp,
+                        modifier = Modifier.padding(horizontal = 4.dp)
                     )
-                }
 
-                Card(
-                    shape = MatrixShapes.Lg,
-                    colors = CardDefaults.cardColors(containerColor = MatrixColors.SurfaceContainerLow),
-                    border = BorderStroke(1.dp, MatrixColors.OutlineVariant),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(MatrixShapes.Lg)
-                        .clickable { onOpenSparkyDetail() }
-                ) {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(10.dp)
+                    Card(
+                        shape = MatrixShapes.Lg,
+                        colors = CardDefaults.cardColors(containerColor = MatrixColors.SurfaceContainerLow),
+                        border = BorderStroke(1.dp, MatrixColors.OutlineVariant),
+                        modifier = Modifier.fillMaxWidth()
                     ) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.SpaceBetween
-                        ) {
+                        Column {
                             Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(10.dp)
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 16.dp, vertical = 12.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
                             ) {
-                                Box(
-                                    modifier = Modifier
-                                        .size(36.dp)
-                                        .clip(CircleShape)
-                                        .background(MatrixColors.PrimaryContainer),
-                                    contentAlignment = Alignment.Center
-                                ) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
                                     Icon(
-                                        imageVector = AppIcons.Sparky,
-                                        contentDescription = null,
-                                        tint = MatrixColors.Primary,
+                                        imageVector = AppIcons.Subscription,
+                                        contentDescription = "Pro Mode",
+                                        tint = MatrixColors.Secondary,
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(12.dp))
+                                    Column {
+                                        Text(
+                                            text = "Pro Mode (Testing)",
+                                            color = MatrixColors.TextHeader,
+                                            fontWeight = FontWeight.Bold,
+                                            fontSize = 14.sp
+                                        )
+                                        Text(
+                                            text = if (isProActive) "Unlocked • Ad-Free" else "Free Tier • Test Ads Shown",
+                                            color = MatrixColors.TextSecondary,
+                                            fontSize = 12.sp
+                                        )
+                                    }
+                                }
+
+                                Switch(
+                                    checked = isProActive,
+                                    onCheckedChange = {
+                                        SubscriptionManager.toggleProMode(coroutineScope)
+                                    },
+                                    colors = SwitchDefaults.colors(
+                                        checkedThumbColor = MatrixColors.Primary,
+                                        checkedTrackColor = MatrixColors.PrimaryContainer
+                                    )
+                                )
+                            }
+
+                            HorizontalDivider(color = MatrixColors.OutlineVariant, thickness = 1.dp)
+
+                            var devToastMessage by remember { mutableStateOf<String?>(null) }
+
+                            LaunchedEffect(devToastMessage) {
+                                devToastMessage?.let {
+                                    kotlinx.coroutines.delay(2000)
+                                    devToastMessage = null
+                                }
+                            }
+
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable {
+                                        if (SubscriptionManager.onDevModeTap()) {
+                                            val nowPro = SubscriptionManager.isProActive.value
+                                            devToastMessage =
+                                                if (nowPro) "Dev Mode: PRO ENABLED" else "Dev Mode: PRO DISABLED"
+                                        }
+                                        onOpenSubscription()
+                                    }
+                                    .padding(horizontal = 16.dp, vertical = 14.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(
+                                        imageVector = AppIcons.Subscription,
+                                        contentDescription = "Subscription Status",
+                                        tint = MatrixColors.TextSecondary,
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(12.dp))
+                                    Text(
+                                        text = "Subscription Status",
+                                        color = MatrixColors.TextHeader,
+                                        fontSize = 14.sp
+                                    )
+                                }
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Text(
+                                        text = if (isProActive) "Pro (Active)" else "Free Tier",
+                                        color = MatrixColors.TextSecondary,
+                                        fontSize = 13.sp,
+                                        fontWeight = FontWeight.Medium
+                                    )
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Icon(
+                                        imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                                        contentDescription = "Go",
+                                        tint = MatrixColors.TextSecondary,
                                         modifier = Modifier.size(20.dp)
                                     )
                                 }
-
-                                Column {
-                                    Text(
-                                        text = "${sparkyState.name}'s Profile",
-                                        fontWeight = FontWeight.Bold,
-                                        fontSize = 15.sp,
-                                        color = MatrixColors.TextHeader
-                                    )
-                                    Text(
-                                        text = "${sparkyState.stage.displayName} • Level ${sparkyState.level}",
-                                        fontSize = 12.sp,
-                                        color = MatrixColors.Primary,
-                                        fontWeight = FontWeight.SemiBold
-                                    )
-                                }
                             }
 
-                            Icon(
-                                imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                                contentDescription = "View",
-                                tint = MatrixColors.TextSecondary,
-                                modifier = Modifier.size(20.dp)
-                            )
-                        }
-
-                        HorizontalDivider(color = MatrixColors.OutlineVariant.copy(alpha = 0.5f))
-
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(6.dp)
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.Favorite,
-                                    contentDescription = null,
-                                    tint = Color(0xFFF43F5E),
-                                    modifier = Modifier.size(14.dp)
-                                )
+                            devToastMessage?.let { msg ->
                                 Text(
-                                    text = "Personality: " + sparkyState.dominantTraits.joinToString(", ") { it.displayName },
-                                    fontSize = 12.sp,
-                                    color = MatrixColors.TextSecondary
-                                )
-                            }
-
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(4.dp)
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.EmojiEvents,
-                                    contentDescription = null,
-                                    tint = MatrixColors.Secondary,
-                                    modifier = Modifier.size(14.dp)
-                                )
-                                Text(
-                                    text = "${sparkyState.claimedAchievements.size}/25",
+                                    text = msg,
+                                    color = Color(0xFF10B981),
                                     fontSize = 12.sp,
                                     fontWeight = FontWeight.Bold,
-                                    color = MatrixColors.Secondary
+                                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
                                 )
                             }
+
+                            val isAppLockEnabled by com.l1khith.calender28.security.AppLockManager.isAppLockEnabled.collectAsState()
+                            HorizontalDivider(color = MatrixColors.OutlineVariant, thickness = 1.dp)
+                            ProfileSubtitleRow(
+                                icon = AppIcons.Security,
+                                title = "Security & App Lock",
+                                subtitle = if (isAppLockEnabled) "Enabled (Biometric/PIN Protected)" else "Disabled (Tap to configure)",
+                                onClick = onOpenSecurity
+                            )
+                            HorizontalDivider(color = MatrixColors.OutlineVariant, thickness = 1.dp)
+                            ProfileSettingRow(
+                                icon = AppIcons.Notification,
+                                title = "Notifications",
+                                onClick = onOpenNotifications
+                            )
+                            HorizontalDivider(color = MatrixColors.OutlineVariant, thickness = 1.dp)
+                            ProfileSettingRow(
+                                icon = Icons.Default.Timer,
+                                title = "Focus Analytics & History",
+                                onClick = onOpenFocusStats
+                            )
+                            HorizontalDivider(color = MatrixColors.OutlineVariant, thickness = 1.dp)
+                            ProfileSettingRow(
+                                icon = Icons.Default.MonetizationOn,
+                                title = "CalCoin Store & Rewards",
+                                onClick = onOpenCoinStore
+                            )
+                            HorizontalDivider(color = MatrixColors.OutlineVariant, thickness = 1.dp)
+                            ProfileSubtitleRow(
+                                icon = AppIcons.Sparky,
+                                title = "App Preferences",
+                                subtitle = "Sparky (${if (enableSparky) "On" else "Off"}) • Animations (${if (enableAnimations) "On" else "Off"}) • Sounds (${if (enableSounds) "On" else "Off"})",
+                                onClick = { showAppPreferencesDialog = true }
+                            )
                         }
                     }
                 }
             }
-        }
-        }
 
-        // Section: Account Settings
-        item {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text(
-                    text = "ACCOUNT SETTINGS",
-                    color = MatrixColors.TextSecondary,
-                    fontSize = 11.sp,
-                    fontWeight = FontWeight.Bold,
-                    letterSpacing = 1.sp,
-                    modifier = Modifier.padding(horizontal = 4.dp)
-                )
+            // Section: APPEARANCE
+            item {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(
+                        text = "APPEARANCE",
+                        color = MatrixColors.TextSecondary,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold,
+                        letterSpacing = 1.sp,
+                        modifier = Modifier.padding(horizontal = 4.dp)
+                    )
 
+                    Card(
+                        shape = MatrixShapes.Lg,
+                        colors = CardDefaults.cardColors(containerColor = MatrixColors.SurfaceContainerLow),
+                        border = BorderStroke(1.dp, MatrixColors.OutlineVariant),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Column {
+                            ProfileValueRow(
+                                icon = AppIcons.Appearance,
+                                title = "Theme",
+                                value = currentTheme.themeName,
+                                onClick = { showThemeDialog = true }
+                            )
+                            HorizontalDivider(color = MatrixColors.OutlineVariant, thickness = 1.dp)
+                            ProfileSubtitleRow(
+                                icon = Icons.Default.Tune,
+                                title = "Customize Navigation",
+                                subtitle = "Choose which tabs appear in the bottom bar",
+                                onClick = onOpenCustomizeNav
+                            )
+                        }
+                    }
+                }
+            }
+
+            // Section: TOP BAR CUSTOMIZATION
+            item {
                 Card(
                     shape = MatrixShapes.Lg,
                     colors = CardDefaults.cardColors(containerColor = MatrixColors.SurfaceContainerLow),
                     border = BorderStroke(1.dp, MatrixColors.OutlineVariant),
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Column {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 16.dp, vertical = 12.dp),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Icon(
-                                    imageVector = AppIcons.Subscription,
-                                    contentDescription = "Pro Mode",
-                                    tint = MatrixColors.Secondary,
-                                    modifier = Modifier.size(20.dp)
+                    Box(modifier = Modifier.padding(16.dp)) {
+                        TopBarSlotPicker(
+                            currentSlot = topBarSlot1,
+                            userName = userName,
+                            onSlotSelected = {
+                                com.l1khith.calender28.utils.AppSettingsManager.setTopBarSlot1(
+                                    it
                                 )
-                                Spacer(modifier = Modifier.width(12.dp))
-                                Column {
-                                    Text(
-                                        text = "Pro Mode (Testing)",
-                                        color = MatrixColors.TextHeader,
-                                        fontWeight = FontWeight.Bold,
-                                        fontSize = 14.sp
-                                    )
-                                    Text(
-                                        text = if (isProActive) "Unlocked • Ad-Free" else "Free Tier • Test Ads Shown",
-                                        color = MatrixColors.TextSecondary,
-                                        fontSize = 12.sp
-                                    )
-                                }
                             }
+                        )
+                    }
+                }
+            }
 
-                            Switch(
-                                checked = isProActive,
-                                onCheckedChange = {
-                                    SubscriptionManager.toggleProMode(coroutineScope)
+            // Section: EXPERIMENTAL FEATURES (Confidence Contract & Morning Briefing)
+            item {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(
+                        text = "EXPERIMENTAL FEATURES",
+                        color = MatrixColors.TextSecondary,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold,
+                        letterSpacing = 1.sp,
+                        modifier = Modifier.padding(horizontal = 4.dp)
+                    )
+
+                    Card(
+                        shape = MatrixShapes.Lg,
+                        colors = CardDefaults.cardColors(containerColor = MatrixColors.SurfaceContainerLow),
+                        border = BorderStroke(1.dp, MatrixColors.OutlineVariant),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(16.dp),
+                            verticalArrangement = Arrangement.spacedBy(20.dp)
+                        ) {
+                            ConfidenceContractSettings(
+                                selectedTier = currentBetTier,
+                                streak = betStreak,
+                                lossStreak = betLossStreak,
+                                onTierSelected = { tier ->
+                                    coroutineScope.launch {
+                                        userPrefs?.updateBetTier(tier.id)
+                                    }
+                                }
+                            )
+
+                            HorizontalDivider(
+                                color = MatrixColors.OutlineVariant.copy(alpha = 0.5f),
+                                thickness = 1.dp
+                            )
+
+                            DailyReminderSettings(
+                                enabled = dailyReminderEnabled,
+                                hour = dailyReminderHour,
+                                minute = dailyReminderMinute,
+                                onToggle = { enabled ->
+                                    coroutineScope.launch {
+                                        if (enabled) {
+                                            scheduleDailyReminder?.invoke(
+                                                dailyReminderHour,
+                                                dailyReminderMinute
+                                            )
+                                        } else {
+                                            cancelDailyReminder?.invoke()
+                                        }
+                                    }
                                 },
-                                colors = SwitchDefaults.colors(
-                                    checkedThumbColor = MatrixColors.Primary,
-                                    checkedTrackColor = MatrixColors.PrimaryContainer
-                                )
+                                onTimeChange = { h, m ->
+                                    coroutineScope.launch {
+                                        scheduleDailyReminder?.invoke(h, m)
+                                    }
+                                }
                             )
                         }
+                    }
+                }
+            }
 
-                        HorizontalDivider(color = MatrixColors.OutlineVariant, thickness = 1.dp)
+            // Section: LEGAL & ABOUT
+            item {
+                val context = LocalContext.current
 
-                        var devToastMessage by remember { mutableStateOf<String?>(null) }
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(
+                        text = "LEGAL & ABOUT",
+                        color = MatrixColors.TextSecondary,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold,
+                        letterSpacing = 1.sp,
+                        modifier = Modifier.padding(horizontal = 4.dp)
+                    )
 
-                        LaunchedEffect(devToastMessage) {
-                            devToastMessage?.let {
-                                kotlinx.coroutines.delay(2000)
-                                devToastMessage = null
-                            }
-                        }
-
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable {
-                                    if (SubscriptionManager.onDevModeTap()) {
-                                        val nowPro = SubscriptionManager.isProActive.value
-                                        devToastMessage = if (nowPro) "Dev Mode: PRO ENABLED" else "Dev Mode: PRO DISABLED"
-                                    }
-                                    onOpenSubscription()
+                    Card(
+                        shape = MatrixShapes.Lg,
+                        colors = CardDefaults.cardColors(containerColor = MatrixColors.SurfaceContainerLow),
+                        border = BorderStroke(1.dp, MatrixColors.OutlineVariant),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Column {
+                            // Privacy Policy Row
+                            ProfileSubtitleRow(
+                                icon = Icons.Outlined.Lock,
+                                title = "Privacy Policy",
+                                subtitle = "Read how your on-device data is protected",
+                                onClick = {
+                                    UrlLauncher.openBrowser(context, AppConfig.PRIVACY_POLICY_URL)
                                 }
-                                .padding(horizontal = 16.dp, vertical = 14.dp),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Icon(
-                                    imageVector = AppIcons.Subscription,
-                                    contentDescription = "Subscription Status",
-                                    tint = MatrixColors.TextSecondary,
-                                    modifier = Modifier.size(20.dp)
-                                )
-                                Spacer(modifier = Modifier.width(12.dp))
+                            )
+
+                            HorizontalDivider(color = MatrixColors.OutlineVariant, thickness = 1.dp)
+
+                            // Terms of Service Row
+                            ProfileSubtitleRow(
+                                icon = Icons.Outlined.Description,
+                                title = "Terms of Service",
+                                subtitle = "Terms and conditions for using Calender28",
+                                onClick = {
+                                    UrlLauncher.openBrowser(context, AppConfig.TERMS_OF_SERVICE_URL)
+                                }
+                            )
+
+                            HorizontalDivider(color = MatrixColors.OutlineVariant, thickness = 1.dp)
+
+                            // Data Management Row
+                            ProfileSubtitleRow(
+                                icon = Icons.Outlined.Storage,
+                                title = "Data Management & Export",
+                                subtitle = "Export current month or all tasks to Downloads (CSV/ICS/JSON)",
+                                onClick = onOpenExportTasks
+                            )
+
+                            HorizontalDivider(color = MatrixColors.OutlineVariant, thickness = 1.dp)
+
+                            // App Version Info Row
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 16.dp, vertical = 14.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    modifier = Modifier.weight(1f)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Outlined.Info,
+                                        contentDescription = "App Version",
+                                        tint = MatrixColors.TextSecondary,
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(12.dp))
+                                    Column {
+                                        Text(
+                                            text = AppConfig.APP_NAME,
+                                            color = MatrixColors.TextHeader,
+                                            fontWeight = FontWeight.SemiBold,
+                                            fontSize = 14.sp
+                                        )
+                                        Text(
+                                            text = "On-device Eisenhower Matrix platform",
+                                            color = MatrixColors.TextSecondary,
+                                            fontSize = 12.sp
+                                        )
+                                    }
+                                }
+
                                 Text(
-                                    text = "Subscription Status",
-                                    color = MatrixColors.TextHeader,
-                                    fontSize = 14.sp
-                                )
-                            }
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Text(
-                                    text = if (isProActive) "Pro (Active)" else "Free Tier",
+                                    text = AppConfig.APP_BUILD_INFO,
                                     color = MatrixColors.TextSecondary,
-                                    fontSize = 13.sp,
+                                    fontSize = 12.sp,
                                     fontWeight = FontWeight.Medium
                                 )
-                                Spacer(modifier = Modifier.width(4.dp))
-                                Icon(
-                                    imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                                    contentDescription = "Go",
-                                    tint = MatrixColors.TextSecondary,
-                                    modifier = Modifier.size(20.dp)
-                                )
                             }
-                        }
-
-                        devToastMessage?.let { msg ->
-                            Text(
-                                text = msg,
-                                color = Color(0xFF10B981),
-                                fontSize = 12.sp,
-                                fontWeight = FontWeight.Bold,
-                                modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
-                            )
-                        }
-
-                        val isAppLockEnabled by com.l1khith.calender28.security.AppLockManager.isAppLockEnabled.collectAsState()
-                        HorizontalDivider(color = MatrixColors.OutlineVariant, thickness = 1.dp)
-                        ProfileSubtitleRow(
-                            icon = AppIcons.Security,
-                            title = "Security & App Lock",
-                            subtitle = if (isAppLockEnabled) "Enabled (Biometric/PIN Protected)" else "Disabled (Tap to configure)",
-                            onClick = onOpenSecurity
-                        )
-                        HorizontalDivider(color = MatrixColors.OutlineVariant, thickness = 1.dp)
-                        ProfileSettingRow(
-                            icon = AppIcons.Notification,
-                            title = "Notifications",
-                            onClick = onOpenNotifications
-                        )
-                        HorizontalDivider(color = MatrixColors.OutlineVariant, thickness = 1.dp)
-                        ProfileSettingRow(
-                            icon = Icons.Default.Timer,
-                            title = "Focus Analytics & History",
-                            onClick = onOpenFocusStats
-                        )
-                        HorizontalDivider(color = MatrixColors.OutlineVariant, thickness = 1.dp)
-                        ProfileSettingRow(
-                            icon = Icons.Default.MonetizationOn,
-                            title = "CalCoin Store & Rewards",
-                            onClick = onOpenCoinStore
-                        )
-                        HorizontalDivider(color = MatrixColors.OutlineVariant, thickness = 1.dp)
-                        ProfileSubtitleRow(
-                            icon = AppIcons.Sparky,
-                            title = "App Preferences",
-                            subtitle = "Sparky (${if (enableSparky) "On" else "Off"}) • Animations (${if (enableAnimations) "On" else "Off"}) • Sounds (${if (enableSounds) "On" else "Off"})",
-                            onClick = { showAppPreferencesDialog = true }
-                        )
-                    }
-                }
-            }
-        }
-
-        // Section: APPEARANCE
-        item {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text(
-                    text = "APPEARANCE",
-                    color = MatrixColors.TextSecondary,
-                    fontSize = 11.sp,
-                    fontWeight = FontWeight.Bold,
-                    letterSpacing = 1.sp,
-                    modifier = Modifier.padding(horizontal = 4.dp)
-                )
-
-                Card(
-                    shape = MatrixShapes.Lg,
-                    colors = CardDefaults.cardColors(containerColor = MatrixColors.SurfaceContainerLow),
-                    border = BorderStroke(1.dp, MatrixColors.OutlineVariant),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Column {
-                        ProfileValueRow(
-                            icon = AppIcons.Appearance,
-                            title = "Theme",
-                            value = currentTheme.themeName,
-                            onClick = { showThemeDialog = true }
-                        )
-                        HorizontalDivider(color = MatrixColors.OutlineVariant, thickness = 1.dp)
-                        ProfileSubtitleRow(
-                            icon = Icons.Default.Tune,
-                            title = "Customize Navigation",
-                            subtitle = "Choose which tabs appear in the bottom bar",
-                            onClick = onOpenCustomizeNav
-                        )
-                    }
-                }
-            }
-        }
-
-        // Section: LEGAL & ABOUT
-        item {
-            val context = LocalContext.current
-
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text(
-                    text = "LEGAL & ABOUT",
-                    color = MatrixColors.TextSecondary,
-                    fontSize = 11.sp,
-                    fontWeight = FontWeight.Bold,
-                    letterSpacing = 1.sp,
-                    modifier = Modifier.padding(horizontal = 4.dp)
-                )
-
-                Card(
-                    shape = MatrixShapes.Lg,
-                    colors = CardDefaults.cardColors(containerColor = MatrixColors.SurfaceContainerLow),
-                    border = BorderStroke(1.dp, MatrixColors.OutlineVariant),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Column {
-                        // Privacy Policy Row
-                        ProfileSubtitleRow(
-                            icon = Icons.Outlined.Lock,
-                            title = "Privacy Policy",
-                            subtitle = "Read how your on-device data is protected",
-                            onClick = {
-                                UrlLauncher.openBrowser(context, AppConfig.PRIVACY_POLICY_URL)
-                            }
-                        )
-
-                        HorizontalDivider(color = MatrixColors.OutlineVariant, thickness = 1.dp)
-
-                        // Terms of Service Row
-                        ProfileSubtitleRow(
-                            icon = Icons.Outlined.Description,
-                            title = "Terms of Service",
-                            subtitle = "Terms and conditions for using Calender28",
-                            onClick = {
-                                UrlLauncher.openBrowser(context, AppConfig.TERMS_OF_SERVICE_URL)
-                            }
-                        )
-
-                        HorizontalDivider(color = MatrixColors.OutlineVariant, thickness = 1.dp)
-
-                        // Data Management Row
-                        ProfileSubtitleRow(
-                            icon = Icons.Outlined.Storage,
-                            title = "Data Management & Export",
-                            subtitle = "Export current month or all tasks to Downloads (CSV/ICS/JSON)",
-                            onClick = onOpenExportTasks
-                        )
-
-                        HorizontalDivider(color = MatrixColors.OutlineVariant, thickness = 1.dp)
-
-                        // App Version Info Row
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 16.dp, vertical = 14.dp),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                modifier = Modifier.weight(1f)
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Outlined.Info,
-                                    contentDescription = "App Version",
-                                    tint = MatrixColors.TextSecondary,
-                                    modifier = Modifier.size(20.dp)
-                                )
-                                Spacer(modifier = Modifier.width(12.dp))
-                                Column {
-                                    Text(
-                                        text = AppConfig.APP_NAME,
-                                        color = MatrixColors.TextHeader,
-                                        fontWeight = FontWeight.SemiBold,
-                                        fontSize = 14.sp
-                                    )
-                                    Text(
-                                        text = "On-device Eisenhower Matrix platform",
-                                        color = MatrixColors.TextSecondary,
-                                        fontSize = 12.sp
-                                    )
-                                }
-                            }
-
-                            Text(
-                                text = AppConfig.APP_BUILD_INFO,
-                                color = MatrixColors.TextSecondary,
-                                fontSize = 12.sp,
-                                fontWeight = FontWeight.Medium
-                            )
                         }
                     }
                 }
@@ -539,7 +677,13 @@ fun ThemeSelectionDialog(
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Select App Theme", color = MatrixColors.TextHeader, fontWeight = FontWeight.Bold) },
+        title = {
+            Text(
+                "Select App Theme",
+                color = MatrixColors.TextHeader,
+                fontWeight = FontWeight.Bold
+            )
+        },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 AppTheme.entries.forEach { theme ->
@@ -614,7 +758,10 @@ fun ThemeSelectionDialog(
                                         color = Color(0xFFF59E0B),
                                         fontWeight = FontWeight.Bold,
                                         fontSize = 10.sp,
-                                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
+                                        modifier = Modifier.padding(
+                                            horizontal = 8.dp,
+                                            vertical = 2.dp
+                                        )
                                     )
                                 }
                             } else if (isSelected) {

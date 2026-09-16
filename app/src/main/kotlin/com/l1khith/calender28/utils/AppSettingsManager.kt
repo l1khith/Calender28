@@ -27,6 +27,12 @@ object AppSettingsManager {
     private val _tabOrder = MutableStateFlow<List<BottomTab>>(BottomTab.ALL_TABS)
     val tabOrder: StateFlow<List<BottomTab>> = _tabOrder.asStateFlow()
 
+    private val _topBarSlot1 = MutableStateFlow(com.l1khith.calender28.domain.model.TopBarSlotContent.MATRIX28)
+    val topBarSlot1: StateFlow<com.l1khith.calender28.domain.model.TopBarSlotContent> = _topBarSlot1.asStateFlow()
+
+    private val _userName = MutableStateFlow<String?>(null)
+    val userName: StateFlow<String?> = _userName.asStateFlow()
+
     private var prefsRepo: UserPreferencesRepository? = null
     private var scope: CoroutineScope? = null
     private var isInitialized = false
@@ -55,6 +61,16 @@ object AppSettingsManager {
         coroutineScope.launch(Dispatchers.Default) {
             repo.bottomTabOrder.collect { orderStr ->
                 _tabOrder.value = BottomTab.parseOrder(orderStr)
+            }
+        }
+        coroutineScope.launch(Dispatchers.Default) {
+            repo.topBarSlot1.collect { slotStr ->
+                _topBarSlot1.value = com.l1khith.calender28.domain.model.TopBarSlotContent.fromId(slotStr)
+            }
+        }
+        coroutineScope.launch(Dispatchers.Default) {
+            repo.optionalUserName.collect { name ->
+                _userName.value = name
             }
         }
     }
@@ -136,6 +152,26 @@ object AppSettingsManager {
             try {
                 prefsRepo?.updateEnabledBottomTabs(BottomTab.DEFAULT_TAB_IDS)
                 prefsRepo?.updateBottomTabOrder(BottomTab.DEFAULT_ORDER_STRING)
+            } catch (_: Exception) {}
+        }
+    }
+
+    fun setTopBarSlot1(slot: com.l1khith.calender28.domain.model.TopBarSlotContent) {
+        _topBarSlot1.value = slot
+        scope?.launch(Dispatchers.IO) {
+            try {
+                prefsRepo?.updateTopBarSlot1(slot.id)
+            } catch (_: Exception) {}
+        }
+    }
+
+    fun setUserName(name: String?) {
+        val clean = name?.trim()?.take(20)
+        val finalVal = if (clean.isNullOrEmpty()) null else clean
+        _userName.value = finalVal
+        scope?.launch(Dispatchers.IO) {
+            try {
+                prefsRepo?.updateUserName(finalVal)
             } catch (_: Exception) {}
         }
     }

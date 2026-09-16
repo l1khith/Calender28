@@ -369,6 +369,26 @@ fun CustomizeNavScreen(
                 }
             }
 
+            // Top Bar Slot 1 Section
+            item {
+                val currentSlot by AppSettingsManager.topBarSlot1.collectAsStateWithLifecycle()
+                val userName by AppSettingsManager.userName.collectAsStateWithLifecycle()
+                Card(
+                    shape = MatrixShapes.Lg,
+                    colors = CardDefaults.cardColors(containerColor = MatrixColors.SurfaceContainerLow),
+                    border = BorderStroke(1.dp, MatrixColors.OutlineVariant),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Box(modifier = Modifier.padding(16.dp)) {
+                        com.l1khith.calender28.ui.profile.settings.TopBarSlotPicker(
+                            currentSlot = currentSlot,
+                            userName = userName,
+                            onSlotSelected = { AppSettingsManager.setTopBarSlot1(it) }
+                        )
+                    }
+                }
+            }
+
             // Reset to Defaults Button
             item {
                 OutlinedButton(

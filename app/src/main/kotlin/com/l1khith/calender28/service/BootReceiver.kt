@@ -11,6 +11,7 @@ import com.l1khith.calender28.widget.WidgetUpdater
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
 private const val TAG = "ServiceBootReceiver"
@@ -96,6 +97,19 @@ class BootReceiver : BroadcastReceiver() {
                 activeHabits.forEach { habit ->
                     if (scheduler.scheduleHabitReminder(habit)) {
                         habitCount++
+                    }
+                }
+
+                // 4. Reschedule daily task reminder if enabled
+                val app = context.applicationContext as? com.l1khith.calender28.MatrixApplication
+                val userPrefs = app?.container?.userPreferencesRepository
+                if (userPrefs != null) {
+                    val enabled = userPrefs.dailyReminderEnabled.first()
+                    if (enabled) {
+                        val hour = userPrefs.dailyReminderHour.first()
+                        val minute = userPrefs.dailyReminderMinute.first()
+                        scheduler.scheduleDailyTaskReminder(hour, minute)
+                        Log.d(TAG, "Rescheduled daily task reminder for $hour:$minute")
                     }
                 }
 
