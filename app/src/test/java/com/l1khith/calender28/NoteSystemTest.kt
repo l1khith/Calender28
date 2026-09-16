@@ -62,6 +62,9 @@ class FakeNoteDao : NoteDao {
         notesFlow.map { list ->
             list.filter { it.linkedType.equals(type, ignoreCase = true) }
         }
+
+    override suspend fun getTitlesStartingWith(prefix: String): List<String> =
+        notesMap.values.map { it.title }.filter { it.startsWith(prefix) }
 }
 
 class NoteSystemTest {

@@ -44,6 +44,18 @@ interface TaskDao {
     @Query("SELECT associated_date, COUNT(*) as count FROM tasks WHERE is_completed = 0 GROUP BY associated_date")
     suspend fun getRawTaskCountsPerDate(): List<DateTaskCount>
 
+    @Query("SELECT COUNT(*) FROM tasks WHERE (associated_date <= :dateStr AND COALESCE(end_date, associated_date) >= :dateStr)")
+    fun observeTodayCount(dateStr: String): Flow<Int>
+
+    @Query("SELECT COUNT(*) FROM tasks WHERE is_completed = 0 AND (associated_date <= :dateStr AND COALESCE(end_date, associated_date) >= :dateStr)")
+    fun observeTodayPendingCount(dateStr: String): Flow<Int>
+
+    @Query("SELECT COUNT(*) FROM tasks WHERE (associated_date <= :dateStr AND COALESCE(end_date, associated_date) >= :dateStr)")
+    suspend fun getTodayCount(dateStr: String): Int
+
+    @Query("SELECT COUNT(*) FROM tasks WHERE is_completed = 0 AND (associated_date <= :dateStr AND COALESCE(end_date, associated_date) >= :dateStr)")
+    suspend fun getTodayPendingCount(dateStr: String): Int
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertTask(task: AppTaskEntity): Long
 

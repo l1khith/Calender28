@@ -14,7 +14,8 @@ import kotlinx.coroutines.launch
  */
 class NotesViewModel(
     application: Application,
-    private val noteRepository: NoteRepository
+    private val noteRepository: NoteRepository,
+    private val generateDefaultNoteTitleUseCase: com.l1khith.calender28.domain.usecase.notes.GenerateDefaultNoteTitleUseCase? = null
 ) : AndroidViewModel(application) {
 
     private val _searchQuery = MutableStateFlow("")
@@ -40,6 +41,9 @@ class NotesViewModel(
     private val _activeNote = MutableStateFlow<Note?>(null)
     val activeNote: StateFlow<Note?> = _activeNote.asStateFlow()
 
+    private val _draftTitle = MutableStateFlow("")
+    val draftTitle: StateFlow<String> = _draftTitle.asStateFlow()
+
     private val _draftContent = MutableStateFlow("")
     val draftContent: StateFlow<String> = _draftContent.asStateFlow()
 
@@ -57,18 +61,31 @@ class NotesViewModel(
         _searchQuery.value = ""
     }
 
+    fun updateTitle(title: String) {
+        _draftTitle.value = title
+    }
+
     /**
      * Opens a new blank note canvas.
      */
-    fun createNewNote(defaultFormat: NoteFormat = NoteFormat.TXT) {
-        val newNote = Note(
-            content = "",
-            format = defaultFormat
-        )
-        _activeNote.value = newNote
+    fun createNewNote(
+        context: com.l1khith.calender28.domain.model.NoteContext = com.l1khith.calender28.domain.model.NoteContext.Standalone,
+        defaultFormat: NoteFormat = NoteFormat.TXT
+    ) {
         _draftContent.value = ""
         _draftFormat.value = defaultFormat
         _isPreviewMode.value = false
+
+        viewModelScope.launch {
+            val autoTitle = generateDefaultNoteTitleUseCase?.invoke(context) ?: ""
+            _draftTitle.value = autoTitle
+            val newNote = Note(
+                title = autoTitle,
+                content = "",
+                format = defaultFormat
+            )
+            _activeNote.value = newNote
+        }
     }
 
     /**
@@ -76,6 +93,7 @@ class NotesViewModel(
      */
     fun openNoteForEdit(note: Note) {
         _activeNote.value = note
+        _draftTitle.value = note.title
         _draftContent.value = note.content
         _draftFormat.value = note.format
         _isPreviewMode.value = false
@@ -117,14 +135,16 @@ class NotesViewModel(
      */
     fun saveAndCloseEditor(onSaved: (() -> Unit)? = null) {
         val current = _activeNote.value ?: return
+        val finalTitle = _draftTitle.value.trim()
         val finalContent = _draftContent.value.trimEnd()
         val finalFormat = _draftFormat.value
 
-        if (finalContent.isBlank()) {
+        if (finalContent.isBlank() && finalTitle.isBlank()) {
             // Delete or discard blank note
             viewModelScope.launch {
                 noteRepository.deleteNote(current)
                 _activeNote.value = null
+                _draftTitle.value = ""
                 _draftContent.value = ""
                 _isPreviewMode.value = false
                 onSaved?.invoke()
@@ -133,6 +153,7 @@ class NotesViewModel(
         }
 
         val updatedNote = current.copy(
+            title = finalTitle,
             content = finalContent,
             format = finalFormat,
             updatedAt = System.currentTimeMillis()
@@ -141,6 +162,7 @@ class NotesViewModel(
         viewModelScope.launch {
             noteRepository.insertNote(updatedNote)
             _activeNote.value = null
+            _draftTitle.value = ""
             _draftContent.value = ""
             _isPreviewMode.value = false
             onSaved?.invoke()
@@ -149,6 +171,7 @@ class NotesViewModel(
 
     fun closeEditorWithoutSaving() {
         _activeNote.value = null
+        _draftTitle.value = ""
         _draftContent.value = ""
         _isPreviewMode.value = false
     }
@@ -158,6 +181,7 @@ class NotesViewModel(
             noteRepository.deleteNote(note)
             if (_activeNote.value?.id == note.id) {
                 _activeNote.value = null
+                _draftTitle.value = ""
                 _draftContent.value = ""
                 _isPreviewMode.value = false
             }

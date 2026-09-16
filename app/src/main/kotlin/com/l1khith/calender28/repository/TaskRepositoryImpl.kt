@@ -75,6 +75,22 @@ class TaskRepositoryImpl(
         }.flowOn(Dispatchers.IO)
     }
 
+    override fun getTodayCountFlow(dateStr: String): Flow<Int> {
+        return taskDao.observeTodayCount(dateStr).flowOn(Dispatchers.IO)
+    }
+
+    override fun getTodayPendingCountFlow(dateStr: String): Flow<Int> {
+        return taskDao.observeTodayPendingCount(dateStr).flowOn(Dispatchers.IO)
+    }
+
+    override suspend fun getTodayCount(dateStr: String): Int = withContext(Dispatchers.IO) {
+        taskDao.getTodayCount(dateStr)
+    }
+
+    override suspend fun getTodayPendingCount(dateStr: String): Int = withContext(Dispatchers.IO) {
+        taskDao.getTodayPendingCount(dateStr)
+    }
+
     override suspend fun getTasksForDate(dateStr: String): List<AppTask> = withContext(Dispatchers.IO) {
         Log.d(TAG, "getTasksForDate: Querying tasks for date=$dateStr")
         val list: List<AppTaskEntity> = taskDao.getTasksForDate(dateStr)

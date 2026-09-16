@@ -12,6 +12,10 @@ interface TaskRepository {
     fun getDatesWithActiveTasksFlow(): Flow<Set<String>>
     fun getTaskCountsPerDateFlow(): Flow<Map<String, Int>>
     fun getRecurringTasksFlow(): Flow<List<RecurringTask>>
+    fun getTodayCountFlow(dateStr: String): Flow<Int>
+    fun getTodayPendingCountFlow(dateStr: String): Flow<Int>
+    suspend fun getTodayCount(dateStr: String): Int
+    suspend fun getTodayPendingCount(dateStr: String): Int
 
     suspend fun getTasksForDate(dateStr: String): List<AppTask>
     fun getTasksSpanningDateFlow(dateStr: String): Flow<List<AppTask>>

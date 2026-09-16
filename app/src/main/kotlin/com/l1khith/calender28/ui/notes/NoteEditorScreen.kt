@@ -30,10 +30,12 @@ import com.l1khith.calender28.ui.theme.MatrixColors
  */
 @Composable
 fun NoteEditorScreen(
+    title: String = "",
     content: String,
     format: NoteFormat,
     isExistingNote: Boolean,
     noteForMenu: Note,
+    onTitleChange: (String) -> Unit = {},
     onContentChange: (String) -> Unit,
     onToggleFormat: () -> Unit,
     onPreviewClick: () -> Unit,
@@ -97,13 +99,43 @@ fun NoteEditorScreen(
         )
 
         // ── Obsidian-Style Infinite Canvas ──────────────────────────
-        Box(
+        Column(
             modifier = Modifier
                 .fillMaxSize()
                 .imePadding()
                 .verticalScroll(rememberScrollState())
                 .padding(horizontal = 20.dp, vertical = 12.dp)
         ) {
+            BasicTextField(
+                value = title,
+                onValueChange = onTitleChange,
+                singleLine = true,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 12.dp),
+                textStyle = MaterialTheme.typography.titleLarge.copy(
+                    fontWeight = FontWeight.Bold,
+                    color = MatrixColors.TextHeader,
+                    fontSize = 20.sp
+                ),
+                cursorBrush = SolidColor(MatrixColors.Primary),
+                decorationBox = { innerTextField ->
+                    Box(modifier = Modifier.fillMaxWidth()) {
+                        if (title.isEmpty()) {
+                            Text(
+                                text = "Title",
+                                style = MaterialTheme.typography.titleLarge.copy(
+                                    fontWeight = FontWeight.Bold,
+                                    color = MatrixColors.TextSecondary.copy(alpha = 0.4f),
+                                    fontSize = 20.sp
+                                )
+                            )
+                        }
+                        innerTextField()
+                    }
+                }
+            )
+
             BasicTextField(
                 value = content,
                 onValueChange = onContentChange,

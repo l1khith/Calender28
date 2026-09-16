@@ -112,12 +112,14 @@ class CustomizeNavViewModel(
     }
 
     /**
-     * Resets navigation tabs to the default set (all 4 tabs enabled in canonical order).
+     * Resets navigation tabs to the default set (all 4 tabs enabled in canonical order)
+     * and resets top bar title slot to default (Matrix 28).
      */
     fun resetToDefaults() {
         viewModelScope.launch {
             navRepository.resetToDefaults()
             AppSettingsManager.resetTabs()
+            AppSettingsManager.setTopBarSlot1(com.l1khith.calender28.domain.model.TopBarSlotContent.MATRIX28)
         }
     }
 }

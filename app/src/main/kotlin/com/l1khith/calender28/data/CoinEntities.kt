@@ -43,7 +43,11 @@ enum class TransactionReason(val displayName: String, val defaultAmount: Int) {
     TASK_COMPLETE("Task Completed", com.l1khith.calender28.utils.Constants.REWARD_TASK_COMPLETE),
     FOCUS_SESSION("Focus Session Completed", com.l1khith.calender28.utils.Constants.REWARD_FOCUS_SESSION),
     PREMIUM_PURCHASE("Premium Unlock", -com.l1khith.calender28.utils.Constants.PREMIUM_UNLOCK_COIN_COST),
-    PROMO_CODE("Promo Code Bonus", 0);
+    PROMO_CODE("Promo Code Bonus", 0),
+    BET_WIN("Confidence Bet Won", 0),
+    BET_LOSS("Confidence Bet Lost", 0),
+    BET_STREAK_BONUS("Confidence Streak Bonus", 0),
+    BET_RECOVERY_DAY_SKIP("Recovery Day Rest", 0);
 
     companion object {
         fun fromString(value: String): TransactionReason {

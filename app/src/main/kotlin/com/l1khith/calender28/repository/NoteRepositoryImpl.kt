@@ -41,4 +41,7 @@ class NoteRepositoryImpl(private val noteDao: NoteDao) : NoteRepository {
 
     override fun getNotesByType(type: String): Flow<List<Note>> =
         noteDao.getNotesByType(type).map { list -> list.map { it.toNote() } }
+
+    override suspend fun getTitlesStartingWith(prefix: String): List<String> =
+        noteDao.getTitlesStartingWith(prefix)
 }

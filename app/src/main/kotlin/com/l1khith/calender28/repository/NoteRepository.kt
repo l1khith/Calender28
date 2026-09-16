@@ -16,4 +16,5 @@ interface NoteRepository {
     suspend fun getNoteById(id: String): Note?
     fun getNotesForEntity(type: String, id: String): Flow<List<Note>>
     fun getNotesByType(type: String): Flow<List<Note>>
+    suspend fun getTitlesStartingWith(prefix: String): List<String>
 }

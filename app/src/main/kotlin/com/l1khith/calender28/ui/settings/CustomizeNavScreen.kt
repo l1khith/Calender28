@@ -2,21 +2,27 @@ package com.l1khith.calender28.ui.settings
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.DragHandle
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
+import androidx.compose.material.icons.filled.LocalFireDepartment
+import androidx.compose.material.icons.filled.MonetizationOn
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Restore
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.pointerInput
@@ -28,9 +34,13 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.l1khith.calender28.data.BottomTab
+import com.l1khith.calender28.domain.model.TopBarSlotContent
 import com.l1khith.calender28.ui.AnimatedSparkDivider
+import com.l1khith.calender28.ui.profile.settings.TopBarSlotPicker
+import com.l1khith.calender28.ui.profile.settings.UserNameField
 import com.l1khith.calender28.ui.theme.MatrixColors
 import com.l1khith.calender28.ui.theme.MatrixShapes
+import com.l1khith.calender28.ui.topbar.TopBarTitle
 import com.l1khith.calender28.utils.AppSettingsManager
 import com.l1khith.calender28.utils.showPlatformToast
 import com.l1khith.calender28.viewmodel.CustomizeNavViewModel
@@ -39,11 +49,15 @@ import com.l1khith.calender28.viewmodel.CustomizeNavViewModel
 @Composable
 fun CustomizeNavScreen(
     viewModel: CustomizeNavViewModel,
-    onBack: () -> Unit
+    onBack: () -> Unit,
+    todayTaskCount: Int = 0,
+    pendingTaskCount: Int = 0
 ) {
     val enabledTabs by viewModel.enabledTabs.collectAsStateWithLifecycle()
     val tabOrder by viewModel.tabOrder.collectAsStateWithLifecycle()
     val enableAnimations by AppSettingsManager.enableAnimations.collectAsStateWithLifecycle()
+    val currentSlot by AppSettingsManager.topBarSlot1.collectAsStateWithLifecycle()
+    val userName by AppSettingsManager.userName.collectAsStateWithLifecycle()
     val hapticFeedback = LocalHapticFeedback.current
 
     var draggingIndex by remember { mutableStateOf<Int?>(null) }
@@ -93,12 +107,12 @@ fun CustomizeNavScreen(
                 .fillMaxSize()
                 .padding(horizontal = 16.dp),
             contentPadding = PaddingValues(top = 16.dp, bottom = 48.dp),
-            verticalArrangement = Arrangement.spacedBy(20.dp)
+            verticalArrangement = Arrangement.spacedBy(24.dp)
         ) {
             // Header instructions
             item {
                 Text(
-                    text = "Drag and drop tabs using the handle to reorder them. Toggle switches to show or hide tabs (at least one tab must remain enabled).",
+                    text = "Personalize your navigation layout. Customize the title shown in the top header and configure the order and visibility of bottom tabs.",
                     color = MatrixColors.TextSecondary,
                     fontSize = 13.sp,
                     lineHeight = 18.sp,
@@ -106,11 +120,170 @@ fun CustomizeNavScreen(
                 )
             }
 
-            // Tabs Management Section (Reorderable List)
+            // ==========================================
+            // SECTION 1: TOP NAVIGATION BAR
+            // ==========================================
             item {
                 Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     Text(
-                        text = "TAB ORDER & VISIBILITY",
+                        text = "TOP NAVIGATION BAR",
+                        color = MatrixColors.TextSecondary,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold,
+                        letterSpacing = 1.sp,
+                        modifier = Modifier.padding(horizontal = 4.dp)
+                    )
+
+                    // Live Preview of Top Bar
+                    Card(
+                        shape = MatrixShapes.Lg,
+                        colors = CardDefaults.cardColors(containerColor = MatrixColors.SurfaceContainerLow),
+                        border = BorderStroke(1.dp, MatrixColors.OutlineVariant),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Column {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 14.dp, vertical = 12.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                // Profile icon
+                                Box(
+                                    modifier = Modifier
+                                        .size(34.dp)
+                                        .clip(CircleShape)
+                                        .background(MatrixColors.SurfaceContainerHigh)
+                                        .border(BorderStroke(1.dp, MatrixColors.OutlineVariant), CircleShape),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Person,
+                                        contentDescription = "Profile",
+                                        tint = Color(0xFFC2C6D6),
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                }
+
+                                Spacer(modifier = Modifier.width(12.dp))
+
+                                // Title slot preview
+                                Box(modifier = Modifier.weight(1f)) {
+                                    TopBarTitle(
+                                        slotContent = currentSlot,
+                                        userName = userName,
+                                        todayTaskCount = todayTaskCount,
+                                        pendingTaskCount = pendingTaskCount
+                                    )
+                                }
+
+                                Spacer(modifier = Modifier.width(8.dp))
+
+                                // Action Badges (Streak & Coins preview)
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                ) {
+                                    Surface(
+                                        shape = RoundedCornerShape(12.dp),
+                                        color = MatrixColors.SurfaceContainerHigh,
+                                        modifier = Modifier.height(26.dp)
+                                    ) {
+                                        Row(
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            modifier = Modifier.padding(horizontal = 8.dp)
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Default.LocalFireDepartment,
+                                                contentDescription = null,
+                                                tint = Color(0xFFFF9800),
+                                                modifier = Modifier.size(14.dp)
+                                            )
+                                            Spacer(modifier = Modifier.width(3.dp))
+                                            Text(
+                                                text = "0",
+                                                fontSize = 11.sp,
+                                                fontWeight = FontWeight.Bold,
+                                                color = MatrixColors.TextHeader
+                                            )
+                                        }
+                                    }
+                                    Surface(
+                                        shape = RoundedCornerShape(12.dp),
+                                        color = MatrixColors.SurfaceContainerHigh,
+                                        modifier = Modifier.height(26.dp)
+                                    ) {
+                                        Row(
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            modifier = Modifier.padding(horizontal = 8.dp)
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Default.MonetizationOn,
+                                                contentDescription = null,
+                                                tint = Color(0xFFFFD700),
+                                                modifier = Modifier.size(14.dp)
+                                            )
+                                            Spacer(modifier = Modifier.width(3.dp))
+                                            Text(
+                                                text = "2",
+                                                fontSize = 11.sp,
+                                                fontWeight = FontWeight.Bold,
+                                                color = MatrixColors.TextHeader
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+
+                            AnimatedSparkDivider(
+                                baseColor = MatrixColors.OutlineVariant,
+                                sparkColor = MatrixColors.Primary,
+                                glowColor = MatrixColors.Secondary,
+                                height = 1.dp,
+                                reverseDirection = true,
+                                durationMillis = 4000,
+                                enableSparkle = enableAnimations
+                            )
+                        }
+                    }
+
+                    // Top Bar Slot Picker Card + Inline Name Editor
+                    Card(
+                        shape = MatrixShapes.Lg,
+                        colors = CardDefaults.cardColors(containerColor = MatrixColors.SurfaceContainerLow),
+                        border = BorderStroke(1.dp, MatrixColors.OutlineVariant),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(16.dp),
+                            verticalArrangement = Arrangement.spacedBy(14.dp)
+                        ) {
+                            TopBarSlotPicker(
+                                currentSlot = currentSlot,
+                                userName = userName,
+                                onSlotSelected = { AppSettingsManager.setTopBarSlot1(it) }
+                            )
+
+                            // If "Your name" is selected, provide an inline editor so the user can easily change it
+                            if (currentSlot == TopBarSlotContent.USER_NAME) {
+                                HorizontalDivider(color = MatrixColors.OutlineVariant, thickness = 1.dp)
+                                UserNameField(
+                                    currentName = userName,
+                                    onNameChanged = { AppSettingsManager.setUserName(it) }
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+
+            // ==========================================
+            // SECTION 2: BOTTOM NAVIGATION BAR
+            // ==========================================
+            item {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Text(
+                        text = "BOTTOM NAVIGATION BAR",
                         color = MatrixColors.TextSecondary,
                         fontSize = 11.sp,
                         fontWeight = FontWeight.Bold,
@@ -303,11 +476,11 @@ fun CustomizeNavScreen(
                 }
             }
 
-            // Live Preview Section
+            // Live Preview of Bottom Bar
             item {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text(
-                        text = "LIVE PREVIEW",
+                        text = "BOTTOM BAR PREVIEW",
                         color = MatrixColors.TextSecondary,
                         fontSize = 11.sp,
                         fontWeight = FontWeight.Bold,
@@ -369,10 +542,15 @@ fun CustomizeNavScreen(
                 }
             }
 
-            // Reset to Defaults Button
+            // ==========================================
+            // SECTION 3: RESET TO DEFAULTS
+            // ==========================================
             item {
                 OutlinedButton(
-                    onClick = { viewModel.resetToDefaults() },
+                    onClick = {
+                        viewModel.resetToDefaults()
+                        showPlatformToast("Navigation reset to defaults")
+                    },
                     shape = MatrixShapes.Md,
                     border = BorderStroke(1.dp, MatrixColors.OutlineVariant),
                     colors = ButtonDefaults.outlinedButtonColors(

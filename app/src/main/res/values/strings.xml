@@ -78,4 +78,12 @@
     <string name="privacy_policy_desc">Read how your on-device data is protected</string>
     <string name="terms_of_service_title">Terms of Service</string>
     <string name="terms_of_service_desc">Terms and conditions for using Calender28</string>
+
+    <!-- Experimental Features Suite -->
+    <string name="confidence_contract_title">Confidence Contract</string>
+    <string name="daily_task_reminder_title">Daily Task Reminder</string>
+    <string name="profile_name_title">Profile Name</string>
+    <string name="top_bar_slot_title">Top Bar Left Title</string>
+    <string name="channel_daily_task_reminder">Daily Task Reminder</string>
+    <string name="channel_daily_task_reminder_desc">Morning briefing of your scheduled tasks</string>
 </resources>

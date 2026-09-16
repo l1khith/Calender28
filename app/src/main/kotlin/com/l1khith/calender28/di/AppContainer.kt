@@ -34,6 +34,12 @@ interface AppContainer {
     val getDayDetailUseCase: com.l1khith.calender28.domain.usecase.GetDayDetailUseCase
     val detectTaskConflictsUseCase: com.l1khith.calender28.domain.usecase.DetectTaskConflictsUseCase
     val getDayConflictsUseCase: com.l1khith.calender28.domain.usecase.GetDayConflictsUseCase
+    val placeBetUseCase: com.l1khith.calender28.domain.usecase.bet.PlaceBetUseCase
+    val evaluateBetUseCase: com.l1khith.calender28.domain.usecase.bet.EvaluateBetUseCase
+    val getBetStatusUseCase: com.l1khith.calender28.domain.usecase.bet.GetBetStatusUseCase
+    val scheduleDailyTaskReminderUseCase: com.l1khith.calender28.domain.usecase.notification.ScheduleDailyTaskReminderUseCase
+    val cancelDailyTaskReminderUseCase: com.l1khith.calender28.domain.usecase.notification.CancelDailyTaskReminderUseCase
+    val generateDefaultNoteTitleUseCase: com.l1khith.calender28.domain.usecase.notes.GenerateDefaultNoteTitleUseCase
 }
 
 /**
@@ -123,5 +129,51 @@ class DefaultAppContainer(private val context: Context) : AppContainer {
 
     override val getDayConflictsUseCase: com.l1khith.calender28.domain.usecase.GetDayConflictsUseCase by lazy {
         com.l1khith.calender28.domain.usecase.GetDayConflictsUseCase(taskRepository)
+    }
+
+    private val serviceAlarmScheduler: com.l1khith.calender28.service.AlarmScheduler by lazy {
+        com.l1khith.calender28.service.AlarmScheduler(appContext)
+    }
+
+    override val placeBetUseCase: com.l1khith.calender28.domain.usecase.bet.PlaceBetUseCase by lazy {
+        com.l1khith.calender28.domain.usecase.bet.PlaceBetUseCase(
+            taskRepository = taskRepository,
+            userPreferencesRepository = userPreferencesRepository
+        )
+    }
+
+    override val evaluateBetUseCase: com.l1khith.calender28.domain.usecase.bet.EvaluateBetUseCase by lazy {
+        com.l1khith.calender28.domain.usecase.bet.EvaluateBetUseCase(
+            taskRepository = taskRepository,
+            coinRepository = coinRepository,
+            userPreferencesRepository = userPreferencesRepository
+        )
+    }
+
+    override val getBetStatusUseCase: com.l1khith.calender28.domain.usecase.bet.GetBetStatusUseCase by lazy {
+        com.l1khith.calender28.domain.usecase.bet.GetBetStatusUseCase(
+            taskRepository = taskRepository,
+            userPreferencesRepository = userPreferencesRepository
+        )
+    }
+
+    override val scheduleDailyTaskReminderUseCase: com.l1khith.calender28.domain.usecase.notification.ScheduleDailyTaskReminderUseCase by lazy {
+        com.l1khith.calender28.domain.usecase.notification.ScheduleDailyTaskReminderUseCase(
+            userPreferencesRepository = userPreferencesRepository,
+            alarmScheduler = serviceAlarmScheduler
+        )
+    }
+
+    override val cancelDailyTaskReminderUseCase: com.l1khith.calender28.domain.usecase.notification.CancelDailyTaskReminderUseCase by lazy {
+        com.l1khith.calender28.domain.usecase.notification.CancelDailyTaskReminderUseCase(
+            userPreferencesRepository = userPreferencesRepository,
+            alarmScheduler = serviceAlarmScheduler
+        )
+    }
+
+    override val generateDefaultNoteTitleUseCase: com.l1khith.calender28.domain.usecase.notes.GenerateDefaultNoteTitleUseCase by lazy {
+        com.l1khith.calender28.domain.usecase.notes.GenerateDefaultNoteTitleUseCase(
+            noteRepository = noteRepository
+        )
     }
 }

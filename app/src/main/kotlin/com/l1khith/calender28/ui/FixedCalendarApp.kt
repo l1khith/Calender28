@@ -153,6 +153,21 @@ fun FixedCalendarApp(
     val tabOrder by com.l1khith.calender28.utils.AppSettingsManager.tabOrder.collectAsStateWithLifecycle()
     var showCustomizeNavScreen by remember { mutableStateOf(false) }
 
+    val todayTaskCount by viewModel.todayTaskCount.collectAsStateWithLifecycle()
+    val todayPendingCount by viewModel.todayPendingCount.collectAsStateWithLifecycle()
+    val betStatus by viewModel.betStatus.collectAsStateWithLifecycle()
+    val topBarSlot1 by com.l1khith.calender28.utils.AppSettingsManager.topBarSlot1.collectAsStateWithLifecycle()
+    val userName by com.l1khith.calender28.utils.AppSettingsManager.userName.collectAsStateWithLifecycle()
+    var showConfidenceContractSheet by rememberSaveable { mutableStateOf(false) }
+
+    LaunchedEffect(Unit) {
+        val navTo = activity?.intent?.getStringExtra("navigate_to")
+        if (navTo == "confidence_contract") {
+            showConfidenceContractSheet = true
+        }
+        viewModel.evaluateConfidenceBet()
+    }
+
     LaunchedEffect(Unit) {
         sparkyViewModel.evolutionEvent.collect { stage ->
             evolvingStageToCelebrate = stage
@@ -332,10 +347,39 @@ fun FixedCalendarApp(
         if (showCustomizeNavScreen) {
             androidx.activity.compose.BackHandler { showCustomizeNavScreen = false }
             val customizeNavViewModel: CustomizeNavViewModel = androidx.lifecycle.viewmodel.compose.viewModel(factory = AppViewModelProvider.Factory)
-            CustomizeNavScreen(
-                viewModel = customizeNavViewModel,
-                onBack = { showCustomizeNavScreen = false }
-            )
+            Scaffold(
+                bottomBar = {
+                    MatrixBottomNav(
+                        selectedTab = -1,
+                        visibleTabs = visibleTabs,
+                        isProActive = isProActive,
+                        enableAnimations = enableAnimations,
+                        monthNavIcon = monthNavIcon,
+                        tasksNavIcon = tasksNavIcon,
+                        habitNavIcon = habitNavIcon,
+                        notesNavIcon = notesNavIcon,
+                        onNavigateToTab = { tabIndex ->
+                            showCustomizeNavScreen = false
+                            showProfileScreen = false
+                            onNavigateToTab(tabIndex)
+                        }
+                    )
+                },
+                containerColor = backgroundColor
+            ) { innerPadding ->
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(innerPadding)
+                ) {
+                    CustomizeNavScreen(
+                        viewModel = customizeNavViewModel,
+                        onBack = { showCustomizeNavScreen = false },
+                        todayTaskCount = todayTaskCount,
+                        pendingTaskCount = todayPendingCount
+                    )
+                }
+            }
         } else if (showAddTaskDialog) {
             CreateTaskScreen(
                 task = taskToEdit,
@@ -476,6 +520,22 @@ fun FixedCalendarApp(
                     )
                 }
             },
+            bottomBar = {
+                MatrixBottomNav(
+                    selectedTab = -1,
+                    visibleTabs = visibleTabs,
+                    isProActive = isProActive,
+                    enableAnimations = enableAnimations,
+                    monthNavIcon = monthNavIcon,
+                    tasksNavIcon = tasksNavIcon,
+                    habitNavIcon = habitNavIcon,
+                    notesNavIcon = notesNavIcon,
+                    onNavigateToTab = { tabIndex ->
+                        showProfileScreen = false
+                        onNavigateToTab(tabIndex)
+                    }
+                )
+            },
             containerColor = backgroundColor
         ) { innerPadding ->
             Box(
@@ -500,6 +560,7 @@ fun FixedCalendarApp(
                         onNavigateToTab(0)
                     },
                     onOpenSparkyDetail = { showSparkyDetail = true },
+                    onOpenCustomizeNav = { showCustomizeNavScreen = true },
                     sparkyViewModel = sparkyViewModel
                 )
             }
@@ -522,7 +583,11 @@ fun FixedCalendarApp(
                     onOpenStreakInfo = { showStreakInfoDialog = true },
                     onOpenCoinStore = { showCoinStoreDialog = true },
                     onOpenSparkyDetail = { showSparkyDetail = true },
-                    onOpenSync = { showSyncDialog = true }
+                    onOpenSync = { showSyncDialog = true },
+                    slotContent = topBarSlot1,
+                    userName = userName,
+                    todayTaskCount = todayTaskCount,
+                    pendingTaskCount = todayPendingCount
                 )
             },
             bottomBar = {
@@ -594,6 +659,54 @@ fun FixedCalendarApp(
                             Spacer(modifier = Modifier.height(10.dp))
                         } else {
                             Spacer(modifier = Modifier.height(12.dp))
+                        }
+
+                        if (betStatus is com.l1khith.calender28.domain.model.BetStatus.ReadyToBet || betStatus is com.l1khith.calender28.domain.model.BetStatus.Active) {
+                            Surface(
+                                shape = RoundedCornerShape(10.dp),
+                                color = MatrixColors.Primary.copy(alpha = 0.12f),
+                                border = BorderStroke(1.dp, MatrixColors.Primary.copy(alpha = 0.35f)),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clip(RoundedCornerShape(10.dp))
+                                    .clickable { showConfidenceContractSheet = true }
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.Star,
+                                            contentDescription = "Contract",
+                                            tint = MatrixColors.Primary,
+                                            modifier = Modifier.size(16.dp)
+                                        )
+                                        Text(
+                                            text = when (val s = betStatus) {
+                                                is com.l1khith.calender28.domain.model.BetStatus.ReadyToBet -> "Confidence Bet: Place your bet today"
+                                                is com.l1khith.calender28.domain.model.BetStatus.Active -> "Active Bet: ${s.currentCompletedCount}/${s.requiredToWin} tasks completed"
+                                                else -> ""
+                                            },
+                                            style = MaterialTheme.typography.bodySmall.copy(
+                                                fontWeight = FontWeight.SemiBold,
+                                                color = MatrixColors.Primary
+                                            )
+                                        )
+                                    }
+                                    Icon(
+                                        imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                                        contentDescription = "Open",
+                                        tint = MatrixColors.Primary,
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                }
+                            }
+                            Spacer(modifier = Modifier.height(10.dp))
                         }
 
             MonthYearSelector(
@@ -750,6 +863,16 @@ fun FixedCalendarApp(
             },
             isProActive = isProActive,
             onOpenPaywall = { showPaywallDialog = true }
+        )
+    }
+
+    if (showConfidenceContractSheet) {
+        com.l1khith.calender28.ui.contract.ConfidenceContractSheet(
+            betStatus = betStatus,
+            onDismiss = { showConfidenceContractSheet = false },
+            onPlaceBet = { tier ->
+                viewModel.placeConfidenceBet(tier)
+            }
         )
     }
 
