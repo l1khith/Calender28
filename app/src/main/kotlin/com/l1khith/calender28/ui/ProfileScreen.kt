@@ -252,8 +252,10 @@ fun ProfileScreen(
                     }
                 }
             }
-            // Section: Profile Identity
-            item {
+        }
+
+        // Section: Profile Identity
+        item {
                 Card(
                     shape = MatrixShapes.Lg,
                     colors = CardDefaults.cardColors(containerColor = MatrixColors.SurfaceContainerLow),
@@ -468,32 +470,10 @@ fun ProfileScreen(
                             ProfileSubtitleRow(
                                 icon = Icons.Default.Tune,
                                 title = "Customize Navigation",
-                                subtitle = "Choose which tabs appear in the bottom bar",
+                                subtitle = "Configure top bar title & bottom navigation tabs",
                                 onClick = onOpenCustomizeNav
                             )
                         }
-                    }
-                }
-            }
-
-            // Section: TOP BAR CUSTOMIZATION
-            item {
-                Card(
-                    shape = MatrixShapes.Lg,
-                    colors = CardDefaults.cardColors(containerColor = MatrixColors.SurfaceContainerLow),
-                    border = BorderStroke(1.dp, MatrixColors.OutlineVariant),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Box(modifier = Modifier.padding(16.dp)) {
-                        TopBarSlotPicker(
-                            currentSlot = topBarSlot1,
-                            userName = userName,
-                            onSlotSelected = {
-                                com.l1khith.calender28.utils.AppSettingsManager.setTopBarSlot1(
-                                    it
-                                )
-                            }
-                        )
                     }
                 }
             }
@@ -665,7 +645,6 @@ fun ProfileScreen(
             }
         }
     }
-}
 
 @Composable
 fun ThemeSelectionDialog(

@@ -24,6 +24,14 @@ object CalendarContentObserver {
     fun register(context: Context) {
         if (observer != null) return
         val appContext = context.applicationContext
+        if (androidx.core.content.ContextCompat.checkSelfPermission(
+                appContext,
+                android.Manifest.permission.READ_CALENDAR
+            ) != android.content.pm.PackageManager.PERMISSION_GRANTED
+        ) {
+            Log.d("CalendarObserver", "READ_CALENDAR permission not granted, skipping observer registration")
+            return
+        }
         try {
             val handler = Handler(Looper.getMainLooper())
             observer = object : ContentObserver(handler) {

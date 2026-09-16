@@ -347,10 +347,39 @@ fun FixedCalendarApp(
         if (showCustomizeNavScreen) {
             androidx.activity.compose.BackHandler { showCustomizeNavScreen = false }
             val customizeNavViewModel: CustomizeNavViewModel = androidx.lifecycle.viewmodel.compose.viewModel(factory = AppViewModelProvider.Factory)
-            CustomizeNavScreen(
-                viewModel = customizeNavViewModel,
-                onBack = { showCustomizeNavScreen = false }
-            )
+            Scaffold(
+                bottomBar = {
+                    MatrixBottomNav(
+                        selectedTab = -1,
+                        visibleTabs = visibleTabs,
+                        isProActive = isProActive,
+                        enableAnimations = enableAnimations,
+                        monthNavIcon = monthNavIcon,
+                        tasksNavIcon = tasksNavIcon,
+                        habitNavIcon = habitNavIcon,
+                        notesNavIcon = notesNavIcon,
+                        onNavigateToTab = { tabIndex ->
+                            showCustomizeNavScreen = false
+                            showProfileScreen = false
+                            onNavigateToTab(tabIndex)
+                        }
+                    )
+                },
+                containerColor = backgroundColor
+            ) { innerPadding ->
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(innerPadding)
+                ) {
+                    CustomizeNavScreen(
+                        viewModel = customizeNavViewModel,
+                        onBack = { showCustomizeNavScreen = false },
+                        todayTaskCount = todayTaskCount,
+                        pendingTaskCount = todayPendingCount
+                    )
+                }
+            }
         } else if (showAddTaskDialog) {
             CreateTaskScreen(
                 task = taskToEdit,
@@ -491,6 +520,22 @@ fun FixedCalendarApp(
                     )
                 }
             },
+            bottomBar = {
+                MatrixBottomNav(
+                    selectedTab = -1,
+                    visibleTabs = visibleTabs,
+                    isProActive = isProActive,
+                    enableAnimations = enableAnimations,
+                    monthNavIcon = monthNavIcon,
+                    tasksNavIcon = tasksNavIcon,
+                    habitNavIcon = habitNavIcon,
+                    notesNavIcon = notesNavIcon,
+                    onNavigateToTab = { tabIndex ->
+                        showProfileScreen = false
+                        onNavigateToTab(tabIndex)
+                    }
+                )
+            },
             containerColor = backgroundColor
         ) { innerPadding ->
             Box(
@@ -515,6 +560,7 @@ fun FixedCalendarApp(
                         onNavigateToTab(0)
                     },
                     onOpenSparkyDetail = { showSparkyDetail = true },
+                    onOpenCustomizeNav = { showCustomizeNavScreen = true },
                     sparkyViewModel = sparkyViewModel
                 )
             }
