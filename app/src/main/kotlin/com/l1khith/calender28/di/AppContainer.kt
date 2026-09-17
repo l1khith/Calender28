@@ -40,6 +40,11 @@ interface AppContainer {
     val scheduleDailyTaskReminderUseCase: com.l1khith.calender28.domain.usecase.notification.ScheduleDailyTaskReminderUseCase
     val cancelDailyTaskReminderUseCase: com.l1khith.calender28.domain.usecase.notification.CancelDailyTaskReminderUseCase
     val generateDefaultNoteTitleUseCase: com.l1khith.calender28.domain.usecase.notes.GenerateDefaultNoteTitleUseCase
+    val resolveConflictUseCase: com.l1khith.calender28.domain.usecase.conflicts.ResolveConflictUseCase
+    val suggestFreeSlotsUseCase: com.l1khith.calender28.domain.usecase.conflicts.SuggestFreeSlotsUseCase
+    val parseNoteLinksUseCase: com.l1khith.calender28.domain.usecase.notes.ParseNoteLinksUseCase
+    val buildGraphUseCase: com.l1khith.calender28.domain.usecase.notes.BuildGraphUseCase
+    val buildBatchGraphUseCase: com.l1khith.calender28.domain.usecase.notes.BuildBatchGraphUseCase
 }
 
 /**
@@ -95,7 +100,11 @@ class DefaultAppContainer(private val context: Context) : AppContainer {
     }
 
     override val noteRepository: com.l1khith.calender28.repository.NoteRepository by lazy {
-        com.l1khith.calender28.repository.NoteRepositoryImpl(database.noteDao())
+        com.l1khith.calender28.repository.NoteRepositoryImpl(
+            noteDao = database.noteDao(),
+            noteLinkDao = database.noteLinkDao(),
+            parseNoteLinksUseCase = parseNoteLinksUseCase
+        )
     }
 
     override val navPreferencesRepository: com.l1khith.calender28.repository.NavPreferencesRepository by lazy {
@@ -174,6 +183,38 @@ class DefaultAppContainer(private val context: Context) : AppContainer {
     override val generateDefaultNoteTitleUseCase: com.l1khith.calender28.domain.usecase.notes.GenerateDefaultNoteTitleUseCase by lazy {
         com.l1khith.calender28.domain.usecase.notes.GenerateDefaultNoteTitleUseCase(
             noteRepository = noteRepository
+        )
+    }
+
+    override val resolveConflictUseCase: com.l1khith.calender28.domain.usecase.conflicts.ResolveConflictUseCase by lazy {
+        com.l1khith.calender28.domain.usecase.conflicts.ResolveConflictUseCase(
+            taskRepository = taskRepository,
+            conflictResolutionDao = database.conflictResolutionDao()
+        )
+    }
+
+    override val suggestFreeSlotsUseCase: com.l1khith.calender28.domain.usecase.conflicts.SuggestFreeSlotsUseCase by lazy {
+        com.l1khith.calender28.domain.usecase.conflicts.SuggestFreeSlotsUseCase(
+            taskRepository = taskRepository
+        )
+    }
+
+    override val parseNoteLinksUseCase: com.l1khith.calender28.domain.usecase.notes.ParseNoteLinksUseCase by lazy {
+        com.l1khith.calender28.domain.usecase.notes.ParseNoteLinksUseCase()
+    }
+
+    override val buildGraphUseCase: com.l1khith.calender28.domain.usecase.notes.BuildGraphUseCase by lazy {
+        com.l1khith.calender28.domain.usecase.notes.BuildGraphUseCase(
+            noteRepository = noteRepository,
+            noteLinkDao = database.noteLinkDao(),
+            parseNoteLinksUseCase = parseNoteLinksUseCase
+        )
+    }
+
+    override val buildBatchGraphUseCase: com.l1khith.calender28.domain.usecase.notes.BuildBatchGraphUseCase by lazy {
+        com.l1khith.calender28.domain.usecase.notes.BuildBatchGraphUseCase(
+            noteRepository = noteRepository,
+            parseNoteLinksUseCase = parseNoteLinksUseCase
         )
     }
 }
