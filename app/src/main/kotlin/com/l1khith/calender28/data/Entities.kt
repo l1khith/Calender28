@@ -35,7 +35,8 @@ data class AppTaskEntity(
     val end_time: String? = null,
     val is_all_day: Int = 0,
     val reminder_offset_min: Int? = null,
-    val end_utc_timestamp: Long? = null
+    val end_utc_timestamp: Long? = null,
+    val reminder_offsets: List<Int> = emptyList()
 ) {
     fun toAppTask(): AppTask = AppTask(
         id = id,
@@ -58,7 +59,8 @@ data class AppTaskEntity(
         endTime = end_time,
         isAllDay = is_all_day,
         reminderOffsetMin = reminder_offset_min,
-        endUtcTimestamp = end_utc_timestamp
+        endUtcTimestamp = end_utc_timestamp,
+        reminderOffsets = reminder_offsets.ifEmpty { reminder_offset_min?.let { listOf(it) } ?: emptyList() }
     )
 
     companion object {
@@ -82,8 +84,9 @@ data class AppTaskEntity(
             end_date = task.endDate,
             end_time = task.endTime,
             is_all_day = task.isAllDay,
-            reminder_offset_min = task.reminderOffsetMin,
-            end_utc_timestamp = task.endUtcTimestamp
+            reminder_offset_min = task.reminderOffsetMin ?: task.reminderOffsets.firstOrNull(),
+            end_utc_timestamp = task.endUtcTimestamp,
+            reminder_offsets = task.effectiveReminderOffsets
         )
     }
 }
