@@ -388,7 +388,7 @@ fun FixedCalendarApp(
                     createTaskInitialHour = null
                     createTaskInitialDateStr = null
                 },
-                onSave = { id, title, desc, isReminder, time, priority, endDate, endTime, isAllDay, reminderOffsetMin ->
+                onSave = { id, title, desc, isReminder, time, priority, endDate, endTime, isAllDay, reminderOffsetMin, reminderOffsets ->
                     val targetDate = createTaskInitialDateStr ?: selectedDate.toString()
                     if (isReminder) {
                         pendingNotificationSaveAction = {
@@ -403,7 +403,8 @@ fun FixedCalendarApp(
                                 endDate = endDate,
                                 endTime = endTime,
                                 isAllDay = isAllDay,
-                                reminderOffsetMin = reminderOffsetMin
+                                reminderOffsetMin = reminderOffsetMin,
+                                reminderOffsets = reminderOffsets
                             )
                             showAddTaskDialog = false
                             createTaskInitialHour = null
@@ -422,7 +423,8 @@ fun FixedCalendarApp(
                             endDate = endDate,
                             endTime = endTime,
                             isAllDay = isAllDay,
-                            reminderOffsetMin = reminderOffsetMin
+                            reminderOffsetMin = reminderOffsetMin,
+                            reminderOffsets = reminderOffsets
                         )
                         showAddTaskDialog = false
                         createTaskInitialHour = null
@@ -603,9 +605,38 @@ fun FixedCalendarApp(
                     onNavigateToTab = onNavigateToTab
                 )
             },
-    containerColor = backgroundColor
-
-    ) { innerPadding ->
+            floatingActionButton = {
+                androidx.compose.animation.AnimatedVisibility(
+                    visible = selectedTab == 0,
+                    enter = androidx.compose.animation.scaleIn() + androidx.compose.animation.fadeIn(),
+                    exit = androidx.compose.animation.scaleOut() + androidx.compose.animation.fadeOut()
+                ) {
+                    var lastClickTime by remember { mutableLongStateOf(0L) }
+                    FloatingActionButton(
+                        onClick = {
+                            val now = System.currentTimeMillis()
+                            if (now - lastClickTime > 500L) {
+                                lastClickTime = now
+                                createTaskInitialDateStr = selectedDate.toString()
+                                createTaskInitialHour = null
+                                taskToEdit = null
+                                showAddTaskDialog = true
+                            }
+                        },
+                        containerColor = MatrixColors.Primary,
+                        contentColor = MatrixColors.OnPrimary,
+                        shape = CircleShape,
+                        modifier = Modifier.padding(bottom = 8.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Add,
+                            contentDescription = "Add Task"
+                        )
+                    }
+                }
+            },
+            containerColor = backgroundColor
+        ) { innerPadding ->
         Box(
             modifier = Modifier
                 .fillMaxSize()
