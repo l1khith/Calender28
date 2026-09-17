@@ -18,6 +18,7 @@ import kotlinx.coroutines.withContext
 data class DayDetail(
     val dateStr: String,
     val timedTasks: List<AppTask>,
+    val unscheduledTasks: List<AppTask>,
     val allDayTasks: List<AppTask>,
     val crossDayTasks: List<AppTask>,
     val recurringInstances: List<RecurringTask>,
@@ -53,13 +54,15 @@ class GetDayDetailUseCase(
             }
 
             val spanningTasks = spanningDeferred.await()
-            val timedTasks = spanningTasks.filter { !it.allDay && !it.spansMidnight }
             val allDayTasks = spanningTasks.filter { it.allDay }
             val crossDayTasks = spanningTasks.filter { it.spansMidnight }
+            val timedTasks = spanningTasks.filter { it.isTimeBounded && !it.spansMidnight }
+            val unscheduledTasks = spanningTasks.filter { !it.allDay && !it.spansMidnight && !it.isTimeBounded }
 
             DayDetail(
                 dateStr = dateStr,
                 timedTasks = timedTasks,
+                unscheduledTasks = unscheduledTasks,
                 allDayTasks = allDayTasks,
                 crossDayTasks = crossDayTasks,
                 recurringInstances = recurringDeferred.await(),

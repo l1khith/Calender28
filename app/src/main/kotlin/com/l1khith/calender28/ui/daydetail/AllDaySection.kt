@@ -28,6 +28,7 @@ import com.l1khith.calender28.ui.theme.MatrixColors
 @Composable
 fun AuxiliarySections(
     allDayTasks: List<AppTask>,
+    unscheduledTasks: List<AppTask>,
     recurringTasks: List<RecurringTask>,
     habits: List<Habit>,
     focusSessions: List<FocusSession>,
@@ -39,149 +40,65 @@ fun AuxiliarySections(
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         if (allDayTasks.isNotEmpty()) {
-            CollapsibleGroup(
-                title = "🌅 All-Day Events (${allDayTasks.size})",
-                defaultExpanded = true
-            ) {
-                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    allDayTasks.forEach { task ->
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clip(RoundedCornerShape(8.dp))
-                                .background(MatrixColors.Primary.copy(alpha = 0.12f))
-                                .clickable { onTaskClick(task) }
-                                .padding(horizontal = 12.dp, vertical = 8.dp)
-                        ) {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Text(
-                                    text = task.title,
-                                    color = MatrixColors.TextHeader,
-                                    fontWeight = FontWeight.SemiBold,
-                                    fontSize = 13.sp
-                                )
-                                Text(
-                                    text = "All Day",
-                                    color = MatrixColors.Primary,
-                                    fontSize = 11.sp,
-                                    fontWeight = FontWeight.Bold
-                                )
-                            }
-                        }
-                    }
-                }
-            }
+            AllDayTasksSection(allDayTasks = allDayTasks, onTaskClick = onTaskClick)
+        }
+
+        if (unscheduledTasks.isNotEmpty()) {
+            UnscheduledTasksSection(tasks = unscheduledTasks, onTaskClick = onTaskClick)
         }
 
         if (recurringTasks.isNotEmpty()) {
-            CollapsibleGroup(
-                title = "🔁 Recurring Routines (${recurringTasks.size})",
-                defaultExpanded = false
-            ) {
-                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    recurringTasks.forEach { rec ->
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clip(RoundedCornerShape(8.dp))
-                                .background(MatrixColors.SurfaceContainerLow)
-                                .padding(horizontal = 12.dp, vertical = 8.dp)
-                        ) {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Text(
-                                    text = rec.title,
-                                    color = MatrixColors.TextHeader,
-                                    fontSize = 13.sp
-                                )
-                                Text(
-                                    text = rec.reminderTime ?: "Routine",
-                                    color = MatrixColors.TextSecondary,
-                                    fontSize = 11.sp
-                                )
-                            }
-                        }
-                    }
-                }
-            }
+            RecurringSection(recurringTasks = recurringTasks)
         }
 
         if (habits.isNotEmpty()) {
-            CollapsibleGroup(
-                title = "🔥 Habits Active (${habits.size})",
-                defaultExpanded = false
-            ) {
-                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    habits.forEach { habit ->
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clip(RoundedCornerShape(8.dp))
-                                .background(MatrixColors.SurfaceContainerLow)
-                                .padding(horizontal = 12.dp, vertical = 8.dp)
-                        ) {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Text(
-                                    text = habit.name,
-                                    color = MatrixColors.TextHeader,
-                                    fontSize = 13.sp
-                                )
-                                Text(
-                                    text = habit.reminderTime ?: "Daily",
-                                    color = MatrixColors.Tertiary,
-                                    fontSize = 11.sp,
-                                    fontWeight = FontWeight.Bold
-                                )
-                            }
-                        }
-                    }
-                }
-            }
+            HabitsSection(habits = habits)
         }
 
         if (focusSessions.isNotEmpty()) {
-            CollapsibleGroup(
-                title = "⏱️ Focus Sessions Today (${focusSessions.size})",
-                defaultExpanded = false
-            ) {
-                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    focusSessions.forEach { session ->
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clip(RoundedCornerShape(8.dp))
-                                .background(MatrixColors.SurfaceContainerLow)
-                                .padding(horizontal = 12.dp, vertical = 8.dp)
-                        ) {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Text(
-                                    text = session.taskTitle.ifEmpty { "Focus" },
-                                    color = MatrixColors.TextHeader,
-                                    fontSize = 13.sp
-                                )
-                                Text(
-                                    text = session.formattedDuration,
-                                    color = MatrixColors.Secondary,
-                                    fontSize = 11.sp,
-                                    fontWeight = FontWeight.Bold
-                                )
-                            }
-                        }
+            FocusSection(focusSessions = focusSessions)
+        }
+    }
+}
+
+@Composable
+fun AllDayTasksSection(
+    allDayTasks: List<AppTask>,
+    onTaskClick: (AppTask) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    CollapsibleGroup(
+        title = "🌅 All-Day Events (${allDayTasks.size})",
+        defaultExpanded = true,
+        modifier = modifier
+    ) {
+        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            allDayTasks.forEach { task ->
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(MatrixColors.Primary.copy(alpha = 0.12f))
+                        .clickable { onTaskClick(task) }
+                        .padding(horizontal = 12.dp, vertical = 8.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = task.title,
+                            color = MatrixColors.TextHeader,
+                            fontWeight = FontWeight.SemiBold,
+                            fontSize = 13.sp
+                        )
+                        Text(
+                            text = "All Day",
+                            color = MatrixColors.Primary,
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold
+                        )
                     }
                 }
             }
@@ -190,15 +107,141 @@ fun AuxiliarySections(
 }
 
 @Composable
-private fun CollapsibleGroup(
+fun RecurringSection(
+    recurringTasks: List<RecurringTask>,
+    modifier: Modifier = Modifier
+) {
+    CollapsibleGroup(
+        title = "🔁 Recurring Routines (${recurringTasks.size})",
+        defaultExpanded = false,
+        modifier = modifier
+    ) {
+        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            recurringTasks.forEach { rec ->
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(MatrixColors.SurfaceContainerLow)
+                        .padding(horizontal = 12.dp, vertical = 8.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = rec.title,
+                            color = MatrixColors.TextHeader,
+                            fontSize = 13.sp
+                        )
+                        Text(
+                            text = rec.reminderTime ?: "Routine",
+                            color = MatrixColors.TextSecondary,
+                            fontSize = 11.sp
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun HabitsSection(
+    habits: List<Habit>,
+    modifier: Modifier = Modifier
+) {
+    CollapsibleGroup(
+        title = "🔥 Habits Active (${habits.size})",
+        defaultExpanded = false,
+        modifier = modifier
+    ) {
+        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            habits.forEach { habit ->
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(MatrixColors.SurfaceContainerLow)
+                        .padding(horizontal = 12.dp, vertical = 8.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = habit.name,
+                            color = MatrixColors.TextHeader,
+                            fontSize = 13.sp
+                        )
+                        Text(
+                            text = habit.reminderTime ?: "Daily",
+                            color = MatrixColors.Tertiary,
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun FocusSection(
+    focusSessions: List<FocusSession>,
+    modifier: Modifier = Modifier
+) {
+    CollapsibleGroup(
+        title = "⏱️ Focus Sessions Today (${focusSessions.size})",
+        defaultExpanded = false,
+        modifier = modifier
+    ) {
+        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            focusSessions.forEach { session ->
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(MatrixColors.SurfaceContainerLow)
+                        .padding(horizontal = 12.dp, vertical = 8.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = session.taskTitle.ifEmpty { "Focus" },
+                            color = MatrixColors.TextHeader,
+                            fontSize = 13.sp
+                        )
+                        Text(
+                            text = session.formattedDuration,
+                            color = MatrixColors.Secondary,
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun CollapsibleGroup(
     title: String,
     defaultExpanded: Boolean,
+    modifier: Modifier = Modifier,
     content: @Composable () -> Unit
 ) {
     var expanded by remember { mutableStateOf(defaultExpanded) }
 
     Card(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = modifier.fillMaxWidth(),
         shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(containerColor = MatrixColors.SurfaceContainerLow)
     ) {

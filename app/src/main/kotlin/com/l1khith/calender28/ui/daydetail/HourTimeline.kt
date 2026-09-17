@@ -76,6 +76,7 @@ fun HourTimeline(
 
     LazyColumn(
         state = listState,
+        contentPadding = PaddingValues(bottom = 96.dp),
         modifier = modifier.fillMaxSize()
     ) {
         // ── Top Continuation Banners ──
