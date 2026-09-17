@@ -6,8 +6,11 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.l1khith.calender28.data.AppTask
 import com.l1khith.calender28.domain.model.DayConflict
+import com.l1khith.calender28.domain.model.ConflictResolutionResult
 import com.l1khith.calender28.domain.usecase.GetDayConflictsUseCase
 import com.l1khith.calender28.domain.usecase.GetDayDetailUseCase
+import com.l1khith.calender28.domain.usecase.conflicts.ResolveConflictUseCase
+import com.l1khith.calender28.domain.usecase.conflicts.SuggestFreeSlotsUseCase
 import com.l1khith.calender28.repository.TaskRepository
 import com.l1khith.calender28.utils.FixedCalendarHelper
 import com.l1khith.calender28.utils.FixedDate
@@ -23,7 +26,9 @@ class DayDetailViewModel(
     application: Application,
     private val getDayDetailUseCase: GetDayDetailUseCase,
     private val getDayConflictsUseCase: GetDayConflictsUseCase,
-    private val taskRepository: TaskRepository
+    private val taskRepository: TaskRepository,
+    private val resolveConflictUseCase: ResolveConflictUseCase,
+    private val suggestFreeSlotsUseCase: SuggestFreeSlotsUseCase
 ) : AndroidViewModel(application) {
 
     private val _uiState = MutableStateFlow(
@@ -45,6 +50,7 @@ class DayDetailViewModel(
                 _uiState.value = _uiState.value.copy(
                     isLoading = false,
                     timedTasks = detail.timedTasks,
+                    unscheduledTasks = detail.unscheduledTasks,
                     allDayTasks = detail.allDayTasks,
                     crossDayTasks = detail.crossDayTasks,
                     recurringInstances = detail.recurringInstances,
@@ -67,32 +73,89 @@ class DayDetailViewModel(
         }
     }
 
-    fun applyConflictSlot(eventId: String, newStartTime: String) {
+    fun moveEvent(
+        eventId: String,
+        conflictEventId: String,
+        isEventA: Boolean,
+        newDateStr: String,
+        newStartTime: String,
+        conflictType: String = "OVERLAP"
+    ) {
         viewModelScope.launch(Dispatchers.IO) {
-            val allTasks = taskRepository.getAllTasks()
-            val task = allTasks.find { it.id == eventId } ?: return@launch
-            val fixedDate = FixedCalendarHelper.parseDateStr(task.associatedDate) ?: return@launch
-
-            val durationMs = if (task.durationMinutes > 0) task.durationMinutes * 60_000L else 60 * 60_000L
-            val newStartMs = FixedCalendarHelper.toTimestamp(fixedDate, newStartTime)
-            val newEndMs = newStartMs + durationMs
-
-            // Compute new end time string
-            val endMinutesTotal = (newEndMs / 60_000L) % 1440L
-            val endHour = (endMinutesTotal / 60).toInt()
-            val endMin = (endMinutesTotal % 60).toInt()
-            val newEndTimeStr = "%02d:%02d".format(endHour, endMin)
-
-            val updatedTask = task.copy(
-                reminderTime = newStartTime,
-                utcTimestamp = newStartMs,
-                endTime = newEndTimeStr,
-                endUtcTimestamp = newEndMs
-            )
-
-            taskRepository.updateTask(updatedTask)
-            loadDate(_uiState.value.selectedDate)
+            try {
+                val result = resolveConflictUseCase.moveEvent(
+                    eventId = eventId,
+                    conflictEventId = conflictEventId,
+                    isEventA = isEventA,
+                    newDateStr = newDateStr,
+                    newStartTime = newStartTime,
+                    conflictType = conflictType
+                )
+                _uiState.value = _uiState.value.copy(lastResolutionResult = result)
+                loadDate(_uiState.value.selectedDate)
+            } catch (e: Exception) {
+                Log.e(TAG, "Error moving event $eventId", e)
+            }
         }
+    }
+
+    fun deleteEvent(
+        eventId: String,
+        conflictEventId: String,
+        isEventA: Boolean,
+        conflictType: String = "OVERLAP"
+    ) {
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val result = resolveConflictUseCase.deleteEvent(
+                    eventId = eventId,
+                    conflictEventId = conflictEventId,
+                    isEventA = isEventA,
+                    conflictType = conflictType
+                )
+                _uiState.value = _uiState.value.copy(lastResolutionResult = result)
+                loadDate(_uiState.value.selectedDate)
+            } catch (e: Exception) {
+                Log.e(TAG, "Error deleting event $eventId", e)
+            }
+        }
+    }
+
+    fun mergeEvents(
+        eventAId: String,
+        eventBId: String,
+        conflictType: String = "HARD_OVERLAP"
+    ) {
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val result = resolveConflictUseCase.mergeEvents(
+                    eventAId = eventAId,
+                    eventBId = eventBId,
+                    conflictType = conflictType
+                )
+                _uiState.value = _uiState.value.copy(lastResolutionResult = result)
+                loadDate(_uiState.value.selectedDate)
+            } catch (e: Exception) {
+                Log.e(TAG, "Error merging events $eventAId and $eventBId", e)
+            }
+        }
+    }
+
+    fun undoLastResolution() {
+        val lastResult = _uiState.value.lastResolutionResult ?: return
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                resolveConflictUseCase.undo(lastResult)
+                _uiState.value = _uiState.value.copy(lastResolutionResult = null)
+                loadDate(_uiState.value.selectedDate)
+            } catch (e: Exception) {
+                Log.e(TAG, "Error undoing resolution", e)
+            }
+        }
+    }
+
+    fun clearLastResolution() {
+        _uiState.value = _uiState.value.copy(lastResolutionResult = null)
     }
 
     fun addBuffer(eventId: String, bufferMinutes: Int = 15) {

@@ -22,7 +22,9 @@ fun ConflictReviewSheet(
     dateStr: String,
     allTasks: List<AppTask>,
     onDismiss: () -> Unit,
-    onApplySlot: (eventId: String, newTime: String) -> Unit,
+    onMoveEvent: (eventId: String, conflictEventId: String, isEventA: Boolean, newDateStr: String, newStartTime: String) -> Unit,
+    onDeleteEvent: (eventId: String, conflictEventId: String, isEventA: Boolean) -> Unit,
+    onMergeEvents: (eventAId: String, eventBId: String) -> Unit,
     onAddBuffer: (eventId: String) -> Unit,
     onDismissConflict: (conflict: DayConflict) -> Unit
 ) {
@@ -82,17 +84,20 @@ fun ConflictReviewSheet(
                             is DayConflict.CrossDayOverlap -> 60L
                             else -> 30L
                         }
-                        val suggestedSlot = ConflictResolver.findConflictFreeSlot(
+                        val suggestedSlots = ConflictResolver.findNearestFreeSlots(
                             candidateDate = dateStr,
                             durationMinutes = candidateDuration,
                             existingTasks = allTasks,
-                            ignoreTaskId = conflict.primaryEventId
+                            ignoreTaskId = conflict.primaryEventId,
+                            count = 3
                         )
 
                         ConflictCard(
                             conflict = conflict,
-                            suggestedSlot = suggestedSlot,
-                            onApplySlot = onApplySlot,
+                            suggestedSlots = suggestedSlots,
+                            onMoveEvent = onMoveEvent,
+                            onDeleteEvent = onDeleteEvent,
+                            onMergeEvents = onMergeEvents,
                             onAddBuffer = onAddBuffer,
                             onDismiss = { onDismissConflict(conflict) }
                         )

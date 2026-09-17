@@ -14,6 +14,7 @@ data class DayDetailUiState(
     val selectedDate: FixedDate,
     val isLoading: Boolean = false,
     val timedTasks: List<AppTask> = emptyList(),
+    val unscheduledTasks: List<AppTask> = emptyList(),
     val allDayTasks: List<AppTask> = emptyList(),
     val crossDayTasks: List<AppTask> = emptyList(),
     val recurringInstances: List<RecurringTask> = emptyList(),
@@ -22,7 +23,8 @@ data class DayDetailUiState(
     val scheduledAlarms: List<ScheduledAlarmEntity> = emptyList(),
     val conflicts: List<DayConflict> = emptyList(),
     val dismissedConflictKeys: Set<String> = emptySet(),
-    val isReviewSheetOpen: Boolean = false
+    val isReviewSheetOpen: Boolean = false,
+    val lastResolutionResult: com.l1khith.calender28.domain.model.ConflictResolutionResult? = null
 ) {
     val activeConflicts: List<DayConflict>
         get() = conflicts.filter { conflict ->
