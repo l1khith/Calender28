@@ -93,9 +93,9 @@ class NotificationHelper(private val context: Context) {
         }
     }
 
-    fun showTaskReminder(task: AppTask) {
+    fun showTaskReminder(task: AppTask, offsetMin: Int? = null) {
         val notificationId = task.id.hashCode() and 0x7FFFFFFF
-        Log.d(TAG, "showTaskReminder: Displaying notification for task id=${task.id}, title=${task.title}")
+        Log.d(TAG, "showTaskReminder: Displaying notification for task id=${task.id}, title=${task.title}, offsetMin=$offsetMin")
 
         val markCompleteIntent = Intent(context, NotificationActionReceiver::class.java).apply {
             action = ACTION_MARK_COMPLETE
@@ -136,10 +136,18 @@ class NotificationHelper(private val context: Context) {
             !task.reminderTime.isNullOrEmpty() -> task.reminderTime
             else -> ""
         }
+        val offsetText = when {
+            offsetMin == null || offsetMin == 0 -> "Starts now"
+            offsetMin > 0 && offsetMin < 60 -> "Starts in $offsetMin min"
+            offsetMin >= 60 && offsetMin % 60 == 0 && offsetMin < 1440 -> "Starts in ${offsetMin / 60}h"
+            offsetMin >= 1440 && offsetMin % 1440 == 0 -> "Starts in ${offsetMin / 1440}d"
+            offsetMin > 0 -> "Starts in ${offsetMin / 60}h ${offsetMin % 60}m"
+            else -> "${-offsetMin} min after start"
+        }
         val contentText = when {
-            !task.description.isNullOrEmpty() -> task.description
-            timeSubText.isNotEmpty() -> "Scheduled for $timeSubText"
-            else -> "Task reminder"
+            !task.description.isNullOrEmpty() -> "${task.description} · $offsetText"
+            timeSubText.isNotEmpty() -> "$offsetText ($timeSubText)"
+            else -> offsetText
         }
 
         val builder = NotificationCompat.Builder(context, CHANNEL_TASK_REMINDERS)

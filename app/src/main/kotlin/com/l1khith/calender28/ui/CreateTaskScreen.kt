@@ -48,7 +48,8 @@ fun CreateTaskScreen(
         endDate: String?,
         endTime: String?,
         isAllDay: Boolean,
-        reminderOffsetMin: Int?
+        reminderOffsetMin: Int?,
+        reminderOffsets: List<Int>
     ) -> Unit,
     onSaveRecurring: (
         id: String?,
@@ -108,7 +109,11 @@ fun CreateTaskScreen(
         )
     }
     var isAllDay by remember { mutableStateOf(task?.allDay ?: false) }
-    var reminderOffsetMin by remember { mutableStateOf(task?.reminderOffsetMin ?: 0) }
+    var reminderOffsets by remember(task) {
+        val initial = task?.effectiveReminderOffsets
+        mutableStateOf(if (initial.isNullOrEmpty()) listOf(15) else initial)
+    }
+    var reminderOffsetMin by remember { mutableStateOf(task?.reminderOffsetMin ?: 15) }
 
     var showStartDatePicker by remember { mutableStateOf(false) }
     var showEndDatePicker by remember { mutableStateOf(false) }
@@ -216,7 +221,8 @@ fun CreateTaskScreen(
                 if (sameDayAsStart) null else effectiveEndDateStr,
                 if (isAllDay) null else endTimeStr,
                 isAllDay,
-                reminderOffsetMin
+                reminderOffsets.firstOrNull(),
+                reminderOffsets
             )
             onDismiss()
         }
@@ -654,53 +660,15 @@ fun CreateTaskScreen(
                                 }
                             }
 
-                            // ── REMINDER OFFSET ──
+                            // ── MULTI-ALARM REMINDERS ──
                             Spacer(modifier = Modifier.height(10.dp))
-                            Text(
-                                text = "Remind Me",
-                                color = MatrixColors.TextSecondary,
-                                fontSize = 12.sp,
-                                fontWeight = FontWeight.Medium
-                            )
-                            Spacer(modifier = Modifier.height(6.dp))
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.spacedBy(6.dp)
-                            ) {
-                                val offsetOptions = listOf(
-                                    0 to "At event",
-                                    10 to "10m before",
-                                    15 to "15m before",
-                                    30 to "30m before",
-                                    60 to "1h before"
-                                )
-                                offsetOptions.forEach { (mins, label) ->
-                                    val isSelected = reminderOffsetMin == mins
-                                    Card(
-                                        modifier = Modifier
-                                            .weight(1f)
-                                            .clickable { reminderOffsetMin = mins },
-                                        shape = MatrixShapes.Sm,
-                                        colors = CardDefaults.cardColors(
-                                            containerColor = if (isSelected) MatrixColors.PrimaryContainer else Color.Transparent
-                                        ),
-                                        border = BorderStroke(1.dp, if (isSelected) MatrixColors.Primary else MatrixColors.OutlineVariant)
-                                    ) {
-                                        Box(
-                                            modifier = Modifier.padding(vertical = 6.dp, horizontal = 2.dp).fillMaxWidth(),
-                                            contentAlignment = Alignment.Center
-                                        ) {
-                                            Text(
-                                                text = label,
-                                                color = if (isSelected) MatrixColors.OnPrimaryContainer else MatrixColors.TextSecondary,
-                                                fontSize = 9.sp,
-                                                fontWeight = FontWeight.Medium,
-                                                maxLines = 1
-                                            )
-                                        }
-                                    }
+                            com.l1khith.calender28.ui.tasks.ReminderOffsetPicker(
+                                selectedOffsets = reminderOffsets,
+                                onOffsetsChanged = {
+                                    reminderOffsets = it
+                                    reminderOffsetMin = it.firstOrNull() ?: 15
                                 }
-                            }
+                            )
                         }
 
                         // ── LIVE CONFLICT DETECTION CARD ──

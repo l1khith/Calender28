@@ -235,14 +235,15 @@ class FixedCalendarViewModel(
         endDate: String? = null,
         endTime: String? = null,
         isAllDay: Boolean = false,
-        reminderOffsetMin: Int? = null
+        reminderOffsetMin: Int? = null,
+        reminderOffsets: List<Int> = emptyList()
     ) {
         val targetDate = if (associatedDateStr != null) {
             FixedCalendarHelper.parseDateStr(associatedDateStr) ?: _selectedDate.value
         } else {
             _selectedDate.value
         }
-        Log.d(TAG, "saveTask: id=$id, title=$title, date=$targetDate, isReminder=$isReminder, reminderTime=$reminderTime")
+        Log.d(TAG, "saveTask: id=$id, title=$title, date=$targetDate, isReminder=$isReminder, reminderTime=$reminderTime, offsets=$reminderOffsets")
 
         viewModelScope.launch(Dispatchers.IO) {
             taskRepository.saveTask(
@@ -256,7 +257,8 @@ class FixedCalendarViewModel(
                 endDate = endDate,
                 endTime = endTime,
                 isAllDay = isAllDay,
-                reminderOffsetMin = reminderOffsetMin
+                reminderOffsetMin = reminderOffsetMin,
+                reminderOffsets = reminderOffsets
             )
             loadState(targetDate)
         }

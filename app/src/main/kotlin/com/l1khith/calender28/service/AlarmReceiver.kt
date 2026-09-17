@@ -47,14 +47,18 @@ class AlarmReceiver : BroadcastReceiver() {
                 val notificationHelper = NotificationHelper(context)
                 val scheduler = AlarmScheduler(context)
 
+                val offsetMin = if (intent.hasExtra(AlarmScheduler.EXTRA_OFFSET_MIN)) {
+                    intent.getIntExtra(AlarmScheduler.EXTRA_OFFSET_MIN, 0)
+                } else null
+
                 when (itemType) {
                     AlarmScheduler.TYPE_TASK -> {
                         // Handles both normal tasks AND generated recurring task instances
                         val task = roomDb.taskDao().getTaskById(itemId)?.toAppTask()
                         if (task != null) {
                             if (!task.completed) {
-                                Log.d(TAG, "Showing task reminder for id=$itemId title='${task.title}'")
-                                notificationHelper.showTaskReminder(task)
+                                Log.d(TAG, "Showing task reminder for id=$itemId title='${task.title}' offsetMin=$offsetMin")
+                                notificationHelper.showTaskReminder(task, offsetMin)
                             } else {
                                 Log.d(TAG, "Task $itemId already completed, skipping notification")
                             }
@@ -71,7 +75,7 @@ class AlarmReceiver : BroadcastReceiver() {
                                 utcTimestamp = System.currentTimeMillis(),
                                 isCompleted = 0
                             )
-                            notificationHelper.showTaskReminder(tempTask)
+                            notificationHelper.showTaskReminder(tempTask, offsetMin)
                         }
                     }
 

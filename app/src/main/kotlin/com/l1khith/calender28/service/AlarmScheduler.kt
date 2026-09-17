@@ -31,6 +31,7 @@ class AlarmScheduler(private val context: Context) {
         const val EXTRA_DESCRIPTION = "description"
         const val EXTRA_IS_RECURRING = "is_recurring"
         const val EXTRA_RECURRENCE_INDEX = "recurrence_index"
+        const val EXTRA_OFFSET_MIN = "offset_min"
 
         const val TYPE_TASK = "task"
         const val TYPE_HABIT = "habit"
@@ -75,7 +76,7 @@ class AlarmScheduler(private val context: Context) {
     }
 
     // ═══════════════════════════════════════════════════════════════════════
-    // SCHEDULE TASK REMINDER (handles both normal and generated tasks)
+    // SCHEDULE TASK REMINDER (handles multiple offsets per task)
     // ═══════════════════════════════════════════════════════════════════════
     fun scheduleTaskReminder(task: AppTask): Boolean {
         if (task.isReminder != 1 || task.utcTimestamp == null || task.completed) {
@@ -83,36 +84,47 @@ class AlarmScheduler(private val context: Context) {
             return false
         }
 
-        val offsetMillis = (task.reminderOffsetMin ?: 0) * 60_000L
-        var triggerTime = task.utcTimestamp - offsetMillis
-        val now = System.currentTimeMillis()
+        val rawOffsets = task.effectiveReminderOffsets.distinct().sorted().take(5)
+        val activeOffsets = if (rawOffsets.isEmpty()) listOf(task.reminderOffsetMin ?: 0) else rawOffsets
 
-        // For generated recurring tasks whose time passed today, roll forward 24h
-        if (triggerTime <= now) {
-            if (task.recurringParentId != null) {
-                while (triggerTime <= now) {
-                    triggerTime += 86400000L
+        val now = System.currentTimeMillis()
+        var anyScheduled = false
+
+        activeOffsets.forEachIndexed { index, offsetMin ->
+            val offsetMillis = offsetMin * 60_000L
+            var triggerTime = task.utcTimestamp - offsetMillis
+
+            // For generated recurring tasks whose time passed today, roll forward 24h
+            if (triggerTime <= now) {
+                if (task.recurringParentId != null) {
+                    while (triggerTime <= now) {
+                        triggerTime += 86400000L
+                    }
+                    Log.d(TAG, "scheduleTaskReminder: Generated recurring task ${task.id} (offset $offsetMin) time passed, rolled to triggerTime=$triggerTime")
+                } else {
+                    Log.d(TAG, "scheduleTaskReminder: Task ${task.id} offset $offsetMin timestamp $triggerTime is in the past, skipping")
+                    return@forEachIndexed
                 }
-                Log.d(TAG, "scheduleTaskReminder: Generated recurring task ${task.id} time passed, rolled to triggerTime=$triggerTime")
-            } else {
-                Log.d(TAG, "scheduleTaskReminder: Task ${task.id} timestamp $triggerTime is in the past, skipping")
-                return false
             }
+
+            val intent = createAlarmIntent(
+                itemId = task.id,
+                itemType = TYPE_TASK,
+                title = task.title,
+                description = task.description,
+                isRecurring = task.recurringParentId != null,
+                recurrenceIndex = index,
+                offsetMin = offsetMin
+            )
+
+            val alarmId = ((task.id.hashCode() * 100) + index) and 0x7FFFFFFF
+            saveAlarmRecord(alarmId, task.id, TYPE_TASK, triggerTime, task.recurringParentId != null, index)
+            val result = scheduleExactAlarm(alarmId, triggerTime, intent)
+            if (result) anyScheduled = true
+            Log.d(TAG, "scheduleTaskReminder: Scheduled task=${task.id} index=$index offset=$offsetMin at triggerTime=$triggerTime result=$result")
         }
 
-        val intent = createAlarmIntent(
-            itemId = task.id,
-            itemType = TYPE_TASK,
-            title = task.title,
-            description = task.description,
-            isRecurring = task.recurringParentId != null
-        )
-
-        val alarmId = task.id.hashCode() and 0x7FFFFFFF
-        saveAlarmRecord(alarmId, task.id, TYPE_TASK, triggerTime, task.recurringParentId != null)
-        val result = scheduleExactAlarm(alarmId, triggerTime, intent)
-        Log.d(TAG, "scheduleTaskReminder: Scheduled task=${task.id} title='${task.title}' at triggerTime=$triggerTime result=$result")
-        return result
+        return anyScheduled
     }
 
     // ═══════════════════════════════════════════════════════════════════════
@@ -162,8 +174,11 @@ class AlarmScheduler(private val context: Context) {
     }
 
     fun cancelTaskAlarm(task: AppTask) {
-        val alarmId = task.id.hashCode() and 0x7FFFFFFF
-        cancelAlarm(alarmId)
+        cancelAllForItem(task.id)
+    }
+
+    fun cancelAllAlarmsForTask(taskId: String) {
+        cancelAllForItem(taskId)
     }
 
     fun cancelAllForItem(itemId: String) {
@@ -231,7 +246,8 @@ class AlarmScheduler(private val context: Context) {
         title: String,
         description: String?,
         isRecurring: Boolean,
-        recurrenceIndex: Int = 0
+        recurrenceIndex: Int = 0,
+        offsetMin: Int? = null
     ): Intent {
         return Intent(context, AlarmReceiver::class.java).apply {
             putExtra(EXTRA_ITEM_ID, itemId)
@@ -240,6 +256,9 @@ class AlarmScheduler(private val context: Context) {
             putExtra(EXTRA_DESCRIPTION, description ?: "")
             putExtra(EXTRA_IS_RECURRING, isRecurring)
             putExtra(EXTRA_RECURRENCE_INDEX, recurrenceIndex)
+            if (offsetMin != null) {
+                putExtra(EXTRA_OFFSET_MIN, offsetMin)
+            }
         }
     }
 

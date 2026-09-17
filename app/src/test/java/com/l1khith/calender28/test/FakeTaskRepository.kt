@@ -76,7 +76,8 @@ class FakeTaskRepository(
         endDate: String?,
         endTime: String?,
         isAllDay: Boolean,
-        reminderOffsetMin: Int?
+        reminderOffsetMin: Int?,
+        reminderOffsets: List<Int>
     ): AppTask {
         val newTask = AppTask(
             id = id ?: java.util.UUID.randomUUID().toString(),
@@ -89,7 +90,8 @@ class FakeTaskRepository(
             endDate = endDate,
             endTime = endTime,
             isAllDay = if (isAllDay) 1 else 0,
-            reminderOffsetMin = reminderOffsetMin
+            reminderOffsetMin = reminderOffsetMin,
+            reminderOffsets = reminderOffsets
         )
         tasks.add(newTask)
         return newTask
