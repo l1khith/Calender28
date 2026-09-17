@@ -84,13 +84,13 @@ fun NoteEditorMenu(
                 }
             )
 
-            // Preview Markdown (if MD) - uses book icon instead of eye
+            // Preview Markdown Option (only available for MD notes)
             if (note.format == NoteFormat.MD && onPreview != null) {
                 DropdownMenuItem(
                     text = { Text("Preview Markdown", color = MatrixColors.TextHeader) },
                     leadingIcon = {
                         Icon(
-                            imageVector = Icons.AutoMirrored.Outlined.MenuBook,
+                            imageVector = Icons.AutoMirrored.Filled.MenuBook,
                             contentDescription = "Preview",
                             tint = MatrixColors.Primary
                         )
@@ -104,7 +104,7 @@ fun NoteEditorMenu(
 
             // Share Note
             DropdownMenuItem(
-                text = { Text("Share", color = MatrixColors.TextHeader) },
+                text = { Text("Share Note", color = MatrixColors.TextHeader) },
                 leadingIcon = {
                     Icon(
                         imageVector = Icons.Default.Share,
@@ -118,10 +118,10 @@ fun NoteEditorMenu(
                 }
             )
 
-            // Delete Note (if existing)
+            // Delete Note Option
             if (onDeleteConfirmed != null) {
                 DropdownMenuItem(
-                    text = { Text("Delete", color = Color(0xFFEF4444)) },
+                    text = { Text("Delete Note", color = Color(0xFFEF4444)) },
                     leadingIcon = {
                         Icon(
                             imageVector = Icons.Default.Delete,
@@ -151,7 +151,7 @@ fun NoteEditorMenu(
 }
 
 /**
- * Three-dot dropdown menu for NotePreviewScreen.
+ * Three-dot dropdown menu for NoteCard in preview mode.
  */
 @Composable
 fun NotePreviewMenu(
@@ -385,6 +385,7 @@ fun NoteFormatBadge(format: NoteFormat) {
 /**
  * NoteCard component used in the Notes List.
  * Pure content-derived card: title is first line, subtitle is snippet preview.
+ * Supports batch selection checkbox when isSelectionMode is true.
  */
 @Composable
 fun NoteCard(
@@ -392,7 +393,10 @@ fun NoteCard(
     onClick: () -> Unit,
     onDelete: () -> Unit,
     onTogglePin: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    isSelectionMode: Boolean = false,
+    isSelected: Boolean = false,
+    onToggleSelect: () -> Unit = {}
 ) {
     val dateFormatter = remember { SimpleDateFormat("MMM d, yyyy", Locale.getDefault()) }
     val formattedDate = remember(note.updatedAt) { dateFormatter.format(Date(note.updatedAt)) }
@@ -400,92 +404,116 @@ fun NoteCard(
     Card(
         modifier = modifier
             .fillMaxWidth()
-            .clickable(onClick = onClick),
+            .clickable(onClick = if (isSelectionMode) onToggleSelect else onClick),
         shape = MatrixShapes.Lg,
-        colors = CardDefaults.cardColors(containerColor = MatrixColors.SurfaceContainerLow),
+        colors = CardDefaults.cardColors(
+            containerColor = if (isSelected) MatrixColors.Primary.copy(alpha = 0.12f) else MatrixColors.SurfaceContainerLow
+        ),
         border = BorderStroke(
             1.dp,
-            if (note.isPinned) MatrixColors.Primary.copy(alpha = 0.6f) else MatrixColors.OutlineVariant
+            if (isSelected) MatrixColors.Primary else if (note.isPinned) MatrixColors.Primary.copy(alpha = 0.6f) else MatrixColors.OutlineVariant
         )
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            // Row 1: Pin status (if pinned) + Derived Title + Optional MD Badge + Card Menu
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                if (note.isPinned) {
-                    Icon(
-                        imageVector = Icons.Filled.PushPin,
-                        contentDescription = "Pinned Note",
-                        tint = MatrixColors.Primary,
-                        modifier = Modifier
-                            .size(16.dp)
-                            .clickable(onClick = onTogglePin)
-                    )
-                    Spacer(modifier = Modifier.width(6.dp))
-                }
-
-                Text(
-                    text = note.displayTitle,
-                    style = MaterialTheme.typography.titleMedium.copy(
-                        fontWeight = FontWeight.Bold,
-                        color = MatrixColors.TextHeader
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.padding(16.dp)
+        ) {
+            if (isSelectionMode) {
+                Checkbox(
+                    checked = isSelected,
+                    onCheckedChange = { onToggleSelect() },
+                    enabled = note.format == NoteFormat.MD, // Markdown notes only!
+                    colors = CheckboxDefaults.colors(
+                        checkedColor = MatrixColors.Primary,
+                        uncheckedColor = MatrixColors.TextSecondary
                     ),
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.weight(1f)
-                )
-
-                if (note.format == NoteFormat.MD) {
-                    Spacer(modifier = Modifier.width(8.dp))
-                    NoteFormatBadge(format = note.format)
-                }
-                Spacer(modifier = Modifier.width(4.dp))
-                NoteCardMenu(note = note, onDeleteConfirmed = onDelete)
-            }
-
-            // Row 2: Content snippet preview (from note.snippetPreview)
-            if (note.snippetPreview.isNotBlank()) {
-                Spacer(modifier = Modifier.height(6.dp))
-                Text(
-                    text = note.snippetPreview,
-                    style = MaterialTheme.typography.bodyMedium.copy(
-                        color = MatrixColors.TextSecondary,
-                        fontSize = 13.sp
-                    ),
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis
+                    modifier = Modifier.padding(end = 12.dp)
                 )
             }
 
-            Spacer(modifier = Modifier.height(10.dp))
-
-            // Row 3: Metadata footer (formatted date + pin toggle)
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Text(
-                    text = "Updated $formattedDate",
-                    style = MaterialTheme.typography.labelSmall.copy(
-                        color = MatrixColors.TextSecondary.copy(alpha = 0.7f),
-                        fontSize = 11.sp
-                    )
-                )
-
-                Spacer(modifier = Modifier.weight(1f))
-
-                IconButton(
-                    onClick = onTogglePin,
-                    modifier = Modifier.size(24.dp)
+            Column(modifier = Modifier.weight(1f)) {
+                // Row 1: Pin status (if pinned) + Derived Title + Optional MD Badge + Card Menu
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.fillMaxWidth()
                 ) {
-                    Icon(
-                        imageVector = if (note.isPinned) Icons.Filled.PushPin else Icons.Outlined.PushPin,
-                        contentDescription = "Pin Note",
-                        tint = if (note.isPinned) MatrixColors.Primary else MatrixColors.TextSecondary.copy(alpha = 0.4f),
-                        modifier = Modifier.size(16.dp)
+                    if (note.isPinned) {
+                        Icon(
+                            imageVector = Icons.Filled.PushPin,
+                            contentDescription = "Pinned Note",
+                            tint = MatrixColors.Primary,
+                            modifier = Modifier
+                                .size(16.dp)
+                                .clickable(onClick = onTogglePin)
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                    }
+
+                    Text(
+                        text = note.displayTitle,
+                        style = MaterialTheme.typography.titleMedium.copy(
+                            fontWeight = FontWeight.Bold,
+                            color = MatrixColors.TextHeader
+                        ),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f)
                     )
+
+                    if (note.format == NoteFormat.MD) {
+                        Spacer(modifier = Modifier.width(8.dp))
+                        NoteFormatBadge(format = note.format)
+                    }
+                    if (!isSelectionMode) {
+                        Spacer(modifier = Modifier.width(4.dp))
+                        NoteCardMenu(note = note, onDeleteConfirmed = onDelete)
+                    }
+                }
+
+                // Row 2: Content snippet preview (from note.snippetPreview)
+                if (note.snippetPreview.isNotBlank()) {
+                    Spacer(modifier = Modifier.height(6.dp))
+                    Text(
+                        text = note.snippetPreview,
+                        style = MaterialTheme.typography.bodyMedium.copy(
+                            color = MatrixColors.TextSecondary,
+                            fontSize = 13.sp
+                        ),
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(10.dp))
+
+                // Row 3: Metadata footer (formatted date + pin toggle)
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(
+                        text = "Updated $formattedDate",
+                        style = MaterialTheme.typography.labelSmall.copy(
+                            color = MatrixColors.TextSecondary.copy(alpha = 0.7f),
+                            fontSize = 11.sp
+                        )
+                    )
+
+                    Spacer(modifier = Modifier.weight(1f))
+
+                    if (!isSelectionMode) {
+                        IconButton(
+                            onClick = onTogglePin,
+                            modifier = Modifier.size(24.dp)
+                        ) {
+                            Icon(
+                                imageVector = if (note.isPinned) Icons.Filled.PushPin else Icons.Outlined.PushPin,
+                                contentDescription = "Pin Note",
+                                tint = if (note.isPinned) MatrixColors.Primary else MatrixColors.TextSecondary.copy(alpha = 0.4f),
+                                modifier = Modifier.size(16.dp)
+                            )
+                        }
+                    }
                 }
             }
         }
