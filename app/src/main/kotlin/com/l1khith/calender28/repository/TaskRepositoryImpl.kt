@@ -160,7 +160,8 @@ class TaskRepositoryImpl(
         endDate: String?,
         endTime: String?,
         isAllDay: Boolean,
-        reminderOffsetMin: Int?
+        reminderOffsetMin: Int?,
+        reminderOffsets: List<Int>
     ): AppTask = withContext(Dispatchers.IO) {
         Log.d(TAG, "saveTask: Saving task id=$id, title=$title, date=$associatedDate, isReminder=$isReminder, isAllDay=$isAllDay")
         val isRem = if (isReminder) 1 else 0
@@ -183,6 +184,12 @@ class TaskRepositoryImpl(
             else -> null
         }
 
+        val effectiveOffsets = if (reminderOffsets.isNotEmpty()) {
+            reminderOffsets
+        } else if (reminderOffsetMin != null) {
+            listOf(reminderOffsetMin)
+        } else emptyList()
+
         val task = AppTask(
             id = id ?: UUID.randomUUID().toString(),
             title = title,
@@ -198,12 +205,13 @@ class TaskRepositoryImpl(
             endDate = if (endDate == associatedDate.toString()) null else endDate,
             endTime = if (isAllDay) null else endTime,
             isAllDay = if (isAllDay) 1 else 0,
-            reminderOffsetMin = reminderOffsetMin,
-            endUtcTimestamp = endUtcTimestamp
+            reminderOffsetMin = effectiveOffsets.firstOrNull(),
+            endUtcTimestamp = endUtcTimestamp,
+            reminderOffsets = effectiveOffsets
         )
 
         if (id != null) {
-            serviceAlarmScheduler.cancelTaskAlarm(task)
+            serviceAlarmScheduler.cancelAllForItem(id)
         }
         taskDao.insertTask(task.toEntity())
 
@@ -224,6 +232,10 @@ class TaskRepositoryImpl(
     override suspend fun updateTask(task: AppTask): Unit = withContext(Dispatchers.IO) {
         Log.d(TAG, "updateTask: Updating taskId=${task.id}")
         taskDao.updateTask(task.toEntity())
+        serviceAlarmScheduler.cancelAllForItem(task.id)
+        if (task.reminder && !task.completed) {
+            serviceAlarmScheduler.scheduleTaskReminder(task)
+        }
         Unit
     }
 
@@ -237,13 +249,7 @@ class TaskRepositoryImpl(
         if (actualParentId != null) {
             deleteRecurringTask(actualParentId)
         } else {
-            val list: List<AppTaskEntity> = taskDao.getAllTasks()
-            for (entity in list) {
-                if (entity.id == taskId) {
-                    serviceAlarmScheduler.cancelTaskAlarm(entity.toAppTask())
-                    break
-                }
-            }
+            serviceAlarmScheduler.cancelAllForItem(taskId)
             taskDao.deleteTask(taskId)
         }
         Unit
@@ -256,7 +262,7 @@ class TaskRepositoryImpl(
         taskDao.updateTask(updatedTask.toEntity())
 
         if (updatedTask.completed) {
-            serviceAlarmScheduler.cancelTaskAlarm(updatedTask)
+            serviceAlarmScheduler.cancelAllForItem(updatedTask.id)
         } else if (updatedTask.reminder) {
             serviceAlarmScheduler.scheduleTaskReminder(updatedTask)
         }

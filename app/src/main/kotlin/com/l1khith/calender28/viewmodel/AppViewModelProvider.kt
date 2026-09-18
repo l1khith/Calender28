@@ -67,7 +67,18 @@ object AppViewModelProvider {
                 application = app,
                 getDayDetailUseCase = app.container.getDayDetailUseCase,
                 getDayConflictsUseCase = app.container.getDayConflictsUseCase,
-                taskRepository = app.container.taskRepository
+                taskRepository = app.container.taskRepository,
+                resolveConflictUseCase = app.container.resolveConflictUseCase,
+                suggestFreeSlotsUseCase = app.container.suggestFreeSlotsUseCase
+            )
+        }
+        initializer {
+            val app = matrixApplication()
+            GraphViewModel(
+                application = app,
+                noteRepository = app.container.noteRepository,
+                buildGraphUseCase = app.container.buildGraphUseCase,
+                buildBatchGraphUseCase = app.container.buildBatchGraphUseCase
             )
         }
     }

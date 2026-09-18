@@ -4,35 +4,11 @@ import android.content.Context
 import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
-import androidx.room.migration.Migration
-import androidx.sqlite.db.SupportSQLiteDatabase
 import com.l1khith.calender28.utils.FixedCalendarHelper
 import com.l1khith.calender28.utils.HabitCycleEngine
 import com.l1khith.calender28.utils.currentTimeMillis
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-
-val MIGRATION_8_9 = object : Migration(8, 9) {
-    override fun migrate(db: SupportSQLiteDatabase) {
-        db.execSQL("CREATE INDEX IF NOT EXISTS `index_tasks_recurring_parent_id` ON `tasks` (`recurring_parent_id`)")
-        db.execSQL("CREATE INDEX IF NOT EXISTS `index_scheduled_alarms_item_id` ON `scheduled_alarms` (`item_id`)")
-        db.execSQL("CREATE INDEX IF NOT EXISTS `index_scheduled_alarms_scheduled_time_utc` ON `scheduled_alarms` (`scheduled_time_utc`)")
-        db.execSQL("CREATE INDEX IF NOT EXISTS `index_coin_transactions_timestamp` ON `coin_transactions` (`timestamp`)")
-        db.execSQL("CREATE INDEX IF NOT EXISTS `index_coin_transactions_reason_note` ON `coin_transactions` (`reason`, `note`)")
-        db.execSQL("CREATE INDEX IF NOT EXISTS `index_notes_linkedType_linkedId` ON `notes` (`linkedType`, `linkedId`)")
-    }
-}
-
-val MIGRATION_9_10 = object : Migration(9, 10) {
-    override fun migrate(db: SupportSQLiteDatabase) {
-        db.execSQL("ALTER TABLE `tasks` ADD COLUMN `end_date` TEXT")
-        db.execSQL("ALTER TABLE `tasks` ADD COLUMN `end_time` TEXT")
-        db.execSQL("ALTER TABLE `tasks` ADD COLUMN `is_all_day` INTEGER NOT NULL DEFAULT 0")
-        db.execSQL("ALTER TABLE `tasks` ADD COLUMN `reminder_offset_min` INTEGER")
-        db.execSQL("ALTER TABLE `tasks` ADD COLUMN `end_utc_timestamp` INTEGER")
-        db.execSQL("CREATE INDEX IF NOT EXISTS `index_tasks_end_date` ON `tasks` (`end_date`)")
-    }
-}
 
 @Database(
     entities = [
@@ -45,11 +21,14 @@ val MIGRATION_9_10 = object : Migration(9, 10) {
         CoinBalanceEntity::class,
         CoinTransactionEntity::class,
         SparkyEntity::class,
-        NoteEntity::class
+        NoteEntity::class,
+        NoteLinkEntity::class,
+        ConflictResolutionEntity::class
     ],
-    version = 10,
+    version = 1,
     exportSchema = false
 )
+@androidx.room.TypeConverters(Converters::class)
 abstract class RoomTaskDatabase : RoomDatabase() {
     abstract fun taskDao(): TaskDao
     abstract fun recurringTaskDao(): RecurringTaskDao
@@ -60,6 +39,8 @@ abstract class RoomTaskDatabase : RoomDatabase() {
     abstract fun coinDao(): CoinDao
     abstract fun sparkyDao(): SparkyDao
     abstract fun noteDao(): NoteDao
+    abstract fun noteLinkDao(): NoteLinkDao
+    abstract fun conflictResolutionDao(): ConflictResolutionDao
 
     companion object {
         @Volatile
@@ -72,8 +53,7 @@ abstract class RoomTaskDatabase : RoomDatabase() {
                     RoomTaskDatabase::class.java,
                     "calender28_room.db"
                 )
-                .addMigrations(MIGRATION_8_9, MIGRATION_9_10)
-                .fallbackToDestructiveMigration()
+                .fallbackToDestructiveMigration(dropAllTables = true)
                 .build()
                 .also { instance = it }
             }
@@ -87,6 +67,8 @@ class TaskDatabase(private val context: Context) {
     }
 
     fun getScheduledAlarmDao(): ScheduledAlarmDao = db.scheduledAlarmDao()
+    fun getNoteLinkDao(): NoteLinkDao = db.noteLinkDao()
+    fun getConflictResolutionDao(): ConflictResolutionDao = db.conflictResolutionDao()
 
     private fun notifyWidgetUpdate() {
         try {

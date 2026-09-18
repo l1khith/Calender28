@@ -38,7 +38,8 @@ interface TaskRepository {
         endDate: String? = null,
         endTime: String? = null,
         isAllDay: Boolean = false,
-        reminderOffsetMin: Int? = null
+        reminderOffsetMin: Int? = null,
+        reminderOffsets: List<Int> = emptyList()
     ): AppTask
 
     suspend fun importSystemCalendarTasks(tasks: List<AppTask>)

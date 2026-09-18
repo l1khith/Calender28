@@ -3,7 +3,6 @@ package com.l1khith.calender28.ui.daydetail
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -23,6 +22,7 @@ import com.l1khith.calender28.data.AppTask
 import com.l1khith.calender28.ui.theme.MatrixColors
 import com.l1khith.calender28.utils.FixedCalendarHelper
 import com.l1khith.calender28.utils.FixedDate
+import kotlinx.coroutines.delay
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -59,7 +59,38 @@ fun DayDetailScreen(
         ((uiState.selectedDate.day - 1) / 7) + 1
     }
 
+    val snackbarHostState = remember { SnackbarHostState() }
+
+    LaunchedEffect(uiState.lastResolutionResult) {
+        val result = uiState.lastResolutionResult
+        if (result != null) {
+            val snackbarResult = snackbarHostState.showSnackbar(
+                message = "Action: ${result.action.name.replace("_", " ")} applied",
+                actionLabel = "Undo",
+                duration = SnackbarDuration.Short
+            )
+            if (snackbarResult == SnackbarResult.ActionPerformed) {
+                viewModel.undoLastResolution()
+            } else {
+                viewModel.clearLastResolution()
+            }
+        }
+    }
+
     Scaffold(
+        snackbarHost = {
+            SnackbarHost(
+                hostState = snackbarHostState,
+                snackbar = { data ->
+                    Snackbar(
+                        snackbarData = data,
+                        containerColor = MatrixColors.SurfaceContainerHigh,
+                        contentColor = MatrixColors.TextHeader,
+                        actionColor = MatrixColors.Primary
+                    )
+                }
+            )
+        },
         topBar = {
             Column(
                 modifier = Modifier
@@ -116,7 +147,7 @@ fun DayDetailScreen(
                         .padding(horizontal = 16.dp, vertical = 6.dp),
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    SummaryChip(label = "${uiState.timedTasks.size + uiState.allDayTasks.size} tasks", color = MatrixColors.Primary)
+                    SummaryChip(label = "${uiState.timedTasks.size + uiState.allDayTasks.size + uiState.unscheduledTasks.size} tasks", color = MatrixColors.Primary)
                     SummaryChip(label = "${uiState.habits.size} habits", color = MatrixColors.Tertiary)
                     SummaryChip(label = "${uiState.focusSessions.size} focus", color = MatrixColors.Secondary)
                     SummaryChip(
@@ -136,14 +167,60 @@ fun DayDetailScreen(
                 }
             }
         },
-        floatingActionButton = {
-            FloatingActionButton(
-                onClick = { onOpenCreateTask(uiState.selectedDate.toString(), null) },
-                containerColor = MatrixColors.Primary,
-                contentColor = MatrixColors.OnPrimary,
-                shape = CircleShape
+        bottomBar = {
+            Surface(
+                color = MatrixColors.SurfaceContainer,
+                tonalElevation = 6.dp,
+                shadowElevation = 8.dp,
+                modifier = Modifier.fillMaxWidth()
             ) {
-                Icon(Icons.Filled.Add, contentDescription = "Create Task")
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .navigationBarsPadding()
+                        .padding(horizontal = 16.dp, vertical = 10.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Button(
+                        onClick = { onOpenCreateTask(uiState.selectedDate.toString(), null) },
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MatrixColors.Primary,
+                            contentColor = MatrixColors.OnPrimary
+                        ),
+                        shape = RoundedCornerShape(12.dp),
+                        contentPadding = PaddingValues(horizontal = 20.dp, vertical = 10.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Filled.Add,
+                            contentDescription = null,
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = "Add Task",
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 14.sp
+                        )
+                    }
+
+                    if (uiState.activeConflicts.isNotEmpty()) {
+                        OutlinedButton(
+                            onClick = { viewModel.setReviewSheetOpen(true) },
+                            colors = ButtonDefaults.outlinedButtonColors(
+                                contentColor = MatrixColors.Secondary
+                            ),
+                            border = androidx.compose.foundation.BorderStroke(1.dp, MatrixColors.Secondary),
+                            shape = RoundedCornerShape(12.dp)
+                        ) {
+                            Text(
+                                text = "Resolve (${uiState.activeConflicts.size})",
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                        }
+                    }
+                }
             }
         },
         containerColor = MatrixColors.Surface,
@@ -171,8 +248,9 @@ fun DayDetailScreen(
             }
 
             // Collapsible auxiliary sections at bottom
-            if (uiState.allDayTasks.isNotEmpty() || uiState.recurringInstances.isNotEmpty() ||
-                uiState.habits.isNotEmpty() || uiState.focusSessions.isNotEmpty()
+            if (uiState.allDayTasks.isNotEmpty() || uiState.unscheduledTasks.isNotEmpty() ||
+                uiState.recurringInstances.isNotEmpty() || uiState.habits.isNotEmpty() ||
+                uiState.focusSessions.isNotEmpty()
             ) {
                 Box(
                     modifier = Modifier
@@ -181,6 +259,7 @@ fun DayDetailScreen(
                 ) {
                     AuxiliarySections(
                         allDayTasks = uiState.allDayTasks,
+                        unscheduledTasks = uiState.unscheduledTasks,
                         recurringTasks = uiState.recurringInstances,
                         habits = uiState.habits,
                         focusSessions = uiState.focusSessions,
@@ -192,16 +271,22 @@ fun DayDetailScreen(
 
         // Conflict Review Bottom Sheet
         if (uiState.isReviewSheetOpen) {
-            val combinedTasks = remember(uiState.timedTasks, uiState.crossDayTasks, uiState.allDayTasks) {
-                uiState.timedTasks + uiState.crossDayTasks + uiState.allDayTasks
+            val combinedTasks = remember(uiState.timedTasks, uiState.crossDayTasks, uiState.allDayTasks, uiState.unscheduledTasks) {
+                uiState.timedTasks + uiState.crossDayTasks + uiState.allDayTasks + uiState.unscheduledTasks
             }
             ConflictReviewSheet(
                 conflicts = uiState.activeConflicts,
                 dateStr = uiState.selectedDate.toString(),
                 allTasks = combinedTasks,
                 onDismiss = { viewModel.setReviewSheetOpen(false) },
-                onApplySlot = { eventId, newTime ->
-                    viewModel.applyConflictSlot(eventId, newTime)
+                onMoveEvent = { eventId, conflictEventId, isEventA, newDateStr, newStartTime ->
+                    viewModel.moveEvent(eventId, conflictEventId, isEventA, newDateStr, newStartTime)
+                },
+                onDeleteEvent = { eventId, conflictEventId, isEventA ->
+                    viewModel.deleteEvent(eventId, conflictEventId, isEventA)
+                },
+                onMergeEvents = { eventAId, eventBId ->
+                    viewModel.mergeEvents(eventAId, eventBId)
                 },
                 onAddBuffer = { eventId ->
                     viewModel.addBuffer(eventId)

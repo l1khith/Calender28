@@ -23,9 +23,16 @@ data class AppTask(
     val endDate: String? = null,     // "YYYY-MM-DD" in 13-month format (null = same as associatedDate)
     val endTime: String? = null,     // "HH:mm" (null = point-in-time)
     val isAllDay: Int = 0,           // 1 = all-day task
-    val reminderOffsetMin: Int? = null, // Reminder offset in minutes before start
-    val endUtcTimestamp: Long? = null // Absolute Unix Milliseconds for end
+    val reminderOffsetMin: Int? = null, // Legacy single reminder offset in minutes before start
+    val endUtcTimestamp: Long? = null, // Absolute Unix Milliseconds for end
+    val reminderOffsets: List<Int> = emptyList() // Multi-alarm reminder offsets in minutes before start
 ) {
+    val effectiveReminderOffsets: List<Int>
+        get() = when {
+            reminderOffsets.isNotEmpty() -> reminderOffsets
+            reminderOffsetMin != null -> listOf(reminderOffsetMin)
+            else -> emptyList()
+        }
     val completed: Boolean get() = isCompleted == 1
     val reminder: Boolean get() = isReminder == 1
     val allDay: Boolean get() = isAllDay == 1
