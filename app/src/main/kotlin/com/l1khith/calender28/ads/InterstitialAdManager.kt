@@ -9,7 +9,9 @@ import com.google.android.gms.ads.LoadAdError
 import com.google.android.gms.ads.interstitial.InterstitialAd
 import com.google.android.gms.ads.interstitial.InterstitialAdLoadCallback
 import com.l1khith.calender28.billing.RevenueCatManager
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 private const val INTERSTITIAL_AD_UNIT_ID =
@@ -19,6 +21,12 @@ object InterstitialAdManager {
 
     private var interstitialAd: InterstitialAd? = null
     private var isLoading = false
+
+    fun preload(context: Context) {
+        kotlinx.coroutines.CoroutineScope(Dispatchers.Main).launch {
+            loadAd(context.applicationContext)
+        }
+    }
 
     suspend fun loadAd(context: Context) {
         if (isLoading) return
@@ -31,7 +39,7 @@ object InterstitialAdManager {
             }
             isLoading = true
             InterstitialAd.load(
-                context,
+                context.applicationContext,
                 INTERSTITIAL_AD_UNIT_ID,
                 AdRequest.Builder().build(),
                 object : InterstitialAdLoadCallback() {
@@ -59,15 +67,18 @@ object InterstitialAdManager {
             ad.fullScreenContentCallback = object : FullScreenContentCallback() {
                 override fun onAdDismissedFullScreenContent() {
                     interstitialAd = null
+                    preload(activity)
                     onDismiss()
                 }
                 override fun onAdFailedToShowFullScreenContent(error: AdError) {
                     interstitialAd = null
+                    preload(activity)
                     onDismiss()
                 }
             }
             ad.show(activity)
         } else {
+            if (activity != null) preload(activity)
             onDismiss()
         }
     }
@@ -87,15 +98,18 @@ object InterstitialAdManager {
             ad.fullScreenContentCallback = object : FullScreenContentCallback() {
                 override fun onAdDismissedFullScreenContent() {
                     interstitialAd = null
+                    preload(activity)
                     onAdDismissed()
                 }
                 override fun onAdFailedToShowFullScreenContent(error: AdError) {
                     interstitialAd = null
+                    preload(activity)
                     onAdUnavailable()
                 }
             }
             ad.show(activity)
         } else {
+            preload(activity)
             onAdUnavailable()
         }
     }

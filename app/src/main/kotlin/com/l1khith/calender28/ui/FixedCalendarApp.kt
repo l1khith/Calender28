@@ -126,7 +126,6 @@ fun FixedCalendarApp(
     var showCoinStoreDialog by remember { mutableStateOf(false) }
     var showFocusStatsDialog by remember { mutableStateOf(false) }
     var showSecurityLockDialog by remember { mutableStateOf(false) }
-    var showCustomSkippableAd by remember { mutableStateOf(false) }
     var navigationCount by remember { mutableIntStateOf(0) }
 
     val coinViewModel: CoinViewModel = androidx.lifecycle.viewmodel.compose.viewModel(factory = AppViewModelProvider.Factory)
@@ -329,14 +328,12 @@ fun FixedCalendarApp(
             if (!isProActive) {
                 navigationCount++
                 if (navigationCount % com.l1khith.calender28.utils.Constants.INTERSTITIAL_NAV_FREQUENCY == 0) {
-                    if (activity != null && com.l1khith.calender28.ads.InterstitialAdManager.isAdLoaded()) {
+                    if (activity != null) {
                         com.l1khith.calender28.ads.InterstitialAdManager.showAd(
                             activity = activity,
                             onAdDismissed = {},
-                            onAdUnavailable = { showCustomSkippableAd = true }
+                            onAdUnavailable = {}
                         )
-                    } else {
-                        showCustomSkippableAd = true
                     }
                 }
             }
@@ -1107,16 +1104,6 @@ fun FixedCalendarApp(
     if (showSecurityLockDialog) {
         com.l1khith.calender28.security.SecurityLockDialog(
             onDismiss = { showSecurityLockDialog = false }
-        )
-    }
-
-    if (showCustomSkippableAd && !isProActive) {
-        CustomSkippableAdDialog(
-            onDismiss = { showCustomSkippableAd = false },
-            onOpenPaywall = {
-                showCustomSkippableAd = false
-                showPaywallDialog = true
-            }
         )
     }
 
