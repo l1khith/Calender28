@@ -55,6 +55,8 @@ fun CoinStoreScreen(
     val coinBalance by coinViewModel.coinBalance.collectAsStateWithLifecycle()
     val transactions by coinViewModel.recentTransactions.collectAsStateWithLifecycle()
     val isProActive by coinViewModel.isProActive.collectAsStateWithLifecycle()
+    val isPremium by com.l1khith.calender28.billing.RevenueCatManager.isPremium.collectAsStateWithLifecycle()
+    val isPro = isPremium || isProActive
     val isPurchasing by coinViewModel.isPurchasing.collectAsStateWithLifecycle()
     val sparkyState by sparkyViewModel.sparkyState.collectAsStateWithLifecycle()
     val currentMood by sparkyViewModel.currentMood.collectAsStateWithLifecycle()
@@ -265,13 +267,97 @@ fun CoinStoreScreen(
             }
         }
     } else {
-        SparkyShopContent(
-            sparkyViewModel = sparkyViewModel,
-            coinBalance = coinBalance,
-            paddingValues = paddingValues
-        )
+        if (!isPro) {
+            SparkyShopLockedCard(
+                onOpenPaywall = onOpenPaywall,
+                paddingValues = paddingValues
+            )
+        } else {
+            SparkyShopContent(
+                sparkyViewModel = sparkyViewModel,
+                coinBalance = coinBalance,
+                paddingValues = paddingValues
+            )
+        }
     }
 }
+}
+
+@Composable
+private fun SparkyShopLockedCard(
+    onOpenPaywall: () -> Unit,
+    paddingValues: PaddingValues
+) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(paddingValues)
+            .padding(24.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Card(
+            shape = MatrixShapes.Lg,
+            colors = CardDefaults.cardColors(containerColor = MatrixColors.SurfaceContainerLow),
+            border = BorderStroke(1.dp, MatrixColors.OutlineVariant),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(24.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(64.dp)
+                        .clip(CircleShape)
+                        .background(MatrixColors.Primary.copy(alpha = 0.15f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Lock,
+                        contentDescription = "Pro Feature",
+                        tint = MatrixColors.Primary,
+                        modifier = Modifier.size(32.dp)
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                Text(
+                    text = "Sparky Shop is a Pro Feature",
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 20.sp,
+                    color = MatrixColors.TextHeader,
+                    textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                )
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                Text(
+                    text = "Upgrade to Calender28 Pro to customize Sparky with hats, glasses, skins, and exclusive companion accessories.",
+                    fontSize = 14.sp,
+                    color = MatrixColors.TextSecondary,
+                    textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                    lineHeight = 20.sp
+                )
+
+                Spacer(modifier = Modifier.height(20.dp))
+
+                Button(
+                    onClick = onOpenPaywall,
+                    shape = MatrixShapes.Md,
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MatrixColors.Primary,
+                        contentColor = Color.Black
+                    ),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("Upgrade to Pro", fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                }
+            }
+        }
+    }
 }
 
 @Composable

@@ -88,7 +88,13 @@ class SparkyRepositoryImpl(
                 val didLevelUp = newLevel > prevLevel
 
                 val prevStage = EvolutionStage.valueOf(current.evolutionStage)
-                val newStage = EvolutionStage.fromHabits(newHabits)
+                val calculatedStage = EvolutionStage.fromHabits(newHabits)
+                val isPro = com.l1khith.calender28.billing.RevenueCatManager.isPremium.value || com.l1khith.calender28.billing.SubscriptionManager.isProActive.value
+                val newStage = if (!isPro && calculatedStage.ordinal > EvolutionStage.BABY.ordinal) {
+                    EvolutionStage.BABY
+                } else {
+                    calculatedStage
+                }
                 val didEvolve = newStage != prevStage
 
                 val updated = current.copy(
