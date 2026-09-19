@@ -190,4 +190,34 @@ class SparkySystemTest {
             assertTrue(duplicateClaim.isFailure)
         }
     }
+
+    @Test
+    fun testSparkyEvolution_freeTierCappedAtBaby() {
+        runBlocking {
+            com.l1khith.calender28.billing.SubscriptionManager.setProActive(false)
+            repeat(30) {
+                sparkyRepo.onHabitCompleted()
+            }
+            val state = sparkyRepo.getSparky()
+            assertEquals(30, state.totalHabitsCompleted)
+            assertEquals(EvolutionStage.BABY, state.stage)
+        }
+    }
+
+    @Test
+    fun testSparkyEvolution_proTierAllowsFullEvolution() {
+        runBlocking {
+            com.l1khith.calender28.billing.SubscriptionManager.setProActive(true)
+            try {
+                repeat(30) {
+                    sparkyRepo.onHabitCompleted()
+                }
+                val state = sparkyRepo.getSparky()
+                assertEquals(30, state.totalHabitsCompleted)
+                assertEquals(EvolutionStage.TEEN, state.stage)
+            } finally {
+                com.l1khith.calender28.billing.SubscriptionManager.setProActive(false)
+            }
+        }
+    }
 }

@@ -98,9 +98,9 @@ fun FixedCalendarApp(
     }
 
     LaunchedEffect(Unit) {
-        // Give SubscriptionManager a moment to resolve Pro status from DataStore
-        // (much shorter than the old arbitrary 600ms delay)
-        kotlinx.coroutines.delay(100)
+        // Give the UI time to settle before loading ads.
+        // 100ms was too aggressive — causes stuttering during initial render.
+        kotlinx.coroutines.delay(1500)
         if (!com.l1khith.calender28.billing.SubscriptionManager.isProActive.value) {
             com.l1khith.calender28.ads.InterstitialAdManager.loadAd(context)
         }
@@ -126,12 +126,10 @@ fun FixedCalendarApp(
     var showCoinStoreDialog by remember { mutableStateOf(false) }
     var showFocusStatsDialog by remember { mutableStateOf(false) }
     var showSecurityLockDialog by remember { mutableStateOf(false) }
-    var showCustomSkippableAd by remember { mutableStateOf(false) }
     var navigationCount by remember { mutableIntStateOf(0) }
 
     val coinViewModel: CoinViewModel = androidx.lifecycle.viewmodel.compose.viewModel(factory = AppViewModelProvider.Factory)
     val focusViewModel: FocusViewModel = androidx.lifecycle.viewmodel.compose.viewModel(factory = AppViewModelProvider.Factory)
-    val focusState by com.l1khith.calender28.service.FocusSessionManager.focusState.collectAsStateWithLifecycle()
 
     val isProActive by com.l1khith.calender28.billing.SubscriptionManager.isProActive.collectAsStateWithLifecycle()
     val coinBalance by coinViewModel.coinBalance.collectAsStateWithLifecycle()
@@ -329,14 +327,12 @@ fun FixedCalendarApp(
             if (!isProActive) {
                 navigationCount++
                 if (navigationCount % com.l1khith.calender28.utils.Constants.INTERSTITIAL_NAV_FREQUENCY == 0) {
-                    if (activity != null && com.l1khith.calender28.ads.InterstitialAdManager.isAdLoaded()) {
+                    if (activity != null) {
                         com.l1khith.calender28.ads.InterstitialAdManager.showAd(
                             activity = activity,
                             onAdDismissed = {},
-                            onAdUnavailable = { showCustomSkippableAd = true }
+                            onAdUnavailable = {}
                         )
-                    } else {
-                        showCustomSkippableAd = true
                     }
                 }
             }
@@ -669,7 +665,11 @@ fun FixedCalendarApp(
                     createHabitTrigger = createHabitTrigger
                 )
 
-                3 -> NotesListScreen()
+                3 -> NotesListScreen(
+                    createNoteTrigger = createNoteTrigger,
+                    isProActive = isProActive,
+                    onOpenPaywall = { showPaywallDialog = true }
+                )
 
                     else -> {
                         val monthScrollState = rememberScrollState()
@@ -766,13 +766,6 @@ fun FixedCalendarApp(
                 borderColor = borderSubtle,
                 textColor = textColorPrimary
             )
-
-            if (!isProActive) {
-                Spacer(modifier = Modifier.height(12.dp))
-                BannerAd(
-                    modifier = Modifier.fillMaxWidth()
-                )
-            }
 
             Spacer(modifier = Modifier.height(12.dp))
 
@@ -1062,13 +1055,19 @@ fun FixedCalendarApp(
     }
 
     if (showPaywallDialog) {
-        SubscriptionPaywallDialog(
-            onDismiss = { showPaywallDialog = false },
-            onPurchaseSuccess = {
-                showPaywallDialog = false
-                viewModel.triggerConfetti()
-            }
-        )
+        androidx.compose.ui.window.Dialog(
+            onDismissRequest = { showPaywallDialog = false },
+            properties = androidx.compose.ui.window.DialogProperties(usePlatformDefaultWidth = false)
+        ) {
+            com.l1khith.calender28.ui.paywall.PaywallScreen(
+                onClose = {
+                    showPaywallDialog = false
+                    if (com.l1khith.calender28.billing.RevenueCatManager.isPremium.value) {
+                        viewModel.triggerConfetti()
+                    }
+                }
+            )
+        }
     }
 
     if (showCustomerCenterDialog) {
@@ -1100,17 +1099,8 @@ fun FixedCalendarApp(
         )
     }
 
-    if (showCustomSkippableAd && !isProActive) {
-        CustomSkippableAdDialog(
-            onDismiss = { showCustomSkippableAd = false },
-            onOpenPaywall = {
-                showCustomSkippableAd = false
-                showPaywallDialog = true
-            }
-        )
-    }
-
-    // Focus Mode Overlays
+    // Collect focusState locally here — NOT at root — to avoid 1Hz full-tree recomposition
+    val focusState by com.l1khith.calender28.service.FocusSessionManager.focusState.collectAsStateWithLifecycle()
     when (val state = focusState) {
         is com.l1khith.calender28.service.FocusState.Setup -> {
             FocusSetupDialog(

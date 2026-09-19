@@ -48,7 +48,7 @@ object ThemeManager {
 
         coroutineScope.launch(Dispatchers.Default) {
             repo.selectedTheme.collect { themeName ->
-                val theme = runCatching { AppTheme.valueOf(themeName) }.getOrDefault(AppTheme.DEFAULT)
+                val theme = AppTheme.entries.find { it.name == themeName } ?: AppTheme.DEFAULT
                 _currentTheme.value = theme
             }
         }

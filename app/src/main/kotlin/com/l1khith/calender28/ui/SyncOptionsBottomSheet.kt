@@ -19,6 +19,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.l1khith.calender28.ui.theme.MatrixColors
 import com.l1khith.calender28.ui.theme.MatrixShapes
 import com.l1khith.calender28.utils.showPlatformToast
@@ -32,6 +33,8 @@ fun SyncOptionsBottomSheet(
     isProActive: Boolean,
     onOpenPaywall: () -> Unit
 ) {
+    val isPremium by com.l1khith.calender28.billing.RevenueCatManager.isPremium.collectAsStateWithLifecycle()
+    val isPro = isPremium || isProActive
     val cardBg = MatrixColors.SurfaceContainerLow
     val titleColor = MatrixColors.TextHeader
     val subtitleColor = MatrixColors.TextSecondary
@@ -171,10 +174,9 @@ fun SyncOptionsBottomSheet(
                     modifier = Modifier
                         .fillMaxWidth()
                         .clickable {
-                            if (isProActive) {
+                            if (isPro) {
                                 onExportTasks()
                             } else {
-                                showPlatformToast("Data Export is a Pro Feature. Switch to Pro mode to export!")
                                 onOpenPaywall()
                             }
                         },
@@ -213,7 +215,7 @@ fun SyncOptionsBottomSheet(
                                     fontWeight = FontWeight.Bold,
                                     fontSize = 14.sp
                                 )
-                                if (!isProActive) {
+                                if (!isPro) {
                                     Spacer(modifier = Modifier.width(6.dp))
                                     Icon(
                                         imageVector = Icons.Default.Lock,

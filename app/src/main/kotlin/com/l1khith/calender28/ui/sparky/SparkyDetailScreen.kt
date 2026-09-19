@@ -51,6 +51,9 @@ fun SparkyDetailScreen(
     var showRenameDialog by remember { mutableStateOf(false) }
     var renameInput by remember { mutableStateOf("") }
     val snackbarHostState = remember { SnackbarHostState() }
+    val isPremium by com.l1khith.calender28.billing.RevenueCatManager.isPremium.collectAsStateWithLifecycle()
+    val isProActive by com.l1khith.calender28.billing.SubscriptionManager.isProActive.collectAsStateWithLifecycle()
+    val isPro = isPremium || isProActive
 
     val achievements = remember(sparkyState) {
         sparkyViewModel.getAchievements()
@@ -304,7 +307,7 @@ fun SparkyDetailScreen(
                     Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                         EvolutionStage.entries.forEach { stage ->
                             val isCurrent = sparkyState.stage == stage
-                            val isReached = sparkyState.totalHabitsCompleted >= stage.minHabits
+                            val isReached = (sparkyState.totalHabitsCompleted >= stage.minHabits) && (stage.ordinal <= EvolutionStage.BABY.ordinal || isPro)
 
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
@@ -341,8 +344,13 @@ fun SparkyDetailScreen(
                                             color = if (isCurrent) MatrixColors.Primary else MatrixColors.TextHeader,
                                             fontSize = 14.sp
                                         )
+                                        val reqText = when {
+                                            stage.minHabits == 0 -> "Starting Stage"
+                                            stage.ordinal > EvolutionStage.BABY.ordinal && !isPro -> "Requires Pro & ${stage.minHabits} completed habits"
+                                            else -> "Requires ${stage.minHabits} completed habits"
+                                        }
                                         Text(
-                                            text = if (stage.minHabits == 0) "Starting Stage" else "Requires ${stage.minHabits} completed habits",
+                                            text = reqText,
                                             color = MatrixColors.TextSecondary,
                                             fontSize = 11.sp
                                         )

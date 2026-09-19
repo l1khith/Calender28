@@ -82,6 +82,15 @@ object FocusSessionManager {
     private val _focusState = MutableStateFlow<FocusState>(FocusState.Idle)
     val focusState: StateFlow<FocusState> = _focusState.asStateFlow()
 
+    // Lightweight flow that only changes on session start/stop — use at root level
+    // instead of focusState to avoid 1Hz recomposition from timer ticks
+    private val _isActive = MutableStateFlow(false)
+    val isActive: StateFlow<Boolean> = _isActive.asStateFlow()
+
+    // Separate timer tick flow — only observe where you display the countdown
+    private val _elapsedSeconds = MutableStateFlow(0)
+    val elapsedSeconds: StateFlow<Int> = _elapsedSeconds.asStateFlow()
+
     private val exceptionHandler = kotlinx.coroutines.CoroutineExceptionHandler { _, throwable ->
         Log.e(TAG, "Uncaught exception in FocusSessionManager scope", throwable)
     }
@@ -117,6 +126,8 @@ object FocusSessionManager {
             startedAtMs = engine.sessionStartTimeMs,
             isScreenPinned = pinScreen
         )
+        _isActive.value = true
+        _elapsedSeconds.value = 0
 
         vibrate(appContext, 100)
         startForegroundService(appContext)
@@ -173,6 +184,7 @@ object FocusSessionManager {
         }
 
         _focusState.value = FocusState.Idle
+        _isActive.value = false
     }
 
     fun finishSessionAsComplete(context: Context) {
@@ -200,6 +212,7 @@ object FocusSessionManager {
             mode = current.mode,
             durationSeconds = duration
         )
+        _isActive.value = false
     }
 
     fun commitCompletedTask(context: Context, markTaskDone: Boolean = true) {
@@ -269,6 +282,7 @@ object FocusSessionManager {
                     finishSessionAsComplete(context)
                     break
                 } else {
+                    _elapsedSeconds.value = totalElapsed
                     _focusState.value = current.copy(elapsedSeconds = totalElapsed)
                 }
             }

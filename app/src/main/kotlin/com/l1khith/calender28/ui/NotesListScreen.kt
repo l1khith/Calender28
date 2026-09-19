@@ -27,6 +27,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.l1khith.calender28.data.NoteFormat
+import com.l1khith.calender28.ui.components.UpgradeDialog
 import com.l1khith.calender28.ui.notes.NoteCard
 import com.l1khith.calender28.ui.notes.NoteEditorScreen
 import com.l1khith.calender28.ui.notes.NotePreviewScreen
@@ -40,10 +41,15 @@ import com.l1khith.calender28.viewmodel.NotesViewModel
 fun NotesListScreen(
     notesViewModel: NotesViewModel = androidx.lifecycle.viewmodel.compose.viewModel(factory = AppViewModelProvider.Factory),
     createNoteTrigger: Int = 0,
+    isProActive: Boolean = false,
+    onOpenPaywall: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val notes by notesViewModel.notes.collectAsStateWithLifecycle()
     val searchQuery by notesViewModel.searchQuery.collectAsStateWithLifecycle()
+    val isPremium by com.l1khith.calender28.billing.RevenueCatManager.isPremium.collectAsStateWithLifecycle()
+    val isPro = isPremium || isProActive
+    var showUpgradeDialog by remember { mutableStateOf(false) }
 
     val activeNote by notesViewModel.activeNote.collectAsStateWithLifecycle()
     val draftTitle by notesViewModel.draftTitle.collectAsStateWithLifecycle()
@@ -57,10 +63,18 @@ fun NotesListScreen(
     val selectedNoteIds = remember { mutableStateListOf<String>() }
     var batchGraphTargetIds by remember { mutableStateOf<Set<String>?>(null) }
 
+    fun onAddNoteClicked() {
+        if (!isPro && notes.size >= 10) {
+            showUpgradeDialog = true
+            return
+        }
+        notesViewModel.createNewNote()
+    }
+
     // Trigger creating note from external triggers if updated
     LaunchedEffect(createNoteTrigger) {
         if (createNoteTrigger > 0) {
-            notesViewModel.createNewNote()
+            onAddNoteClicked()
         }
     }
 
@@ -156,6 +170,8 @@ fun NotesListScreen(
             onDelete = {
                 notesViewModel.deleteActiveNote()
             },
+            isPro = isPro,
+            onUpgrade = onOpenPaywall,
             modifier = modifier
         )
         return
@@ -414,7 +430,7 @@ fun NotesListScreen(
         } else {
             // Floating Action Button
             FloatingActionButton(
-                onClick = { notesViewModel.createNewNote() },
+                onClick = { onAddNoteClicked() },
                 containerColor = MatrixColors.Primary,
                 contentColor = Color.White,
                 shape = MatrixShapes.Xl,
@@ -425,5 +441,17 @@ fun NotesListScreen(
                 Icon(imageVector = Icons.Default.Add, contentDescription = "New Note")
             }
         }
+    }
+
+    if (showUpgradeDialog) {
+        UpgradeDialog(
+            title = "Note Limit Reached",
+            message = "Free users can create up to 10 notes. Upgrade to Pro for unlimited notes, Markdown formatting, and knowledge graphs.",
+            onDismiss = { showUpgradeDialog = false },
+            onUpgrade = {
+                showUpgradeDialog = false
+                onOpenPaywall()
+            }
+        )
     }
 }

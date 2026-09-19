@@ -23,11 +23,12 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.l1khith.calender28.data.AppTask
 import com.l1khith.calender28.data.RecurrenceType
+import com.l1khith.calender28.ui.components.UpgradeDialog
 import com.l1khith.calender28.ui.theme.AppIcons
 import com.l1khith.calender28.ui.theme.MatrixColors
 import com.l1khith.calender28.ui.theme.MatrixShapes
 import com.l1khith.calender28.utils.PlatformTimePicker
-
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 
 import android.util.Log
 
@@ -180,6 +181,9 @@ fun CreateTaskScreen(
     var showAddCategoryDialog by remember { mutableStateOf(false) }
     var newCategoryName by remember { mutableStateOf("") }
     var customCategoryName by remember { mutableStateOf<String?>(null) }
+    val isPremium by com.l1khith.calender28.billing.RevenueCatManager.isPremium.collectAsStateWithLifecycle()
+    val isPro = isPremium || isProActive
+    var showUpgradeDialog by remember { mutableStateOf(false) }
 
     val performSave = {
         val finalDesc = if (!customCategoryName.isNullOrEmpty()) {
@@ -189,9 +193,9 @@ fun CreateTaskScreen(
         Log.d(TAG, "performSave: Saving task title=${title.trim()}, type=$taskTypeLabel, isReminder=$isReminder, isAllDay=$isAllDay")
 
         if (taskTypeLabel == "Recurring") {
-            if (!isProActive && existingRecurringCount >= 1 && task == null) {
-                Log.d(TAG, "performSave: Paywall triggered for recurring task limit")
-                onOpenPaywall()
+            if (!isPro && existingRecurringCount >= 5 && task == null) {
+                Log.d(TAG, "performSave: UpgradeDialog triggered for recurring task limit")
+                showUpgradeDialog = true
             } else {
                 val recurringIdToSave = task?.recurringParentId ?: task?.id
                 Log.d(TAG, "performSave: Saving recurring task with id=$recurringIdToSave")
@@ -424,11 +428,15 @@ fun CreateTaskScreen(
                                         .clip(MatrixShapes.Sm)
                                         .background(if (isSelected) MatrixColors.PrimaryContainer else Color.Transparent)
                                         .clickable {
-                                            taskTypeLabel = label
-                                            if (label == "Scheduled" || label == "Recurring") {
-                                                isReminder = true
-                                            } else if (label == "Normal") {
-                                                isReminder = false
+                                            if (label == "Recurring" && !isPro && existingRecurringCount >= 5 && task == null) {
+                                                showUpgradeDialog = true
+                                            } else {
+                                                taskTypeLabel = label
+                                                if (label == "Scheduled" || label == "Recurring") {
+                                                    isReminder = true
+                                                } else if (label == "Normal") {
+                                                    isReminder = false
+                                                }
                                             }
                                         }
                                         .padding(vertical = 10.dp),
@@ -996,6 +1004,18 @@ fun CreateTaskScreen(
             showEndTimePicker = false
         }
     )
+
+    if (showUpgradeDialog) {
+        UpgradeDialog(
+            title = "Recurring Task Limit Reached",
+            message = "Free users can track up to 5 active recurring tasks. Upgrade to Pro for unlimited recurring tasks.",
+            onDismiss = { showUpgradeDialog = false },
+            onUpgrade = {
+                showUpgradeDialog = false
+                onOpenPaywall()
+            }
+        )
+    }
 }
 
 

@@ -36,6 +36,7 @@ import com.l1khith.calender28.data.TaskDatabase
 import com.l1khith.calender28.ui.theme.AppIcons
 import com.l1khith.calender28.ui.theme.MatrixColors
 import com.l1khith.calender28.ui.theme.MatrixShapes
+import com.l1khith.calender28.ui.components.UpgradeDialog
 import com.l1khith.calender28.utils.FixedCalendarHelper
 import com.l1khith.calender28.utils.HabitCycleEngine
 import com.l1khith.calender28.utils.PlatformTimePicker
@@ -60,14 +61,21 @@ fun HabitSection(
     val confettiTrigger by viewModel.confettiTrigger.collectAsStateWithLifecycle()
     var selectedHabitId by remember { mutableStateOf<String?>(null) }
     var showCreateNewHabitScreen by remember { mutableStateOf(false) }
+    val isPremium by com.l1khith.calender28.billing.RevenueCatManager.isPremium.collectAsStateWithLifecycle()
+    val isPro = isPremium || isProActive
+    var showUpgradeDialog by remember { mutableStateOf(false) }
+
+    fun onCreateHabitClicked() {
+        if (!isPro && habits.size >= 3) {
+            showUpgradeDialog = true
+            return
+        }
+        showCreateNewHabitScreen = true
+    }
 
     LaunchedEffect(createHabitTrigger) {
         if (createHabitTrigger > 0) {
-            if (isProActive) {
-                showCreateNewHabitScreen = true
-            } else {
-                onOpenPaywall()
-            }
+            onCreateHabitClicked()
         }
     }
 
@@ -135,6 +143,18 @@ fun HabitSection(
         }
     }
 
+    if (showUpgradeDialog) {
+        UpgradeDialog(
+            title = "Habit Limit Reached",
+            message = "Free users can track up to 3 active habit cycles. Upgrade to Pro to track unlimited habits and build routines without restrictions.",
+            onDismiss = { showUpgradeDialog = false },
+            onUpgrade = {
+                showUpgradeDialog = false
+                onOpenPaywall()
+            }
+        )
+    }
+
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(horizontal = 16.dp, vertical = 16.dp),
@@ -170,13 +190,7 @@ fun HabitSection(
                 }
 
                 Button(
-                    onClick = {
-                        if (isProActive) {
-                            showCreateNewHabitScreen = true
-                        } else {
-                            onOpenPaywall()
-                        }
-                    },
+                    onClick = { onCreateHabitClicked() },
                     colors = ButtonDefaults.buttonColors(containerColor = MatrixColors.PrimaryContainer),
                     contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
                     shape = MatrixShapes.Md
@@ -215,7 +229,7 @@ fun HabitSection(
                         )
                         Spacer(modifier = Modifier.height(6.dp))
                         Text(
-                            text = if (isProActive) "Tap below to create your first 28-day habit cycle!" else "Upgrade to Pro to track unlimited 28-day habit cycles & streaks.",
+                            text = "Tap below to create your 28-day habit cycle!",
                             color = MatrixColors.TextSecondary,
                             fontSize = 13.sp,
                             textAlign = androidx.compose.ui.text.style.TextAlign.Center
@@ -362,13 +376,7 @@ fun HabitSection(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(top = 4.dp, bottom = 24.dp)
-                    .clickable {
-                        if (isProActive) {
-                            showCreateNewHabitScreen = true
-                        } else {
-                            onOpenPaywall()
-                        }
-                    }
+                    .clickable { onCreateHabitClicked() }
             ) {
                 Row(
                     modifier = Modifier

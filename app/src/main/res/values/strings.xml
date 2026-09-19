@@ -39,8 +39,11 @@
     <string name="ad_go_pro_button">Go Pro</string>
 
     <!-- Paywall & Subscriptions -->
-    <string name="paywall_title">Matrix 28 Pro</string>
-    <string name="paywall_subtitle">Unleash Full Productivity &amp; Ad-Free Freedom</string>
+    <string name="paywall_title">Upgrade to Pro</string>
+    <string name="paywall_headline">Unlock Full Access</string>
+    <string name="paywall_subtitle">Support development and remove ads</string>
+    <string name="paywall_continue">Continue</string>
+    <string name="paywall_restore">Restore Purchases</string>
     <string name="perk_ad_free">100% Ad-Free Experience</string>
     <string name="perk_unlimited_habits">Unlimited 28-Day Habit Trackers</string>
     <string name="perk_all_themes">All 5 Dark Theme Palettes</string>

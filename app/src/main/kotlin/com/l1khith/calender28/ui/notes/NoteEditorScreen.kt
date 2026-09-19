@@ -41,6 +41,8 @@ fun NoteEditorScreen(
     onPreviewClick: () -> Unit,
     onBack: () -> Unit,
     onDelete: () -> Unit,
+    isPro: Boolean = false,
+    onUpgrade: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     Column(
@@ -73,8 +75,8 @@ fun NoteEditorScreen(
                 modifier = Modifier.weight(1f)
             )
 
-            // Book icon button to toggle to Preview mode when in Markdown
-            if (format == NoteFormat.MD) {
+            // Book icon button to toggle to Preview mode when in Markdown (Pro only)
+            if (format == NoteFormat.MD && isPro) {
                 IconButton(onClick = onPreviewClick) {
                     Icon(
                         imageVector = Icons.AutoMirrored.Outlined.MenuBook,
@@ -88,8 +90,10 @@ fun NoteEditorScreen(
             NoteEditorMenu(
                 note = noteForMenu,
                 onToggleFormat = onToggleFormat,
-                onPreview = if (format == NoteFormat.MD) onPreviewClick else null,
-                onDeleteConfirmed = if (isExistingNote) onDelete else null
+                onPreview = if (format == NoteFormat.MD && isPro) onPreviewClick else null,
+                onDeleteConfirmed = if (isExistingNote) onDelete else null,
+                isPro = isPro,
+                onUpgrade = onUpgrade
             )
         }
 

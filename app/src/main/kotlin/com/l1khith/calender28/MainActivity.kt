@@ -6,13 +6,12 @@ import android.util.Log
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
-import androidx.compose.animation.togetherWith
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.fragment.app.FragmentActivity
@@ -35,9 +34,9 @@ class MainActivity : FragmentActivity() {
         deepLinkIdState = intent?.getStringExtra("selected_task_id")
 
         setContent {
-            val deepLinkId = rememberSaveable { mutableStateOf(deepLinkIdState) }
+            val deepLinkId = remember { mutableStateOf(deepLinkIdState) }
             val isLocked by com.l1khith.calender28.security.AppLockManager.isLocked.collectAsStateWithLifecycle()
-            var showSplash by rememberSaveable { mutableStateOf(deepLinkIdState == null) }
+            var showSplash by remember { mutableStateOf(deepLinkIdState == null) }
 
             MatrixTheme {
                 if (isLocked) {
@@ -48,12 +47,9 @@ class MainActivity : FragmentActivity() {
                         }
                     )
                 } else {
-                    androidx.compose.animation.AnimatedContent(
+                    androidx.compose.animation.Crossfade(
                         targetState = showSplash,
-                        transitionSpec = {
-                            androidx.compose.animation.fadeIn(animationSpec = androidx.compose.animation.core.tween(300)) togetherWith
-                                    androidx.compose.animation.fadeOut(animationSpec = androidx.compose.animation.core.tween(300))
-                        },
+                        animationSpec = androidx.compose.animation.core.tween(300),
                         label = "SplashTransition"
                     ) { isSplash ->
                         if (isSplash) {
@@ -81,6 +77,7 @@ class MainActivity : FragmentActivity() {
 
     override fun onPause() {
         super.onPause()
+        com.l1khith.calender28.ads.InterstitialAdManager.clear()
         com.l1khith.calender28.security.AppLockManager.onActivityPaused()
 
         // If an active focus session had screen pinning enabled and the user navigated away,

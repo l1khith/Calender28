@@ -51,16 +51,16 @@ object SubscriptionManager {
     fun initDataStore(context: Context, scope: CoroutineScope) {
         if (isDataStoreInitialized) return
         isDataStoreInitialized = true
-        try {
-            val repo = getRepo(context)
-            scope.launch(Dispatchers.Default) {
+        scope.launch(Dispatchers.Default) {
+            try {
+                val repo = getRepo(context)
                 repo.isProUser.collect { isPro ->
                     _isProActive.value = isPro
                 }
+            } catch (e: Exception) {
+                isDataStoreInitialized = false
+                e.printStackTrace()
             }
-        } catch (e: Exception) {
-            isDataStoreInitialized = false
-            e.printStackTrace()
         }
     }
 
@@ -111,7 +111,7 @@ object SubscriptionManager {
         _isProActive.value = isPro
     }
 
-    fun configure(context: Context, apiKey: String, entitlementId: String = "pro") {
+    fun configure(context: Context, apiKey: String, entitlementId: String = "calender28_pro") {
         if (apiKey.isBlank() || isConfigured) return
 
         try {
@@ -137,15 +137,15 @@ object SubscriptionManager {
 
     private fun checkEntitlements(customerInfo: CustomerInfo, entitlementId: String, context: Context) {
         val hasPro = customerInfo.entitlements[entitlementId]?.isActive == true ||
+                     customerInfo.entitlements["calender28_pro"]?.isActive == true ||
+                     customerInfo.entitlements["pro"]?.isActive == true ||
                      customerInfo.entitlements["premium"]?.isActive == true
 
-        if (hasPro) {
-            _isProActive.value = true
-            persistenceScope.launch {
-                try {
-                    getRepo(context).updateIsProUser(true)
-                } catch (_: Exception) {}
-            }
+        _isProActive.value = hasPro
+        persistenceScope.launch {
+            try {
+                getRepo(context).updateIsProUser(hasPro)
+            } catch (_: Exception) {}
         }
     }
 
