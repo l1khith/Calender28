@@ -54,9 +54,12 @@ fun ProfileScreen(
     onOpenCustomizeNav: () -> Unit = {},
     sparkyViewModel: com.l1khith.calender28.viewmodel.SparkyViewModel = androidx.lifecycle.viewmodel.compose.viewModel(factory = com.l1khith.calender28.viewmodel.AppViewModelProvider.Factory)
 ) {
+    val isPremium by com.l1khith.calender28.billing.RevenueCatManager.isPremium.collectAsStateWithLifecycle()
     val isProActive by SubscriptionManager.isProActive.collectAsStateWithLifecycle()
+    val isPro = isPremium || isProActive
     val sparkyState by sparkyViewModel.sparkyState.collectAsStateWithLifecycle()
     val coroutineScope = rememberCoroutineScope()
+    val snackbarHostState = remember { SnackbarHostState() }
     val currentTheme by ThemeManager.currentTheme.collectAsStateWithLifecycle()
     var showThemeDialog by remember { mutableStateOf(false) }
     var showAppPreferencesDialog by remember { mutableStateOf(false) }
@@ -109,14 +112,15 @@ fun ProfileScreen(
         )
     }
 
-    LazyColumn(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(MatrixColors.Surface)
-            .padding(horizontal = 16.dp),
-        contentPadding = PaddingValues(top = 16.dp, bottom = 80.dp),
-        verticalArrangement = Arrangement.spacedBy(20.dp)
-    ) {
+    Box(modifier = Modifier.fillMaxSize()) {
+        LazyColumn(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(MatrixColors.Surface)
+                .padding(horizontal = 16.dp),
+            contentPadding = PaddingValues(top = 16.dp, bottom = 80.dp),
+            verticalArrangement = Arrangement.spacedBy(20.dp)
+        ) {
         // Section: Sparky Companion (Zero Emoji - Vector Icons only)
         if (enableSparky) {
             item {
@@ -294,113 +298,84 @@ fun ProfileScreen(
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         Column {
-                            Row(
+                            // --- PRO STATUS ---
+                            Card(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .padding(horizontal = 16.dp, vertical = 12.dp),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
+                                    .padding(horizontal = 12.dp, vertical = 6.dp),
+                                colors = CardDefaults.cardColors(
+                                    containerColor = if (isPremium) MatrixColors.PrimaryContainer.copy(alpha = 0.35f) else MatrixColors.SurfaceContainerHigh
+                                ),
+                                onClick = {
+                                    if (!isPremium) onOpenSubscription()
+                                }
                             ) {
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Icon(
-                                        imageVector = AppIcons.Subscription,
-                                        contentDescription = "Pro Mode",
-                                        tint = MatrixColors.Secondary,
-                                        modifier = Modifier.size(20.dp)
-                                    )
-                                    Spacer(modifier = Modifier.width(12.dp))
-                                    Column {
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(16.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Column(modifier = Modifier.weight(1f)) {
                                         Text(
-                                            text = "Pro Mode (Testing)",
-                                            color = MatrixColors.TextHeader,
+                                            "Pro Status",
+                                            style = MaterialTheme.typography.bodyLarge,
                                             fontWeight = FontWeight.Bold,
-                                            fontSize = 14.sp
+                                            color = MatrixColors.TextHeader
                                         )
                                         Text(
-                                            text = if (isProActive) "Unlocked • Ad-Free" else "Free Tier • Test Ads Shown",
-                                            color = MatrixColors.TextSecondary,
-                                            fontSize = 12.sp
+                                            text = if (isPremium) "Active" else "Inactive",
+                                            style = MaterialTheme.typography.bodySmall,
+                                            fontWeight = FontWeight.SemiBold,
+                                            color = if (isPremium)
+                                                MaterialTheme.colorScheme.primary
+                                            else
+                                                MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    }
+                                    if (!isPremium) {
+                                        Text(
+                                            "Upgrade",
+                                            style = MaterialTheme.typography.labelLarge,
+                                            fontWeight = FontWeight.Bold,
+                                            color = MaterialTheme.colorScheme.primary
                                         )
                                     }
                                 }
-
-                                Switch(
-                                    checked = isProActive,
-                                    onCheckedChange = {
-                                        SubscriptionManager.toggleProMode(coroutineScope)
-                                    },
-                                    colors = SwitchDefaults.colors(
-                                        checkedThumbColor = MatrixColors.Primary,
-                                        checkedTrackColor = MatrixColors.PrimaryContainer
-                                    )
-                                )
                             }
 
-                            HorizontalDivider(color = MatrixColors.OutlineVariant, thickness = 1.dp)
-
-                            var devToastMessage by remember { mutableStateOf<String?>(null) }
-
-                            LaunchedEffect(devToastMessage) {
-                                devToastMessage?.let {
-                                    kotlinx.coroutines.delay(2000)
-                                    devToastMessage = null
-                                }
-                            }
-
-                            Row(
+                            // --- RESTORE PURCHASES ---
+                            Card(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .clickable {
-                                        if (SubscriptionManager.onDevModeTap()) {
-                                            val nowPro = SubscriptionManager.isProActive.value
-                                            devToastMessage =
-                                                if (nowPro) "Dev Mode: PRO ENABLED" else "Dev Mode: PRO DISABLED"
+                                    .padding(horizontal = 12.dp, vertical = 6.dp),
+                                colors = CardDefaults.cardColors(containerColor = MatrixColors.SurfaceContainerHigh),
+                                onClick = {
+                                    coroutineScope.launch {
+                                        val r = com.l1khith.calender28.billing.RevenueCatManager.restore()
+                                        val msg = when (r) {
+                                            is com.l1khith.calender28.billing.RevenueCatManager.PurchaseResult.Success ->
+                                                "Purchases restored"
+                                            is com.l1khith.calender28.billing.RevenueCatManager.PurchaseResult.Error -> r.message
+                                            else -> "No purchases found"
                                         }
-                                        onOpenSubscription()
+                                        snackbarHostState.showSnackbar(msg)
                                     }
-                                    .padding(horizontal = 16.dp, vertical = 14.dp),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
+                                }
                             ) {
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Icon(
-                                        imageVector = AppIcons.Subscription,
-                                        contentDescription = "Subscription Status",
-                                        tint = MatrixColors.TextSecondary,
-                                        modifier = Modifier.size(20.dp)
-                                    )
-                                    Spacer(modifier = Modifier.width(12.dp))
+                                Column(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
                                     Text(
-                                        text = "Subscription Status",
-                                        color = MatrixColors.TextHeader,
-                                        fontSize = 14.sp
+                                        "Restore Purchases",
+                                        style = MaterialTheme.typography.bodyLarge,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MatrixColors.TextHeader
+                                    )
+                                    Text(
+                                        "Restore a previous subscription",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
                                     )
                                 }
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Text(
-                                        text = if (isProActive) "Pro (Active)" else "Free Tier",
-                                        color = MatrixColors.TextSecondary,
-                                        fontSize = 13.sp,
-                                        fontWeight = FontWeight.Medium
-                                    )
-                                    Spacer(modifier = Modifier.width(4.dp))
-                                    Icon(
-                                        imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                                        contentDescription = "Go",
-                                        tint = MatrixColors.TextSecondary,
-                                        modifier = Modifier.size(20.dp)
-                                    )
-                                }
-                            }
-
-                            devToastMessage?.let { msg ->
-                                Text(
-                                    text = msg,
-                                    color = Color(0xFF10B981),
-                                    fontSize = 12.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
-                                )
                             }
 
                             val isAppLockEnabled by com.l1khith.calender28.security.AppLockManager.isAppLockEnabled.collectAsState()
@@ -421,7 +396,17 @@ fun ProfileScreen(
                             ProfileSettingRow(
                                 icon = Icons.Default.Timer,
                                 title = "Focus Analytics & History",
-                                onClick = onOpenFocusStats
+                                onClick = if (isPro) onOpenFocusStats else onOpenSubscription,
+                                trailingBadge = if (!isPro) {
+                                    {
+                                        Icon(
+                                            imageVector = Icons.Outlined.Lock,
+                                            contentDescription = "Pro Feature",
+                                            tint = MatrixColors.Primary,
+                                            modifier = Modifier.size(16.dp)
+                                        )
+                                    }
+                                } else null
                             )
                             HorizontalDivider(color = MatrixColors.OutlineVariant, thickness = 1.dp)
                             ProfileSettingRow(
@@ -593,7 +578,17 @@ fun ProfileScreen(
                                 icon = Icons.Outlined.Storage,
                                 title = "Data Management & Export",
                                 subtitle = "Export current month or all tasks to Downloads (CSV/ICS/JSON)",
-                                onClick = onOpenExportTasks
+                                onClick = if (isPro) onOpenExportTasks else onOpenSubscription,
+                                trailingBadge = if (!isPro) {
+                                    {
+                                        Icon(
+                                            imageVector = Icons.Outlined.Lock,
+                                            contentDescription = "Pro Feature",
+                                            tint = MatrixColors.Primary,
+                                            modifier = Modifier.size(16.dp)
+                                        )
+                                    }
+                                } else null
                             )
 
                             HorizontalDivider(color = MatrixColors.OutlineVariant, thickness = 1.dp)
@@ -644,7 +639,15 @@ fun ProfileScreen(
                 }
             }
         }
+
+        SnackbarHost(
+            hostState = snackbarHostState,
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .padding(bottom = 16.dp)
+        )
     }
+}
 
 @Composable
 fun ThemeSelectionDialog(
@@ -769,7 +772,8 @@ fun ThemeSelectionDialog(
 fun ProfileSettingRow(
     icon: ImageVector,
     title: String,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    trailingBadge: (@Composable () -> Unit)? = null
 ) {
     Row(
         modifier = Modifier
@@ -793,12 +797,18 @@ fun ProfileSettingRow(
                 fontSize = 14.sp
             )
         }
-        Icon(
-            imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
-            contentDescription = "Go",
-            tint = MatrixColors.TextSecondary,
-            modifier = Modifier.size(20.dp)
-        )
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            if (trailingBadge != null) {
+                trailingBadge()
+                Spacer(modifier = Modifier.width(6.dp))
+            }
+            Icon(
+                imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                contentDescription = "Go",
+                tint = MatrixColors.TextSecondary,
+                modifier = Modifier.size(20.dp)
+            )
+        }
     }
 }
 
@@ -854,7 +864,8 @@ fun ProfileSubtitleRow(
     icon: ImageVector,
     title: String,
     subtitle: String,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    trailingBadge: (@Composable () -> Unit)? = null
 ) {
     Row(
         modifier = Modifier
@@ -889,12 +900,18 @@ fun ProfileSubtitleRow(
                 )
             }
         }
-        Icon(
-            imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
-            contentDescription = "Go",
-            tint = MatrixColors.TextSecondary,
-            modifier = Modifier.size(20.dp)
-        )
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            if (trailingBadge != null) {
+                trailingBadge()
+                Spacer(modifier = Modifier.width(6.dp))
+            }
+            Icon(
+                imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                contentDescription = "Go",
+                tint = MatrixColors.TextSecondary,
+                modifier = Modifier.size(20.dp)
+            )
+        }
     }
 }
 

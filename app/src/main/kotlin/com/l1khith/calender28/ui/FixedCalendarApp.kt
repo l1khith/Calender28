@@ -669,7 +669,11 @@ fun FixedCalendarApp(
                     createHabitTrigger = createHabitTrigger
                 )
 
-                3 -> NotesListScreen()
+                3 -> NotesListScreen(
+                    createNoteTrigger = createNoteTrigger,
+                    isProActive = isProActive,
+                    onOpenPaywall = { showPaywallDialog = true }
+                )
 
                     else -> {
                         val monthScrollState = rememberScrollState()
@@ -1062,13 +1066,19 @@ fun FixedCalendarApp(
     }
 
     if (showPaywallDialog) {
-        SubscriptionPaywallDialog(
-            onDismiss = { showPaywallDialog = false },
-            onPurchaseSuccess = {
-                showPaywallDialog = false
-                viewModel.triggerConfetti()
-            }
-        )
+        androidx.compose.ui.window.Dialog(
+            onDismissRequest = { showPaywallDialog = false },
+            properties = androidx.compose.ui.window.DialogProperties(usePlatformDefaultWidth = false)
+        ) {
+            com.l1khith.calender28.ui.paywall.PaywallScreen(
+                onClose = {
+                    showPaywallDialog = false
+                    if (com.l1khith.calender28.billing.RevenueCatManager.isPremium.value) {
+                        viewModel.triggerConfetti()
+                    }
+                }
+            )
+        }
     }
 
     if (showCustomerCenterDialog) {
