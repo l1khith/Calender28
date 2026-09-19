@@ -7,11 +7,15 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.google.android.gms.ads.AdListener
 import com.google.android.gms.ads.AdRequest
 import com.google.android.gms.ads.AdSize
 import com.google.android.gms.ads.AdView
+import com.google.android.gms.ads.LoadAdError
+import com.l1khith.calender28.BuildConfig
 import com.l1khith.calender28.billing.RevenueCatManager
 import com.l1khith.calender28.billing.SubscriptionManager
+import com.l1khith.calender28.utils.Constants
 import kotlinx.coroutines.delay
 
 private const val BANNER_AD_UNIT_ID =
@@ -48,6 +52,15 @@ fun BannerAd(modifier: Modifier = Modifier) {
             AdView(context).apply {
                 setAdSize(AdSize.BANNER)
                 adUnitId = BANNER_AD_UNIT_ID
+                adListener = object : AdListener() {
+                    override fun onAdFailedToLoad(error: LoadAdError) {
+                        super.onAdFailedToLoad(error)
+                        if (BuildConfig.DEBUG && adUnitId != Constants.TEST_ADMOB_BANNER_ID && error.code == AdRequest.ERROR_CODE_NO_FILL) {
+                            adUnitId = Constants.TEST_ADMOB_BANNER_ID
+                            loadAd(AdRequest.Builder().build())
+                        }
+                    }
+                }
                 loadAd(AdRequest.Builder().build())
             }
         }

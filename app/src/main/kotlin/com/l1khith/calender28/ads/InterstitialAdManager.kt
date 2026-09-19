@@ -8,13 +8,15 @@ import com.google.android.gms.ads.FullScreenContentCallback
 import com.google.android.gms.ads.LoadAdError
 import com.google.android.gms.ads.interstitial.InterstitialAd
 import com.google.android.gms.ads.interstitial.InterstitialAdLoadCallback
+import com.l1khith.calender28.BuildConfig
 import com.l1khith.calender28.billing.RevenueCatManager
+import com.l1khith.calender28.utils.Constants
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-private const val INTERSTITIAL_AD_UNIT_ID =
+private const val PROD_INTERSTITIAL_AD_UNIT_ID =
     "ca-app-pub-2924148184856423/8473570084"
 
 object InterstitialAdManager {
@@ -23,7 +25,7 @@ object InterstitialAdManager {
     private var isLoading = false
 
     fun preload(context: Context) {
-        kotlinx.coroutines.CoroutineScope(Dispatchers.Main).launch {
+        CoroutineScope(Dispatchers.Main).launch {
             loadAd(context.applicationContext)
         }
     }
@@ -38,21 +40,31 @@ object InterstitialAdManager {
                 return@withContext
             }
             isLoading = true
-            InterstitialAd.load(
-                context.applicationContext,
-                INTERSTITIAL_AD_UNIT_ID,
-                AdRequest.Builder().build(),
-                object : InterstitialAdLoadCallback() {
-                    override fun onAdLoaded(ad: InterstitialAd) {
-                        interstitialAd = ad
-                        isLoading = false
+
+            fun requestAd(unitId: String) {
+                InterstitialAd.load(
+                    context.applicationContext,
+                    unitId,
+                    AdRequest.Builder().build(),
+                    object : InterstitialAdLoadCallback() {
+                        override fun onAdLoaded(ad: InterstitialAd) {
+                            interstitialAd = ad
+                            isLoading = false
+                        }
+                        override fun onAdFailedToLoad(error: LoadAdError) {
+                            // In DEBUG builds, if the production unit returns NO_FILL (3) because it is new or not yet propagated on Google servers, fallback to sample test unit
+                            if (BuildConfig.DEBUG && unitId != Constants.TEST_ADMOB_INTERSTITIAL_ID && error.code == AdRequest.ERROR_CODE_NO_FILL) {
+                                requestAd(Constants.TEST_ADMOB_INTERSTITIAL_ID)
+                            } else {
+                                interstitialAd = null
+                                isLoading = false
+                            }
+                        }
                     }
-                    override fun onAdFailedToLoad(error: LoadAdError) {
-                        interstitialAd = null
-                        isLoading = false
-                    }
-                }
-            )
+                )
+            }
+
+            requestAd(PROD_INTERSTITIAL_AD_UNIT_ID)
         }
     }
 

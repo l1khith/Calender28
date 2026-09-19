@@ -27,7 +27,15 @@ class Calender28Application : Application() {
         super.onCreate()
         container = DefaultAppContainer(this)
 
-        // AdMob — initialize on background thread (SDK handles it internally)
+        // AdMob — configure test devices and initialize
+        val testDeviceIds = listOf(
+            "30C817764033E417985FB2473D74A061",
+            com.google.android.gms.ads.AdRequest.DEVICE_ID_EMULATOR
+        )
+        val requestConfiguration = com.google.android.gms.ads.RequestConfiguration.Builder()
+            .setTestDeviceIds(testDeviceIds)
+            .build()
+        MobileAds.setRequestConfiguration(requestConfiguration)
         MobileAds.initialize(this) { }
 
         // RevenueCat — only initialize if API key present
