@@ -111,7 +111,7 @@ object SubscriptionManager {
         _isProActive.value = isPro
     }
 
-    fun configure(context: Context, apiKey: String, entitlementId: String = "pro") {
+    fun configure(context: Context, apiKey: String, entitlementId: String = "calender28_pro") {
         if (apiKey.isBlank() || isConfigured) return
 
         try {
@@ -137,6 +137,8 @@ object SubscriptionManager {
 
     private fun checkEntitlements(customerInfo: CustomerInfo, entitlementId: String, context: Context) {
         val hasPro = customerInfo.entitlements[entitlementId]?.isActive == true ||
+                     customerInfo.entitlements["calender28_pro"]?.isActive == true ||
+                     customerInfo.entitlements["pro"]?.isActive == true ||
                      customerInfo.entitlements["premium"]?.isActive == true
 
         if (hasPro) {

@@ -8,18 +8,14 @@ plugins {
     alias(libs.plugins.ksp)
 }
 
+val secrets = Properties().apply {
+    val f = rootProject.file("secrets.properties")
+    if (f.exists()) f.inputStream().use { load(it) }
+}
+
 android {
     namespace = "com.l1khith.calender28"
     compileSdk = 37
-
-    val secretsPropertiesFile = rootProject.file("secrets.properties")
-    val secretsProperties = Properties()
-    if (secretsPropertiesFile.exists()) {
-        secretsProperties.load(FileInputStream(secretsPropertiesFile))
-    }
-    val revenueCatApiKey = secretsProperties.getProperty("REVENUECAT_API_KEY")
-        ?: System.getenv("REVENUECAT_API_KEY")
-        ?: ""
 
     defaultConfig {
         applicationId = "com.l1khith.calender28"
@@ -28,7 +24,11 @@ android {
         versionCode = 4
         versionName = "1.0.3"
 
-        buildConfigField("String", "REVENUECAT_API_KEY", "\"$revenueCatApiKey\"")
+        buildConfigField(
+            "String",
+            "REVENUECAT_API_KEY",
+            "\"${secrets.getProperty("REVENUECAT_API_KEY") ?: System.getenv("REVENUECAT_API_KEY") ?: ""}\""
+        )
     }
 
     buildFeatures {
@@ -146,10 +146,10 @@ dependencies {
     implementation(libs.lottie.compose)
 
     implementation(libs.androidx.biometric)
-    implementation(libs.play.services.ads)
+    implementation("com.google.android.gms:play-services-ads:23.6.0")
 
-    implementation(libs.revenuecat.purchases)
-    implementation(libs.revenuecat.purchases.ui)
+    implementation("com.revenuecat.purchases:purchases:9.15.0")
+    implementation("com.revenuecat.purchases:purchases-ui:9.15.0")
 
     testImplementation(libs.junit)
     testImplementation(libs.mockito.core)
