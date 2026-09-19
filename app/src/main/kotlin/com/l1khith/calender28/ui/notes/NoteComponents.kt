@@ -28,6 +28,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.l1khith.calender28.data.Note
 import com.l1khith.calender28.data.NoteFormat
+import com.l1khith.calender28.ui.components.UpgradeDialog
 import com.l1khith.calender28.ui.theme.MatrixColors
 import com.l1khith.calender28.ui.theme.MatrixShapes
 import java.text.SimpleDateFormat
@@ -43,11 +44,14 @@ fun NoteEditorMenu(
     onToggleFormat: () -> Unit,
     onPreview: (() -> Unit)? = null,
     onDeleteConfirmed: (() -> Unit)? = null,
+    isPro: Boolean = false,
+    onUpgrade: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
     var menuExpanded by remember { mutableStateOf(false) }
     var showDeleteConfirm by remember { mutableStateOf(false) }
+    var showUpgradeDialog by remember { mutableStateOf(false) }
 
     Box(modifier = modifier) {
         IconButton(onClick = { menuExpanded = true }) {
@@ -80,12 +84,16 @@ fun NoteEditorMenu(
                 },
                 onClick = {
                     menuExpanded = false
-                    onToggleFormat()
+                    if (note.format == NoteFormat.TXT && !isPro) {
+                        showUpgradeDialog = true
+                    } else {
+                        onToggleFormat()
+                    }
                 }
             )
 
-            // Preview Markdown Option (only available for MD notes)
-            if (note.format == NoteFormat.MD && onPreview != null) {
+            // Preview Markdown Option (only available for MD notes and Pro users)
+            if (note.format == NoteFormat.MD && isPro && onPreview != null) {
                 DropdownMenuItem(
                     text = { Text("Preview Markdown", color = MatrixColors.TextHeader) },
                     leadingIcon = {
@@ -146,6 +154,18 @@ fun NoteEditorMenu(
                 onDeleteConfirmed()
             },
             onDismiss = { showDeleteConfirm = false }
+        )
+    }
+
+    if (showUpgradeDialog) {
+        UpgradeDialog(
+            title = "Markdown Notes (Pro)",
+            message = "Markdown notes (.md) and live preview are exclusive to Calender28 Pro. Upgrade to unlock rich markdown notes, tables, checklists, and visual knowledge graphs.",
+            onDismiss = { showUpgradeDialog = false },
+            onUpgrade = {
+                showUpgradeDialog = false
+                onUpgrade()
+            }
         )
     }
 }
