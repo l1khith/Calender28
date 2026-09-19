@@ -11,12 +11,22 @@ import com.l1khith.calender28.service.NotificationHelper
 import com.l1khith.calender28.utils.CalendarContentObserver
 import com.revenuecat.purchases.Purchases
 import com.revenuecat.purchases.PurchasesConfiguration
+import com.l1khith.calender28.data.user.UserIdManager
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 
+import android.app.Activity
+import android.os.Bundle
+import java.lang.ref.WeakReference
+
 class Calender28Application : Application() {
+
+    companion object {
+        var currentActivity: WeakReference<Activity>? = null
+            private set
+    }
 
     lateinit var container: AppContainer
         private set
@@ -27,16 +37,30 @@ class Calender28Application : Application() {
         super.onCreate()
         container = DefaultAppContainer(this)
 
-        // AdMob — configure test devices and initialize
-        val testDeviceIds = listOf(
-            "30C817764033E417985FB2473D74A061",
-            com.google.android.gms.ads.AdRequest.DEVICE_ID_EMULATOR
-        )
-        val requestConfiguration = com.google.android.gms.ads.RequestConfiguration.Builder()
-            .setTestDeviceIds(testDeviceIds)
-            .build()
-        MobileAds.setRequestConfiguration(requestConfiguration)
-        MobileAds.initialize(this) { }
+        registerActivityLifecycleCallbacks(object : ActivityLifecycleCallbacks {
+            override fun onActivityResumed(activity: Activity) {
+                currentActivity = WeakReference(activity)
+            }
+            override fun onActivityPaused(activity: Activity) {
+                if (currentActivity?.get() == activity) {
+                    currentActivity = null
+                }
+            }
+            override fun onActivityCreated(activity: Activity, savedInstanceState: Bundle?) {}
+            override fun onActivityStarted(activity: Activity) {}
+            override fun onActivityStopped(activity: Activity) {}
+            override fun onActivitySaveInstanceState(activity: Activity, outState: Bundle) {}
+            override fun onActivityDestroyed(activity: Activity) {
+                if (currentActivity?.get() == activity) {
+                    currentActivity = null
+                }
+            }
+        })
+
+        // AdMob — initialize on background thread to avoid blocking startup
+        applicationScope.launch(Dispatchers.IO) {
+            MobileAds.initialize(this@Calender28Application) { }
+        }
 
         // RevenueCat — only initialize if API key present
         val key = BuildConfig.REVENUECAT_API_KEY
@@ -55,8 +79,11 @@ class Calender28Application : Application() {
         com.l1khith.calender28.utils.AppSettingsManager.init(this, applicationScope)
         com.l1khith.calender28.ui.theme.ThemeManager.init(this, applicationScope)
 
-        // Background workers and notification channels
+        // Generate UUID, timestamp, and display name on first launch, reuse forever after
         applicationScope.launch(Dispatchers.IO) {
+            UserIdManager.getOrCreate(this@Calender28Application)
+            UserIdManager.getOrCreateCreationTimestamp(this@Calender28Application)
+            UserIdManager.getOrCreateDisplayName(this@Calender28Application)
             NotificationHelper(this@Calender28Application).createNotificationChannels()
             MidnightRolloverWorker.scheduleNextMidnightRollover(this@Calender28Application)
             CalendarContentObserver.register(this@Calender28Application)

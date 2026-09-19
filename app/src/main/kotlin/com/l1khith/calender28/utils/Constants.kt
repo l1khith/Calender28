@@ -56,9 +56,13 @@ object Constants {
     const val PROMO_REWARD_MATRIXPRO = 1500
 
     // --- AdMob Configuration ---
-    const val TEST_ADMOB_APP_ID = "ca-app-pub-3940256099942544~3347511713"
-    const val TEST_ADMOB_BANNER_ID = "ca-app-pub-3940256099942544/6300978111"
-    const val TEST_ADMOB_INTERSTITIAL_ID = "ca-app-pub-3940256099942544/1033173712"
+    const val ADMOB_APP_ID = "ca-app-pub-2924141814856423~1936826751"
+    const val ADMOB_BANNER_ID = "ca-app-pub-2924141814856423/6252757545"
+    const val ADMOB_INTERSTITIAL_ID = "ca-app-pub-2924141814856423/8473570084"
+
+    const val TEST_ADMOB_APP_ID = "ca-app-pub-2924141814856423~1936826751"
+    const val TEST_ADMOB_BANNER_ID = "ca-app-pub-2924141814856423/6252757545"
+    const val TEST_ADMOB_INTERSTITIAL_ID = "ca-app-pub-2924141814856423/8473570084"
 
     // Interstitial Ad Frequency
     const val INTERSTITIAL_NAV_FREQUENCY = 5

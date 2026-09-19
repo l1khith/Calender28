@@ -15,12 +15,10 @@ import com.revenuecat.purchases.awaitRestore
 import com.revenuecat.purchases.interfaces.ReceiveCustomerInfoCallback
 import com.revenuecat.purchases.interfaces.UpdatedCustomerInfoListener
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.withContext
 
 object RevenueCatManager {
@@ -77,17 +75,7 @@ object RevenueCatManager {
         }
     }
 
-    fun observePremium(): Flow<Boolean> = callbackFlow {
-        trySend(_isPremium.value)
-        val listener = UpdatedCustomerInfoListener { info ->
-            val active = info.entitlements[ENTITLEMENT_ID]?.isActive == true
-            _isPremium.value = active
-            SubscriptionManager.setProActive(active)
-            trySend(active)
-        }
-        Purchases.sharedInstance.updatedCustomerInfoListener = listener
-        awaitClose { }
-    }
+    fun observePremium(): Flow<Boolean> = isPremium
 
     sealed class PurchaseResult {
         object Success : PurchaseResult()

@@ -98,9 +98,9 @@ fun FixedCalendarApp(
     }
 
     LaunchedEffect(Unit) {
-        // Give SubscriptionManager a moment to resolve Pro status from DataStore
-        // (much shorter than the old arbitrary 600ms delay)
-        kotlinx.coroutines.delay(100)
+        // Give the UI time to settle before loading ads.
+        // 100ms was too aggressive — causes stuttering during initial render.
+        kotlinx.coroutines.delay(1500)
         if (!com.l1khith.calender28.billing.SubscriptionManager.isProActive.value) {
             com.l1khith.calender28.ads.InterstitialAdManager.loadAd(context)
         }
@@ -130,7 +130,6 @@ fun FixedCalendarApp(
 
     val coinViewModel: CoinViewModel = androidx.lifecycle.viewmodel.compose.viewModel(factory = AppViewModelProvider.Factory)
     val focusViewModel: FocusViewModel = androidx.lifecycle.viewmodel.compose.viewModel(factory = AppViewModelProvider.Factory)
-    val focusState by com.l1khith.calender28.service.FocusSessionManager.focusState.collectAsStateWithLifecycle()
 
     val isProActive by com.l1khith.calender28.billing.SubscriptionManager.isProActive.collectAsStateWithLifecycle()
     val coinBalance by coinViewModel.coinBalance.collectAsStateWithLifecycle()
@@ -768,13 +767,6 @@ fun FixedCalendarApp(
                 textColor = textColorPrimary
             )
 
-            if (!isProActive) {
-                Spacer(modifier = Modifier.height(12.dp))
-                BannerAd(
-                    modifier = Modifier.fillMaxWidth()
-                )
-            }
-
             Spacer(modifier = Modifier.height(12.dp))
 
             Row(
@@ -1107,7 +1099,8 @@ fun FixedCalendarApp(
         )
     }
 
-    // Focus Mode Overlays
+    // Collect focusState locally here — NOT at root — to avoid 1Hz full-tree recomposition
+    val focusState by com.l1khith.calender28.service.FocusSessionManager.focusState.collectAsStateWithLifecycle()
     when (val state = focusState) {
         is com.l1khith.calender28.service.FocusState.Setup -> {
             FocusSetupDialog(

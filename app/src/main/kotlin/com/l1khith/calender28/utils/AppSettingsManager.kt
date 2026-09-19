@@ -45,32 +45,28 @@ object AppSettingsManager {
         scope = coroutineScope
 
         coroutineScope.launch(Dispatchers.Default) {
-            repo.enableSparky.collect { _enableSparky.value = it }
-        }
-        coroutineScope.launch(Dispatchers.Default) {
-            repo.enableAnimations.collect { _enableAnimations.value = it }
-        }
-        coroutineScope.launch(Dispatchers.Default) {
-            repo.enableSounds.collect { _enableSounds.value = it }
-        }
-        coroutineScope.launch(Dispatchers.Default) {
-            repo.enabledBottomTabs.collect { ids ->
-                _enabledTabs.value = BottomTab.parseTabs(ids)
+            launch { repo.enableSparky.collect { _enableSparky.value = it } }
+            launch { repo.enableAnimations.collect { _enableAnimations.value = it } }
+            launch { repo.enableSounds.collect { _enableSounds.value = it } }
+            launch {
+                repo.enabledBottomTabs.collect { ids ->
+                    _enabledTabs.value = BottomTab.parseTabs(ids)
+                }
             }
-        }
-        coroutineScope.launch(Dispatchers.Default) {
-            repo.bottomTabOrder.collect { orderStr ->
-                _tabOrder.value = BottomTab.parseOrder(orderStr)
+            launch {
+                repo.bottomTabOrder.collect { orderStr ->
+                    _tabOrder.value = BottomTab.parseOrder(orderStr)
+                }
             }
-        }
-        coroutineScope.launch(Dispatchers.Default) {
-            repo.topBarSlot1.collect { slotStr ->
-                _topBarSlot1.value = com.l1khith.calender28.domain.model.TopBarSlotContent.fromId(slotStr)
+            launch {
+                repo.topBarSlot1.collect { slotStr ->
+                    _topBarSlot1.value = com.l1khith.calender28.domain.model.TopBarSlotContent.fromId(slotStr)
+                }
             }
-        }
-        coroutineScope.launch(Dispatchers.Default) {
-            repo.optionalUserName.collect { name ->
-                _userName.value = name
+            launch {
+                repo.optionalUserName.collect { name ->
+                    _userName.value = name
+                }
             }
         }
     }

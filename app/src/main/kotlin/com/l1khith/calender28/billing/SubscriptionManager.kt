@@ -51,16 +51,16 @@ object SubscriptionManager {
     fun initDataStore(context: Context, scope: CoroutineScope) {
         if (isDataStoreInitialized) return
         isDataStoreInitialized = true
-        try {
-            val repo = getRepo(context)
-            scope.launch(Dispatchers.Default) {
+        scope.launch(Dispatchers.Default) {
+            try {
+                val repo = getRepo(context)
                 repo.isProUser.collect { isPro ->
                     _isProActive.value = isPro
                 }
+            } catch (e: Exception) {
+                isDataStoreInitialized = false
+                e.printStackTrace()
             }
-        } catch (e: Exception) {
-            isDataStoreInitialized = false
-            e.printStackTrace()
         }
     }
 
@@ -141,13 +141,11 @@ object SubscriptionManager {
                      customerInfo.entitlements["pro"]?.isActive == true ||
                      customerInfo.entitlements["premium"]?.isActive == true
 
-        if (hasPro) {
-            _isProActive.value = true
-            persistenceScope.launch {
-                try {
-                    getRepo(context).updateIsProUser(true)
-                } catch (_: Exception) {}
-            }
+        _isProActive.value = hasPro
+        persistenceScope.launch {
+            try {
+                getRepo(context).updateIsProUser(hasPro)
+            } catch (_: Exception) {}
         }
     }
 
