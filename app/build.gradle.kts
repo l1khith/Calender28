@@ -21,8 +21,8 @@ android {
         applicationId = "com.l1khith.calender28"
         minSdk = 24
         targetSdk = 37
-        versionCode = 4
-        versionName = "1.0.3"
+        versionCode = 5
+        versionName = "1.0.4"
 
         buildConfigField(
             "String",
@@ -146,10 +146,10 @@ dependencies {
     implementation(libs.lottie.compose)
 
     implementation(libs.androidx.biometric)
-    implementation("com.google.android.gms:play-services-ads:23.6.0")
+    implementation(libs.play.services.ads)
 
-    implementation("com.revenuecat.purchases:purchases:9.15.0")
-    implementation("com.revenuecat.purchases:purchases-ui:9.15.0")
+    implementation(libs.revenuecat.purchases)
+    implementation(libs.revenuecat.purchases.ui)
 
     testImplementation(libs.junit)
     testImplementation(libs.mockito.core)

@@ -19,6 +19,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.l1khith.calender28.data.AppTask
+import com.l1khith.calender28.data.Note
+import com.l1khith.calender28.data.NoteFormat
+import com.l1khith.calender28.ui.notes.NoteEditorScreen
 import com.l1khith.calender28.ui.theme.MatrixColors
 import com.l1khith.calender28.utils.FixedCalendarHelper
 import com.l1khith.calender28.utils.FixedDate
@@ -31,6 +34,7 @@ fun DayDetailScreen(
     onBack: () -> Unit,
     onOpenCreateTask: (dateStr: String, initialHour: Int?) -> Unit,
     onEditTask: (AppTask) -> Unit,
+    onNoteClick: ((Note) -> Unit)? = null,
     modifier: Modifier = Modifier,
     viewModel: DayDetailViewModel = androidx.lifecycle.viewmodel.compose.viewModel(factory = com.l1khith.calender28.viewmodel.AppViewModelProvider.Factory)
 ) {
@@ -45,6 +49,13 @@ fun DayDetailScreen(
     }
 
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val timelineItems by viewModel.timelineItems.collectAsStateWithLifecycle()
+    var editingNote by remember { mutableStateOf<Note?>(null) }
+
+    BackHandler(enabled = editingNote != null) {
+        editingNote = null
+    }
+
     val todayFixed = remember { FixedCalendarHelper.currentFixedDate() }
     val isToday = remember(uiState.selectedDate) {
         uiState.selectedDate.year == todayFixed.year &&
@@ -243,6 +254,14 @@ fun DayDetailScreen(
                     onToggleComplete = { viewModel.toggleTaskComplete(it) },
                     onCreateTaskAtHour = { hour ->
                         onOpenCreateTask(uiState.selectedDate.toString(), hour)
+                    },
+                    timelineItems = timelineItems,
+                    onNoteClick = { note ->
+                        if (onNoteClick != null) {
+                            onNoteClick(note)
+                        } else {
+                            editingNote = note
+                        }
                     }
                 )
             }
@@ -296,6 +315,41 @@ fun DayDetailScreen(
                 }
             )
         }
+    }
+
+    if (editingNote != null) {
+        val note = editingNote!!
+        var draftTitle by remember(note.id) { mutableStateOf(note.title) }
+        var draftContent by remember(note.id) { mutableStateOf(note.content) }
+        var draftFormat by remember(note.id) { mutableStateOf(note.format) }
+        val noteForMenu = remember(note.id, draftTitle, draftContent, draftFormat) {
+            note.copy(title = draftTitle, content = draftContent, format = draftFormat)
+        }
+
+        NoteEditorScreen(
+            title = draftTitle,
+            content = draftContent,
+            format = draftFormat,
+            isExistingNote = true,
+            noteForMenu = noteForMenu,
+            onTitleChange = { draftTitle = it },
+            onContentChange = { draftContent = it },
+            onToggleFormat = {
+                draftFormat = if (draftFormat == NoteFormat.TXT) NoteFormat.MD else NoteFormat.TXT
+            },
+            onPreviewClick = { },
+            onBack = {
+                viewModel.saveNote(note.copy(title = draftTitle, content = draftContent, format = draftFormat))
+                editingNote = null
+            },
+            onDelete = {
+                viewModel.deleteNote(note)
+                editingNote = null
+            },
+            isPro = true,
+            onUpgrade = { },
+            modifier = Modifier.fillMaxSize()
+        )
     }
 }
 

@@ -19,7 +19,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.foundation.lazy.items
 import com.l1khith.calender28.data.AppTask
+import com.l1khith.calender28.data.Note
 import com.l1khith.calender28.domain.model.DayConflict
 import com.l1khith.calender28.ui.theme.MatrixColors
 import com.l1khith.calender28.utils.FixedCalendarHelper
@@ -37,7 +39,9 @@ fun HourTimeline(
     onToggleComplete: (AppTask) -> Unit,
     onCreateTaskAtHour: (Int) -> Unit,
     modifier: Modifier = Modifier,
-    hourRowHeight: Dp = 64.dp
+    hourRowHeight: Dp = 64.dp,
+    timelineItems: List<TimelineItem> = emptyList(),
+    onNoteClick: (Note) -> Unit = {}
 ) {
     val currentHour = remember { Calendar.getInstance().get(Calendar.HOUR_OF_DAY) }
     val initialScrollHour = if (isToday) maxOf(0, currentHour - 1) else 8
@@ -109,104 +113,132 @@ fun HourTimeline(
             }
         }
 
-        // ── 24-Hour Timeline Rows ──
-        items(24, key = { hour -> "hour_row_$hour" }) { hour ->
-            val hourTasks = tasksByHour[hour] ?: emptyList()
-            val timeLabel = "%02d:00".format(hour)
+        // ── 24-Hour Timeline Rows (Interleaved with Notes) ──
+        val effectiveTimelineItems = if (timelineItems.isNotEmpty()) {
+            timelineItems
+        } else {
+            (0..23).map { TimelineItem(hour = it, minute = 0, type = TimelineItemType.HourHeader) }
+        }
 
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(hourRowHeight)
-            ) {
-                // Background hour divider line
-                HorizontalDivider(
-                    modifier = Modifier.align(Alignment.TopStart),
-                    thickness = if (hour == 0 || hour == 12) 1.5.dp else 0.8.dp,
-                    color = MatrixColors.OutlineVariant.copy(alpha = 0.6f)
-                )
+        items(
+            items = effectiveTimelineItems,
+            key = { item ->
+                when (item.type) {
+                    TimelineItemType.HourHeader -> "hour_${item.hour}"
+                    TimelineItemType.NoteItem -> "note_${item.note?.id ?: "${item.hour}_${item.minute}"}"
+                }
+            }
+        ) { item ->
+            when (item.type) {
+                TimelineItemType.HourHeader -> {
+                    val hour = item.hour
+                    val hourTasks = tasksByHour[hour] ?: emptyList()
+                    val timeLabel = "%02d:00".format(hour)
 
-                Row(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .clickable { onCreateTaskAtHour(hour) },
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    // Time Label (Left axis)
                     Box(
                         modifier = Modifier
-                            .width(56.dp)
-                            .fillMaxHeight()
-                            .padding(start = 12.dp, top = 4.dp),
-                        contentAlignment = Alignment.TopStart
+                            .fillMaxWidth()
+                            .height(hourRowHeight)
                     ) {
-                        Text(
-                            text = timeLabel,
-                            color = MatrixColors.TextSecondary,
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.Medium
+                        // Background hour divider line
+                        HorizontalDivider(
+                            modifier = Modifier.align(Alignment.TopStart),
+                            thickness = if (hour == 0 || hour == 12) 1.5.dp else 0.8.dp,
+                            color = MatrixColors.OutlineVariant.copy(alpha = 0.6f)
                         )
-                    }
 
-                    // Vertical subtle axis line
-                    Box(
-                        modifier = Modifier
-                            .width(1.dp)
-                            .fillMaxHeight()
-                            .background(MatrixColors.OutlineVariant.copy(alpha = 0.5f))
-                    )
+                        Row(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .clickable { onCreateTaskAtHour(hour) },
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            // Time Label (Left axis)
+                            Box(
+                                modifier = Modifier
+                                    .width(56.dp)
+                                    .fillMaxHeight()
+                                    .padding(start = 12.dp, top = 4.dp),
+                                contentAlignment = Alignment.TopStart
+                            ) {
+                                Text(
+                                    text = timeLabel,
+                                    color = MatrixColors.TextSecondary,
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Medium
+                                )
+                            }
 
-                    Spacer(modifier = Modifier.width(8.dp))
+                            // Vertical subtle axis line
+                            Box(
+                                modifier = Modifier
+                                    .width(1.dp)
+                                    .fillMaxHeight()
+                                    .background(MatrixColors.OutlineVariant.copy(alpha = 0.5f))
+                            )
 
-                    // Events in this hour slot
-                    Box(
-                        modifier = Modifier
-                            .weight(1f)
-                            .fillMaxHeight()
-                            .padding(end = 12.dp, top = 4.dp, bottom = 4.dp)
-                    ) {
-                        if (hourTasks.isNotEmpty()) {
-                            if (hourTasks.size > 1) {
-                                // Side-by-Side Layout for concurrent/overlapping tasks
-                                Row(
-                                    modifier = Modifier.fillMaxSize(),
-                                    horizontalArrangement = Arrangement.spacedBy(4.dp)
-                                ) {
-                                    hourTasks.forEach { task ->
+                            Spacer(modifier = Modifier.width(8.dp))
+
+                            // Events in this hour slot
+                            Box(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .fillMaxHeight()
+                                    .padding(end = 12.dp, top = 4.dp, bottom = 4.dp)
+                            ) {
+                                if (hourTasks.isNotEmpty()) {
+                                    if (hourTasks.size > 1) {
+                                        // Side-by-Side Layout for concurrent/overlapping tasks
+                                        Row(
+                                            modifier = Modifier.fillMaxSize(),
+                                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                        ) {
+                                            hourTasks.forEach { task ->
+                                                val isHard = hardConflictTaskIds.contains(task.id)
+                                                TimeBlockItem(
+                                                    task = task,
+                                                    onClick = { onTaskClick(task) },
+                                                    onToggleComplete = { onToggleComplete(task) },
+                                                    conflictBadgeType = if (isHard) ConflictBadgeType.HARD else null,
+                                                    modifier = Modifier
+                                                        .weight(1f)
+                                                        .fillMaxHeight()
+                                                )
+                                            }
+                                        }
+                                    } else {
+                                        // Single full-width item
+                                        val task = hourTasks.first()
                                         val isHard = hardConflictTaskIds.contains(task.id)
                                         TimeBlockItem(
                                             task = task,
                                             onClick = { onTaskClick(task) },
                                             onToggleComplete = { onToggleComplete(task) },
                                             conflictBadgeType = if (isHard) ConflictBadgeType.HARD else null,
-                                            modifier = Modifier
-                                                .weight(1f)
-                                                .fillMaxHeight()
+                                            modifier = Modifier.fillMaxSize()
                                         )
                                     }
                                 }
-                            } else {
-                                // Single full-width item
-                                val task = hourTasks.first()
-                                val isHard = hardConflictTaskIds.contains(task.id)
-                                TimeBlockItem(
-                                    task = task,
-                                    onClick = { onTaskClick(task) },
-                                    onToggleComplete = { onToggleComplete(task) },
-                                    conflictBadgeType = if (isHard) ConflictBadgeType.HARD else null,
-                                    modifier = Modifier.fillMaxSize()
-                                )
                             }
+                        }
+
+                        // Now Indicator line if viewing today and current hour matches
+                        if (isToday && hour == currentHour) {
+                            NowIndicator(
+                                hourRowHeight = hourRowHeight,
+                                modifier = Modifier.align(Alignment.CenterStart)
+                            )
                         }
                     }
                 }
 
-                // Now Indicator line if viewing today and current hour matches
-                if (isToday && hour == currentHour) {
-                    NowIndicator(
-                        hourRowHeight = hourRowHeight,
-                        modifier = Modifier.align(Alignment.CenterStart)
-                    )
+                TimelineItemType.NoteItem -> {
+                    item.note?.let { note ->
+                        NoteTimelineItem(
+                            note = note,
+                            onClick = { onNoteClick(note) }
+                        )
+                    }
                 }
             }
         }
