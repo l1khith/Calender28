@@ -194,7 +194,7 @@ class SparkySystemTest {
     @Test
     fun testSparkyEvolution_freeTierCappedAtBaby() {
         runBlocking {
-            com.l1khith.calender28.billing.SubscriptionManager.setProActive(false)
+            com.l1khith.calender28.billing.SubscriptionManager.setProActiveForTest(false)
             repeat(30) {
                 sparkyRepo.onHabitCompleted()
             }
@@ -207,7 +207,7 @@ class SparkySystemTest {
     @Test
     fun testSparkyEvolution_proTierAllowsFullEvolution() {
         runBlocking {
-            com.l1khith.calender28.billing.SubscriptionManager.setProActive(true)
+            com.l1khith.calender28.billing.SubscriptionManager.setProActiveForTest(true)
             try {
                 repeat(30) {
                     sparkyRepo.onHabitCompleted()
@@ -216,7 +216,7 @@ class SparkySystemTest {
                 assertEquals(30, state.totalHabitsCompleted)
                 assertEquals(EvolutionStage.TEEN, state.stage)
             } finally {
-                com.l1khith.calender28.billing.SubscriptionManager.setProActive(false)
+                com.l1khith.calender28.billing.SubscriptionManager.setProActiveForTest(false)
             }
         }
     }

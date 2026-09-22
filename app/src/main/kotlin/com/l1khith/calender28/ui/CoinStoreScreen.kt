@@ -545,7 +545,7 @@ private fun PremiumUnlockCard(
                         contentColor = MatrixColors.TextHeader
                     )
                 ) {
-                    Text("Or Try Testing Track Free")
+                    Text("Purchase Pro with Google Play")
                 }
             }
         }

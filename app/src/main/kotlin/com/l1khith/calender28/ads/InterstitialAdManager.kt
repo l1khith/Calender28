@@ -11,7 +11,9 @@ import com.google.android.gms.ads.interstitial.InterstitialAdLoadCallback
 import com.l1khith.calender28.Calender28Application
 import com.l1khith.calender28.billing.RevenueCatManager
 import com.l1khith.calender28.billing.SubscriptionManager
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 private const val INTERSTITIAL_AD_UNIT_ID =
@@ -33,6 +35,7 @@ object InterstitialAdManager {
         withContext(Dispatchers.Main) {
             // Check isLoading INSIDE the Main dispatcher to avoid race conditions
             if (isLoading) return@withContext
+            if (interstitialAd != null) return@withContext
 
             // CRITICAL: Skip entirely for Pro users
             if (RevenueCatManager.isPremium.value || SubscriptionManager.isProActive.value) {
@@ -89,11 +92,18 @@ object InterstitialAdManager {
             override fun onAdDismissedFullScreenContent() {
                 interstitialAd = null
                 onDismiss()
+                // Auto-preload the next ad
+                kotlinx.coroutines.CoroutineScope(Dispatchers.Main).launch {
+                    loadAd(targetActivity.applicationContext)
+                }
             }
 
             override fun onAdFailedToShowFullScreenContent(error: AdError) {
                 interstitialAd = null
                 onDismiss()
+                kotlinx.coroutines.CoroutineScope(Dispatchers.Main).launch {
+                    loadAd(targetActivity.applicationContext)
+                }
             }
         }
         ad.show(targetActivity)
@@ -112,6 +122,10 @@ object InterstitialAdManager {
             show(activity, onAdDismissed)
         } else {
             onAdUnavailable()
+            // Ad was not ready — trigger background preload so it's ready next time
+            kotlinx.coroutines.CoroutineScope(Dispatchers.Main).launch {
+                loadAd(activity.applicationContext)
+            }
         }
     }
 

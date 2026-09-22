@@ -1,7 +1,7 @@
 # Privacy Policy & Terms of Service
 ## Calender28
 
-**Last Updated:** August 28, 2026
+**Last Updated:** September 22, 2026
 
 ---
 
@@ -118,6 +118,72 @@ Calender28 does not require user accounts. All data is stored locally on your de
 - Follows Google Play's refund policy
 - Tied to your Google Play account
 
+---
+
+## Refund Policy
+
+All purchases made through Calender28 are processed by Google Play
+Billing and managed via RevenueCat.
+
+### Subscription Purchases
+
+Subscriptions are billed on a recurring basis (monthly or yearly)
+through your Google Play account.
+
+**Calender28 does not offer refunds for subscription purchases.**
+This includes but is not limited to:
+
+- Unused time remaining in a billing period
+- Forgetting to cancel a subscription before renewal
+- Change of mind after purchase
+- Lack of usage of the app
+- Device incompatibility discovered after purchase
+
+### One-Time Purchases (In-App Products)
+
+All one-time purchases (including CalCoins and permanent Premium
+unlocks) are final and non-refundable.
+
+### Google Play's 48-Hour Self-Service Window
+
+For the first 48 hours after a purchase, Google Play may allow
+users to request a refund directly through Google Play's own
+refund system without contacting the developer. This is outside
+the developer's control and is governed by Google Play's policies.
+
+### Cancellation vs. Refund
+
+You may cancel your subscription at any time through the Google
+Play Store. **Cancelling a subscription stops future billing but
+does not issue a refund for the current or past billing periods.**
+Access to Premium features continues until the end of the paid
+period already charged.
+
+### Abuse & Revocation of Digital Entitlements
+
+All digital entitlements, Premium upgrades, and unlocked features are tied directly to active verification with Google Play and RevenueCat. If any transaction is refunded, revoked, or subject to a payment dispute/chargeback by Google Play or the payment provider, all associated Premium features, ad-free privileges, and balances are automatically and permanently terminated on the device immediately upon processing.
+
+### Exception — Applicable Law
+
+Nothing in this policy limits any non-waivable rights you may have
+under applicable consumer protection laws in your jurisdiction.
+
+### How to Cancel
+
+To cancel your subscription:
+
+1. Open the Google Play Store app
+2. Tap your profile icon
+3. Go to Payments & subscriptions → Subscriptions
+4. Select Calender28
+5. Tap Cancel subscription
+
+For help with cancellation, contact us at: likid2d21@gmail.com
+
+**Last Updated: September 22, 2026**
+
+---
+
 ### 3.4 Premium Features
 
 | Feature | Free | Premium |
@@ -207,4 +273,4 @@ For privacy concerns or questions about these terms, contact us at the email abo
 
 ---
 
-**Last Updated:** August 28, 2026
+**Last Updated:** September 22, 2026

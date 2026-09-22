@@ -2,6 +2,7 @@ package com.l1khith.calender28
 
 import android.app.Application
 import com.google.android.gms.ads.MobileAds
+import com.google.android.gms.ads.RequestConfiguration
 import com.l1khith.calender28.billing.RevenueCatManager
 import com.l1khith.calender28.billing.SubscriptionManager
 import com.l1khith.calender28.di.AppContainer
@@ -59,6 +60,11 @@ class Calender28Application : Application() {
 
         // AdMob — initialize on background thread to avoid blocking startup
         applicationScope.launch(Dispatchers.IO) {
+            val testDeviceIds = listOf("133D1144306AD57DB71C7D77741FDDA7", "02A7F0B79F16A343110E6BD736798762")
+            val configuration = RequestConfiguration.Builder()
+                .setTestDeviceIds(testDeviceIds)
+                .build()
+            MobileAds.setRequestConfiguration(configuration)
             MobileAds.initialize(this@Calender28Application) { }
         }
 

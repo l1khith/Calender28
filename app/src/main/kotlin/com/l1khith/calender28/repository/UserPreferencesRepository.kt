@@ -17,7 +17,7 @@ class UserPreferencesRepository(
     companion object {
         val KEY_USER_NAME = stringPreferencesKey("user_name")
         val KEY_USER_AVATAR_URL = stringPreferencesKey("user_avatar_url")
-        val KEY_IS_PRO_USER = booleanPreferencesKey("is_pro_user")
+        val KEY_COIN_PREMIUM_UNLOCKED = booleanPreferencesKey("coin_premium_unlocked")
         val KEY_SELECTED_THEME = stringPreferencesKey("selected_theme")
         val KEY_IS_APP_LOCK_ENABLED = booleanPreferencesKey("is_app_lock_enabled")
         val KEY_ENABLE_SPARKY = booleanPreferencesKey("enable_sparky")
@@ -46,7 +46,7 @@ class UserPreferencesRepository(
 
         const val DEFAULT_USER_NAME = "Guest"
         const val DEFAULT_USER_AVATAR_URL = ""
-        const val DEFAULT_IS_PRO_USER = false
+        const val DEFAULT_COIN_PREMIUM_UNLOCKED = false
         const val DEFAULT_SELECTED_THEME = "DEFAULT"
         const val DEFAULT_IS_APP_LOCK_ENABLED = false
         const val DEFAULT_ENABLE_SPARKY = true
@@ -82,8 +82,8 @@ class UserPreferencesRepository(
         preferences[KEY_USER_AVATAR_URL] ?: DEFAULT_USER_AVATAR_URL
     }
 
-    val isProUser: Flow<Boolean> = dataStore.data.map { preferences ->
-        preferences[KEY_IS_PRO_USER] ?: DEFAULT_IS_PRO_USER
+    val coinPremiumUnlocked: Flow<Boolean> = dataStore.data.map { preferences ->
+        preferences[KEY_COIN_PREMIUM_UNLOCKED] ?: DEFAULT_COIN_PREMIUM_UNLOCKED
     }
 
     val selectedTheme: Flow<String> = dataStore.data.map { preferences ->
@@ -253,9 +253,15 @@ class UserPreferencesRepository(
         }
     }
 
-    suspend fun updateIsProUser(isPro: Boolean) {
+    suspend fun updateCoinPremiumUnlocked(unlocked: Boolean) {
         dataStore.edit { preferences ->
-            preferences[KEY_IS_PRO_USER] = isPro
+            preferences[KEY_COIN_PREMIUM_UNLOCKED] = unlocked
+        }
+    }
+
+    suspend fun purgeLegacyProState() {
+        dataStore.edit { preferences ->
+            preferences.remove(booleanPreferencesKey("is_pro_user"))
         }
     }
 

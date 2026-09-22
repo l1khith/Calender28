@@ -225,8 +225,7 @@ class CoinRepositoryImpl(
                 )
                 coinDao.insertTransaction(tx)
 
-                userPrefsRepo?.updateIsProUser(true)
-                SubscriptionManager.setProActive(true)
+                userPrefsRepo?.updateCoinPremiumUnlocked(true)
 
                 Result.success(Unit)
             }

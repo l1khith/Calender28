@@ -50,6 +50,7 @@ fun DayDetailScreen(
 
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val timelineItems by viewModel.timelineItems.collectAsStateWithLifecycle()
+    val isProActive by com.l1khith.calender28.billing.SubscriptionManager.isProActive.collectAsStateWithLifecycle()
     var editingNote by remember { mutableStateOf<Note?>(null) }
 
     BackHandler(enabled = editingNote != null) {
@@ -346,7 +347,7 @@ fun DayDetailScreen(
                 viewModel.deleteNote(note)
                 editingNote = null
             },
-            isPro = true,
+            isPro = isProActive,
             onUpgrade = { },
             modifier = Modifier.fillMaxSize()
         )
