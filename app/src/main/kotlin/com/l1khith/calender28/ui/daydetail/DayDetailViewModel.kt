@@ -17,10 +17,30 @@ import com.l1khith.calender28.utils.FixedDate
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import com.l1khith.calender28.Calender28Application
+import com.l1khith.calender28.data.Note
+import com.l1khith.calender28.repository.NoteRepository
+import java.util.Calendar
 
 private const val TAG = "DayDetailViewModel"
+
+data class TimelineItem(
+    val hour: Int,              // 0-23
+    val minute: Int,            // 0-59
+    val type: TimelineItemType,
+    val note: Note? = null
+)
+
+sealed class TimelineItemType {
+    object HourHeader : TimelineItemType()
+    object NoteItem : TimelineItemType()
+}
 
 class DayDetailViewModel(
     application: Application,
@@ -28,7 +48,8 @@ class DayDetailViewModel(
     private val getDayConflictsUseCase: GetDayConflictsUseCase,
     private val taskRepository: TaskRepository,
     private val resolveConflictUseCase: ResolveConflictUseCase,
-    private val suggestFreeSlotsUseCase: SuggestFreeSlotsUseCase
+    private val suggestFreeSlotsUseCase: SuggestFreeSlotsUseCase,
+    private val noteRepository: NoteRepository = (application as Calender28Application).container.noteRepository
 ) : AndroidViewModel(application) {
 
     private val _uiState = MutableStateFlow(
@@ -36,11 +57,44 @@ class DayDetailViewModel(
     )
     val uiState: StateFlow<DayDetailUiState> = _uiState.asStateFlow()
 
+    private val _notesForDate = MutableStateFlow<List<Note>>(emptyList())
+    val notesForDate: StateFlow<List<Note>> = _notesForDate.asStateFlow()
+
+    val hourRangeFlow: StateFlow<IntRange> = MutableStateFlow(0..23).asStateFlow()
+
+    val timelineItems: StateFlow<List<TimelineItem>> = combine(
+        notesForDate,
+        hourRangeFlow
+    ) { notes, range ->
+        buildTimelineItems(notes, range)
+    }.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5000),
+        initialValue = emptyList()
+    )
+
+    private var notesJob: Job? = null
+
     fun loadDate(date: FixedDate) {
         val dateStr = date.toString()
         Log.d(TAG, "loadDate: Loading detail for $dateStr")
 
         _uiState.value = _uiState.value.copy(selectedDate = date, isLoading = true)
+
+        notesJob?.cancel()
+        notesJob = viewModelScope.launch(Dispatchers.IO) {
+            val startOfDayMs = FixedCalendarHelper.toTimestamp(date, "00:00")
+            val endOfDayMs = FixedCalendarHelper.toTimestamp(date, "23:59") + 59_999L
+
+            noteRepository.getAllNotes().collect { allNotes ->
+                val filtered = allNotes.filter { note ->
+                    (note.linkedType == "DATE" && note.linkedId == dateStr) ||
+                    (note.createdAt in startOfDayMs..endOfDayMs) ||
+                    FixedCalendarHelper.fromTimestamp(note.createdAt).toString() == dateStr
+                }
+                _notesForDate.value = filtered
+            }
+        }
 
         viewModelScope.launch(Dispatchers.IO) {
             try {
@@ -195,5 +249,70 @@ class DayDetailViewModel(
 
     fun setReviewSheetOpen(open: Boolean) {
         _uiState.value = _uiState.value.copy(isReviewSheetOpen = open)
+    }
+
+    fun saveNote(note: Note) {
+        viewModelScope.launch(Dispatchers.IO) {
+            noteRepository.updateNote(note)
+        }
+    }
+
+    fun deleteNote(note: Note) {
+        viewModelScope.launch(Dispatchers.IO) {
+            noteRepository.deleteNote(note)
+        }
+    }
+
+    companion object {
+        fun buildTimelineItems(
+            notes: List<Note>,
+            hourRange: IntRange
+        ): List<TimelineItem> {
+            val items = mutableListOf<TimelineItem>()
+
+            // Group notes by hour
+            val notesByHour = notes.groupBy { note ->
+                val cal = Calendar.getInstance().apply {
+                    timeInMillis = note.createdAt
+                }
+                cal.get(Calendar.HOUR_OF_DAY)
+            }
+
+            // Build the timeline
+            for (hour in hourRange) {
+                // Add hour header
+                items.add(
+                    TimelineItem(
+                        hour = hour,
+                        minute = 0,
+                        type = TimelineItemType.HourHeader
+                    )
+                )
+
+                // Add notes for this hour, sorted by minute
+                notesByHour[hour]
+                    ?.sortedBy { note ->
+                        val cal = Calendar.getInstance().apply {
+                            timeInMillis = note.createdAt
+                        }
+                        cal.get(Calendar.MINUTE)
+                    }
+                    ?.forEach { note ->
+                        val cal = Calendar.getInstance().apply {
+                            timeInMillis = note.createdAt
+                        }
+                        items.add(
+                            TimelineItem(
+                                hour = hour,
+                                minute = cal.get(Calendar.MINUTE),
+                                type = TimelineItemType.NoteItem,
+                                note = note
+                            )
+                        )
+                    }
+            }
+
+            return items
+        }
     }
 }

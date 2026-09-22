@@ -69,7 +69,8 @@ object AppViewModelProvider {
                 getDayConflictsUseCase = app.container.getDayConflictsUseCase,
                 taskRepository = app.container.taskRepository,
                 resolveConflictUseCase = app.container.resolveConflictUseCase,
-                suggestFreeSlotsUseCase = app.container.suggestFreeSlotsUseCase
+                suggestFreeSlotsUseCase = app.container.suggestFreeSlotsUseCase,
+                noteRepository = app.container.noteRepository
             )
         }
         initializer {
