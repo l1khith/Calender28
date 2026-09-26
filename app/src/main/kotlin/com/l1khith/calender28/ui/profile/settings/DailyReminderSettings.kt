@@ -34,14 +34,8 @@ fun DailyReminderSettings(
     var showTimePicker by remember { mutableStateOf(false) }
     val hasPermission = remember { NotificationPermissionHelper.hasPermission(context) }
 
-    val formattedTime = remember(hour, minute) {
-        val ampm = if (hour >= 12) "PM" else "AM"
-        val h12 = when {
-            hour == 0 -> 12
-            hour > 12 -> hour - 12
-            else -> hour
-        }
-        String.format(Locale.US, "%02d:%02d %s", h12, minute, ampm)
+    val formattedTime = remember(hour, minute, context) {
+        com.l1khith.calender28.utils.TimeFormatter.formatTime(context, hour, minute)
     }
 
     Column(modifier = modifier.fillMaxWidth()) {

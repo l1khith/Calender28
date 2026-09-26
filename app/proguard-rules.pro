@@ -22,6 +22,7 @@
 -keep class com.l1khith.calender28.receiver.** { *; }
 -keep class com.l1khith.calender28.widget.** { *; }
 -keep class com.l1khith.calender28.billing.** { *; }
+-keep class com.l1khith.calender28.ads.** { *; }
 -keep class com.l1khith.calender28.utils.** { *; }
 
 # -----------------------------------------------------------------------------

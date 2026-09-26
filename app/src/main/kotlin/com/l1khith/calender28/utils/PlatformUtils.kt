@@ -53,33 +53,21 @@ fun PlatformTimePicker(
 ) {
     if (!show) return
     val context = LocalContext.current
-    var hour = 7
-    var min = 0
-    try {
-        val clean = initialTime.replace(" Daily", "")
-        val parts = clean.split(" ", ":")
-        hour = parts.getOrNull(0)?.toIntOrNull() ?: 7
-        min = parts.getOrNull(1)?.toIntOrNull() ?: 0
-        if (clean.contains("PM", ignoreCase = true) && hour < 12) hour += 12
-        if (clean.contains("AM", ignoreCase = true) && hour == 12) hour = 0
-    } catch (_: Exception) {}
+    val parsed = TimeFormatter.parseTimeToHourMinute(initialTime)
+    val hour = parsed?.first ?: 7
+    val min = parsed?.second ?: 0
+    val is24Hour = android.text.format.DateFormat.is24HourFormat(context)
 
     DisposableEffect(show) {
         val dialog = TimePickerDialog(
             context,
             { _, h, m ->
-                val amPm = if (h >= 12) "PM" else "AM"
-                val hour12 = when {
-                    h == 0 -> 12
-                    h > 12 -> h - 12
-                    else -> h
-                }
-                val formatted = "${hour12.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')} $amPm"
+                val formatted = "%02d:%02d".format(h, m)
                 onTimeSelected(formatted)
             },
             hour,
             min,
-            false
+            is24Hour
         )
         dialog.setOnDismissListener { onDismiss() }
         dialog.show()

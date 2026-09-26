@@ -357,6 +357,7 @@ fun NotesListScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .weight(1f)
+                        .imeNestedScroll()
                 ) {
                     items(items = notes, key = { it.id }) { note ->
                         val isSelected = selectedNoteIds.contains(note.id)

@@ -70,7 +70,8 @@ object AppViewModelProvider {
                 taskRepository = app.container.taskRepository,
                 resolveConflictUseCase = app.container.resolveConflictUseCase,
                 suggestFreeSlotsUseCase = app.container.suggestFreeSlotsUseCase,
-                noteRepository = app.container.noteRepository
+                noteRepository = app.container.noteRepository,
+                habitRepository = app.container.habitRepository
             )
         }
         initializer {

@@ -52,6 +52,7 @@ import com.l1khith.calender28.data.AppTask
 import com.l1khith.calender28.utils.FixedCalendarHelper
 import com.l1khith.calender28.utils.FixedDate
 import com.l1khith.calender28.utils.PlatformTimePicker
+import com.l1khith.calender28.utils.TimeFormatter
 import com.l1khith.calender28.utils.SoundEffectHelper
 import com.l1khith.calender28.utils.currentTimeMillis
 import com.l1khith.calender28.viewmodel.FixedCalendarViewModel
@@ -344,6 +345,7 @@ fun FixedCalendarApp(
             androidx.activity.compose.BackHandler { showCustomizeNavScreen = false }
             val customizeNavViewModel: CustomizeNavViewModel = androidx.lifecycle.viewmodel.compose.viewModel(factory = AppViewModelProvider.Factory)
             Scaffold(
+                contentWindowInsets = WindowInsets.safeDrawing,
                 bottomBar = {
                     MatrixBottomNav(
                         selectedTab = -1,
@@ -367,6 +369,7 @@ fun FixedCalendarApp(
                     modifier = Modifier
                         .fillMaxSize()
                         .padding(innerPadding)
+                        .consumeWindowInsets(innerPadding)
                 ) {
                     CustomizeNavScreen(
                         viewModel = customizeNavViewModel,
@@ -478,6 +481,7 @@ fun FixedCalendarApp(
     } else if (showProfileScreen) {
         BackHandler { showProfileScreen = false }
         Scaffold(
+            contentWindowInsets = WindowInsets.safeDrawing,
             topBar = {
                 Column(
                     modifier = Modifier
@@ -540,6 +544,7 @@ fun FixedCalendarApp(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(innerPadding)
+                    .consumeWindowInsets(innerPadding)
                     .background(backgroundColor)
             ) {
                 ProfileScreen(
@@ -631,12 +636,14 @@ fun FixedCalendarApp(
                     }
                 }
             },
-            containerColor = backgroundColor
+            containerColor = backgroundColor,
+            contentWindowInsets = WindowInsets.safeDrawing
         ) { innerPadding ->
         Box(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
+                .consumeWindowInsets(innerPadding)
                 .background(backgroundColor)
         ) {
             when (selectedTab) {
@@ -1494,9 +1501,9 @@ fun ReminderItem(
                             modifier = Modifier.size(16.dp)
                         )
 
-                        Spacer(modifier = Modifier.width(6.dp))
+                        val context = androidx.compose.ui.platform.LocalContext.current
                         Text(
-                            text = task.reminderTime ?: "All Day",
+                            text = if (!task.reminderTime.isNullOrEmpty()) TimeFormatter.formatTime(context, task.reminderTime) else "All Day",
                             color = MatrixColors.TextHeader,
                             fontWeight = FontWeight.SemiBold,
                             fontSize = 13.sp

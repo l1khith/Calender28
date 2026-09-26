@@ -9,7 +9,9 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
@@ -40,6 +42,8 @@ import com.l1khith.calender28.ui.components.UpgradeDialog
 import com.l1khith.calender28.utils.FixedCalendarHelper
 import com.l1khith.calender28.utils.HabitCycleEngine
 import com.l1khith.calender28.utils.PlatformTimePicker
+import com.l1khith.calender28.utils.TimeFormatter
+import androidx.compose.ui.platform.LocalContext
 import com.l1khith.calender28.utils.currentTimeMillis
 import com.l1khith.calender28.viewmodel.FixedCalendarViewModel
 import android.util.Log
@@ -413,7 +417,7 @@ fun NewHabitScreen(
     var habitName by remember { mutableStateOf("") }
     var selectedCategory by remember { mutableStateOf("Health") }
     var isReminderEnabled by remember { mutableStateOf(true) }
-    var reminderTime by remember { mutableStateOf("07:00 AM") }
+    var reminderTime by remember { mutableStateOf("07:00") }
     var showTimePicker by remember { mutableStateOf(false) }
 
     PlatformTimePicker(
@@ -427,6 +431,7 @@ fun NewHabitScreen(
     )
 
     Scaffold(
+        contentWindowInsets = WindowInsets.safeDrawing,
         topBar = {
             TopAppBar(
                 title = { Text("New Habit", color = MatrixColors.TextHeader, fontWeight = FontWeight.Bold) },
@@ -444,8 +449,11 @@ fun NewHabitScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
+                .consumeWindowInsets(innerPadding)
+                .imeNestedScroll()
+                .verticalScroll(rememberScrollState())
                 .padding(16.dp),
-            verticalArrangement = Arrangement.SpaceBetween
+            verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
                 // HABIT NAME
@@ -612,7 +620,7 @@ fun NewHabitScreen(
                             ) {
                                 Text("Time", color = MatrixColors.TextSecondary, fontSize = 14.sp)
                                 Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Text(reminderTime, color = Color(0xFF60A5FA), fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                                    Text(TimeFormatter.formatHabitReminderTime(LocalContext.current, reminderTime), color = Color(0xFF60A5FA), fontWeight = FontWeight.Bold, fontSize = 14.sp)
                                     Spacer(modifier = Modifier.width(4.dp))
                                     Icon(imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null, tint = Color(0xFF60A5FA), modifier = Modifier.size(18.dp))
                                 }
@@ -653,6 +661,8 @@ fun NewHabitScreen(
                     fontSize = 16.sp
                 )
             }
+
+            Spacer(modifier = Modifier.height(24.dp))
         }
     }
 }
@@ -680,7 +690,7 @@ fun HabitDetailScreen(
 
     PlatformTimePicker(
         show = showTimePicker,
-        initialTime = habit.reminderTime ?: "07:00 AM",
+        initialTime = habit.reminderTime ?: "07:00",
         onDismiss = { showTimePicker = false },
         onTimeSelected = { newTime ->
             onUpdateHabit(habit.copy(reminderTime = "$newTime Daily"))
@@ -973,7 +983,7 @@ fun HabitDetailScreen(
                                 Spacer(modifier = Modifier.width(12.dp))
                                 Column {
                                     Text("Reminder Time", color = MatrixColors.TextHeader, fontSize = 14.sp)
-                                    Text(habit.reminderTime ?: "Off", color = MatrixColors.TextSecondary, fontSize = 12.sp)
+                                    Text(TimeFormatter.formatHabitReminderTime(LocalContext.current, habit.reminderTime), color = MatrixColors.TextSecondary, fontSize = 12.sp)
                                 }
                             }
                             Icon(imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null, tint = MatrixColors.TextSecondary)

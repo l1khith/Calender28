@@ -131,11 +131,7 @@ class NotificationHelper(private val context: Context) {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
-        val timeSubText = when {
-            task.formattedTimeRange.isNotEmpty() -> task.formattedTimeRange
-            !task.reminderTime.isNullOrEmpty() -> task.reminderTime
-            else -> ""
-        }
+        val timeSubText = com.l1khith.calender28.utils.TimeFormatter.formatTaskTimeRange(context, task)
         val offsetText = when {
             offsetMin == null || offsetMin == 0 -> "Starts now"
             offsetMin > 0 && offsetMin < 60 -> "Starts in $offsetMin min"

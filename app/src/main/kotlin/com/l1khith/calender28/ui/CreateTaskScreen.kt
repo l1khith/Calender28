@@ -28,9 +28,15 @@ import com.l1khith.calender28.ui.theme.AppIcons
 import com.l1khith.calender28.ui.theme.MatrixColors
 import com.l1khith.calender28.ui.theme.MatrixShapes
 import com.l1khith.calender28.utils.PlatformTimePicker
+import com.l1khith.calender28.utils.TimeFormatter
+import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 
 import android.util.Log
+import androidx.compose.foundation.relocation.BringIntoViewRequester
+import androidx.compose.foundation.relocation.bringIntoViewRequester
+import androidx.compose.ui.focus.onFocusEvent
+import kotlinx.coroutines.launch
 
 private const val TAG = "CreateTaskScreen"
 
@@ -243,6 +249,7 @@ fun CreateTaskScreen(
             .fillMaxSize()
             .background(MatrixColors.Surface)
             .statusBarsPadding()
+            .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Bottom + WindowInsetsSides.Horizontal))
     ) {
 
         // Top App Bar
@@ -331,6 +338,7 @@ fun CreateTaskScreen(
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
+                .imeNestedScroll()
                 .padding(horizontal = 16.dp),
             contentPadding = PaddingValues(top = 16.dp, bottom = 40.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
@@ -556,7 +564,7 @@ fun CreateTaskScreen(
                                         }
 
                                         TextButton(onClick = { showStartTimePicker = true }) {
-                                            Text(startTimeStr, color = MatrixColors.Primary, fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                                            Text(TimeFormatter.formatTime(LocalContext.current, startTimeStr), color = MatrixColors.Primary, fontWeight = FontWeight.Bold, fontSize = 15.sp)
                                         }
                                     }
                                 }
@@ -631,7 +639,7 @@ fun CreateTaskScreen(
                                         }
 
                                         TextButton(onClick = { showEndTimePicker = true }) {
-                                            Text(endTimeStr, color = MatrixColors.Secondary, fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                                            Text(TimeFormatter.formatTime(LocalContext.current, endTimeStr), color = MatrixColors.Secondary, fontWeight = FontWeight.Bold, fontSize = 15.sp)
                                         }
                                     }
                                 }
@@ -696,7 +704,7 @@ fun CreateTaskScreen(
                                         fontSize = 13.sp
                                     )
                                     Text(
-                                        text = "Overlaps with '${detectedConflict.title}' (${detectedConflict.formattedTimeRange})",
+                                        text = "Overlaps with '${detectedConflict.title}' (${TimeFormatter.formatTaskTimeRange(LocalContext.current, detectedConflict)})",
                                         color = MatrixColors.TextHeader,
                                         fontSize = 12.sp
                                     )
@@ -817,11 +825,16 @@ fun CreateTaskScreen(
 
             // Notes Section
             item {
+                val coroutineScope = rememberCoroutineScope()
+                val bringIntoViewRequester = remember { BringIntoViewRequester() }
+
                 Card(
                     shape = MatrixShapes.Lg,
                     colors = CardDefaults.cardColors(containerColor = MatrixColors.SurfaceContainerLow),
                     border = BorderStroke(1.dp, MatrixColors.OutlineVariant),
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .bringIntoViewRequester(bringIntoViewRequester)
                 ) {
                     Column(modifier = Modifier.padding(16.dp)) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -847,7 +860,14 @@ fun CreateTaskScreen(
                             maxLines = 4,
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .heightIn(min = 90.dp),
+                                .heightIn(min = 90.dp)
+                                .onFocusEvent { focusState ->
+                                    if (focusState.isFocused) {
+                                        coroutineScope.launch {
+                                            bringIntoViewRequester.bringIntoView()
+                                        }
+                                    }
+                                },
                             colors = OutlinedTextFieldDefaults.colors(
                                 focusedContainerColor = MatrixColors.Surface,
                                 unfocusedContainerColor = MatrixColors.Surface,

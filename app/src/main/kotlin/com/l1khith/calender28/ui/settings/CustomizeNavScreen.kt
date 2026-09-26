@@ -105,6 +105,7 @@ fun CustomizeNavScreen(
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
+                .imeNestedScroll()
                 .padding(horizontal = 16.dp),
             contentPadding = PaddingValues(top = 16.dp, bottom = 48.dp),
             verticalArrangement = Arrangement.spacedBy(24.dp)

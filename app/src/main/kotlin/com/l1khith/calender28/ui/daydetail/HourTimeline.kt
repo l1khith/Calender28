@@ -4,72 +4,62 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyListState
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.foundation.lazy.items
 import com.l1khith.calender28.data.AppTask
+import com.l1khith.calender28.data.Habit
 import com.l1khith.calender28.data.Note
+import com.l1khith.calender28.data.RecurringTask
 import com.l1khith.calender28.domain.model.DayConflict
 import com.l1khith.calender28.ui.theme.MatrixColors
-import com.l1khith.calender28.utils.FixedCalendarHelper
-import com.l1khith.calender28.utils.FixedDate
+import com.l1khith.calender28.utils.TimeFormatter
 import java.util.Calendar
 
 @Composable
 fun HourTimeline(
     dateStr: String,
-    timedTasks: List<AppTask>,
-    crossDayTasks: List<AppTask>,
-    conflicts: List<DayConflict>,
+    dayTimelineItems: List<DayTimelineItem>,
+    unscheduledItems: List<DayTimelineItem> = emptyList(),
+    crossDayTasks: List<AppTask> = emptyList(),
+    conflicts: List<DayConflict> = emptyList(),
     isToday: Boolean,
     onTaskClick: (AppTask) -> Unit,
-    onToggleComplete: (AppTask) -> Unit,
+    onToggleTaskComplete: (AppTask) -> Unit,
+    onRecurringClick: (RecurringTask, AppTask?) -> Unit = { _, _ -> },
+    onToggleRecurringComplete: (RecurringTask, AppTask?, Boolean) -> Unit = { _, _, _ -> },
+    onHabitClick: (Habit) -> Unit = {},
+    onToggleHabitComplete: (Habit) -> Unit = {},
     onCreateTaskAtHour: (Int) -> Unit,
+    onNoteClick: (Note) -> Unit = {},
     modifier: Modifier = Modifier,
-    hourRowHeight: Dp = 64.dp,
-    timelineItems: List<TimelineItem> = emptyList(),
-    onNoteClick: (Note) -> Unit = {}
+    hourRowHeight: Dp = 64.dp
 ) {
+    val context = LocalContext.current
     val currentHour = remember { Calendar.getInstance().get(Calendar.HOUR_OF_DAY) }
     val initialScrollHour = if (isToday) maxOf(0, currentHour - 1) else 8
 
-    val listState = rememberLazyListState(initialFirstVisibleItemIndex = initialScrollHour)
+    val initialIndex = remember(dayTimelineItems, initialScrollHour) {
+        val idx = dayTimelineItems.indexOfFirst { it is DayTimelineItem.HourHeader && it.hour == initialScrollHour }
+        if (idx >= 0) idx else 0
+    }
+
+    val listState = rememberLazyListState(initialFirstVisibleItemIndex = initialIndex)
 
     // Continuation banners for tasks entering or exiting this day
     val continuesFrom = crossDayTasks.filter { it.associatedDate < dateStr }
     val continuesTo = crossDayTasks.filter { (it.endDate ?: it.associatedDate) > dateStr }
-
-    // Map tasks to their primary starting hour (0..23)
-    val tasksByHour = remember(timedTasks) {
-        val map = mutableMapOf<Int, MutableList<AppTask>>()
-        for (h in 0..23) map[h] = mutableListOf()
-
-        for (task in timedTasks) {
-            val time = task.reminderTime
-            if (time != null && time.contains(":")) {
-                val hour = time.substringBefore(":").toIntOrNull() ?: 0
-                if (hour in 0..23) {
-                    map[hour]?.add(task)
-                }
-            } else {
-                map[0]?.add(task) // unscheduled goes into hour 0
-            }
-        }
-        map
-    }
 
     // Set of IDs that have hard overlaps
     val hardConflictTaskIds = remember(conflicts) {
@@ -113,27 +103,71 @@ fun HourTimeline(
             }
         }
 
-        // ── 24-Hour Timeline Rows (Interleaved with Notes) ──
-        val effectiveTimelineItems = if (timelineItems.isNotEmpty()) {
-            timelineItems
+        // ── Top Unscheduled Section ──
+        if (unscheduledItems.isNotEmpty()) {
+            item(key = "unscheduled_items_section") {
+                CollapsibleGroup(
+                    title = "📋 Unscheduled Items (${unscheduledItems.size})",
+                    defaultExpanded = false,
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp)
+                ) {
+                    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        unscheduledItems.forEach { item ->
+                            when (item) {
+                                is DayTimelineItem.OneOffTask -> {
+                                    TimeBlockItem(
+                                        task = item.task,
+                                        onClick = { onTaskClick(item.task) },
+                                        onToggleComplete = { onToggleTaskComplete(item.task) },
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .height(56.dp)
+                                    )
+                                }
+                                is DayTimelineItem.RecurringTaskInstance -> {
+                                    RecurringTimelineItem(
+                                        recurringTask = item.task,
+                                        isCompleted = item.isCompleted,
+                                        onClick = { onRecurringClick(item.task, item.generatedTask) },
+                                        onToggleComplete = {
+                                            onToggleRecurringComplete(item.task, item.generatedTask, item.isCompleted)
+                                        },
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .height(56.dp)
+                                    )
+                                }
+                                else -> {}
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // ── 24-Hour Unified Timeline Rows ──
+        val effectiveTimelineItems = if (dayTimelineItems.isNotEmpty()) {
+            dayTimelineItems
         } else {
-            (0..23).map { TimelineItem(hour = it, minute = 0, type = TimelineItemType.HourHeader) }
+            (0..23).map { DayTimelineItem.HourHeader(it) }
         }
 
         items(
             items = effectiveTimelineItems,
             key = { item ->
-                when (item.type) {
-                    TimelineItemType.HourHeader -> "hour_${item.hour}"
-                    TimelineItemType.NoteItem -> "note_${item.note?.id ?: "${item.hour}_${item.minute}"}"
+                when (item) {
+                    is DayTimelineItem.HourHeader -> "hour_${item.hour}"
+                    is DayTimelineItem.OneOffTask -> "task_${item.task.id}"
+                    is DayTimelineItem.RecurringTaskInstance -> "rec_${item.task.id}_${item.generatedTask?.id ?: item.timeMinutes ?: "tmpl"}"
+                    is DayTimelineItem.HabitReminder -> "habit_${item.habit.id}"
+                    is DayTimelineItem.NoteItem -> "note_${item.note.id}"
                 }
             }
         ) { item ->
-            when (item.type) {
-                TimelineItemType.HourHeader -> {
+            when (item) {
+                is DayTimelineItem.HourHeader -> {
                     val hour = item.hour
-                    val hourTasks = tasksByHour[hour] ?: emptyList()
-                    val timeLabel = "%02d:00".format(hour)
+                    val timeLabel = TimeFormatter.formatHourHeader(context, hour)
 
                     Box(
                         modifier = Modifier
@@ -153,10 +187,10 @@ fun HourTimeline(
                                 .clickable { onCreateTaskAtHour(hour) },
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            // Time Label (Left axis)
+                            // Time Label (Left axis, formatted per 24h / 12h)
                             Box(
                                 modifier = Modifier
-                                    .width(56.dp)
+                                    .width(64.dp)
                                     .fillMaxHeight()
                                     .padding(start = 12.dp, top = 4.dp),
                                 contentAlignment = Alignment.TopStart
@@ -179,47 +213,13 @@ fun HourTimeline(
 
                             Spacer(modifier = Modifier.width(8.dp))
 
-                            // Events in this hour slot
+                            // Clickable empty slot area for creating a task
                             Box(
                                 modifier = Modifier
                                     .weight(1f)
                                     .fillMaxHeight()
-                                    .padding(end = 12.dp, top = 4.dp, bottom = 4.dp)
-                            ) {
-                                if (hourTasks.isNotEmpty()) {
-                                    if (hourTasks.size > 1) {
-                                        // Side-by-Side Layout for concurrent/overlapping tasks
-                                        Row(
-                                            modifier = Modifier.fillMaxSize(),
-                                            horizontalArrangement = Arrangement.spacedBy(4.dp)
-                                        ) {
-                                            hourTasks.forEach { task ->
-                                                val isHard = hardConflictTaskIds.contains(task.id)
-                                                TimeBlockItem(
-                                                    task = task,
-                                                    onClick = { onTaskClick(task) },
-                                                    onToggleComplete = { onToggleComplete(task) },
-                                                    conflictBadgeType = if (isHard) ConflictBadgeType.HARD else null,
-                                                    modifier = Modifier
-                                                        .weight(1f)
-                                                        .fillMaxHeight()
-                                                )
-                                            }
-                                        }
-                                    } else {
-                                        // Single full-width item
-                                        val task = hourTasks.first()
-                                        val isHard = hardConflictTaskIds.contains(task.id)
-                                        TimeBlockItem(
-                                            task = task,
-                                            onClick = { onTaskClick(task) },
-                                            onToggleComplete = { onToggleComplete(task) },
-                                            conflictBadgeType = if (isHard) ConflictBadgeType.HARD else null,
-                                            modifier = Modifier.fillMaxSize()
-                                        )
-                                    }
-                                }
-                            }
+                                    .padding(end = 12.dp)
+                            )
                         }
 
                         // Now Indicator line if viewing today and current hour matches
@@ -232,13 +232,102 @@ fun HourTimeline(
                     }
                 }
 
-                TimelineItemType.NoteItem -> {
-                    item.note?.let { note ->
-                        NoteTimelineItem(
-                            note = note,
-                            onClick = { onNoteClick(note) }
+                is DayTimelineItem.OneOffTask -> {
+                    val isHard = hardConflictTaskIds.contains(item.task.id)
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(60.dp)
+                            .padding(vertical = 3.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Spacer(modifier = Modifier.width(64.dp))
+                        Box(
+                            modifier = Modifier
+                                .width(1.dp)
+                                .fillMaxHeight()
+                                .background(MatrixColors.OutlineVariant.copy(alpha = 0.5f))
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        TimeBlockItem(
+                            task = item.task,
+                            onClick = { onTaskClick(item.task) },
+                            onToggleComplete = { onToggleTaskComplete(item.task) },
+                            conflictBadgeType = if (isHard) ConflictBadgeType.HARD else null,
+                            modifier = Modifier
+                                .weight(1f)
+                                .fillMaxHeight()
+                                .padding(end = 12.dp)
                         )
                     }
+                }
+
+                is DayTimelineItem.RecurringTaskInstance -> {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(60.dp)
+                            .padding(vertical = 3.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Spacer(modifier = Modifier.width(64.dp))
+                        Box(
+                            modifier = Modifier
+                                .width(1.dp)
+                                .fillMaxHeight()
+                                .background(MatrixColors.OutlineVariant.copy(alpha = 0.5f))
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        RecurringTimelineItem(
+                            recurringTask = item.task,
+                            isCompleted = item.isCompleted,
+                            onClick = { onRecurringClick(item.task, item.generatedTask) },
+                            onToggleComplete = {
+                                onToggleRecurringComplete(item.task, item.generatedTask, item.isCompleted)
+                            },
+                            modifier = Modifier
+                                .weight(1f)
+                                .fillMaxHeight()
+                                .padding(end = 12.dp)
+                        )
+                    }
+                }
+
+                is DayTimelineItem.HabitReminder -> {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(60.dp)
+                            .padding(vertical = 3.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Spacer(modifier = Modifier.width(64.dp))
+                        Box(
+                            modifier = Modifier
+                                .width(1.dp)
+                                .fillMaxHeight()
+                                .background(MatrixColors.OutlineVariant.copy(alpha = 0.5f))
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        HabitTimelineItem(
+                            habit = item.habit,
+                            isCompleted = item.isCompleted,
+                            onClick = { onHabitClick(item.habit) },
+                            onToggleComplete = { onToggleHabitComplete(item.habit) },
+                            modifier = Modifier
+                                .weight(1f)
+                                .fillMaxHeight()
+                                .padding(end = 12.dp)
+                        )
+                    }
+                }
+
+                is DayTimelineItem.NoteItem -> {
+                    NoteTimelineItem(
+                        note = item.note,
+                        onClick = { onNoteClick(item.note) },
+                        modifier = Modifier.fillMaxWidth()
+                    )
                 }
             }
         }
@@ -273,7 +362,7 @@ fun HourTimeline(
             }
         }
 
-        // Bottom space so FAB doesn't obscure 23:00
+        // Bottom space so FAB / bottomBar doesn't obscure 23:00
         item(key = "bottom_spacer") {
             Spacer(modifier = Modifier.height(80.dp))
         }

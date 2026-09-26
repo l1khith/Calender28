@@ -99,6 +99,7 @@ android {
 kotlin {
     compilerOptions {
         jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_21)
+        optIn.add("androidx.compose.foundation.layout.ExperimentalLayoutApi")
     }
 }
 
