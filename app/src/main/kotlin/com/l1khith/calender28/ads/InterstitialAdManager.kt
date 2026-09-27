@@ -11,13 +11,13 @@ import com.google.android.gms.ads.interstitial.InterstitialAdLoadCallback
 import com.l1khith.calender28.Calender28Application
 import com.l1khith.calender28.billing.RevenueCatManager
 import com.l1khith.calender28.billing.SubscriptionManager
+import com.l1khith.calender28.utils.Constants
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-private const val INTERSTITIAL_AD_UNIT_ID =
-    "ca-app-pub-2924141814856423/8473570084"
+private val INTERSTITIAL_AD_UNIT_ID = Constants.ADMOB_INTERSTITIAL_ID
 
 object InterstitialAdManager {
 

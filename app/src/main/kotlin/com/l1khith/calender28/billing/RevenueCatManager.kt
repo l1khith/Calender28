@@ -68,10 +68,12 @@ object RevenueCatManager {
             return@withContext _isPremium.value
         }
         try {
-            val info = Purchases.sharedInstance.awaitCustomerInfo()
+            val info = Purchases.sharedInstance.awaitCustomerInfo(
+                fetchPolicy = com.revenuecat.purchases.CacheFetchPolicy.FETCH_CURRENT
+            )
             val active = info.entitlements[ENTITLEMENT_ID]?.isActive == true
             _isPremium.value = active
-            Log.d(TAG, "Refreshed customer info: isPremium=$active")
+            Log.d(TAG, "Refreshed customer info (FETCH_CURRENT): isPremium=$active")
             active
         } catch (e: Exception) {
             Log.e(TAG, "Failed to refresh customer info: ${e.message}", e)

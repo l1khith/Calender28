@@ -99,12 +99,11 @@ fun FixedCalendarApp(
     }
 
     LaunchedEffect(Unit) {
-        // Give the UI time to settle before loading ads.
-        // 100ms was too aggressive — causes stuttering during initial render.
         kotlinx.coroutines.delay(1500)
         if (!com.l1khith.calender28.billing.SubscriptionManager.isProActive.value) {
             com.l1khith.calender28.ads.InterstitialAdManager.loadAd(context)
         }
+        com.l1khith.calender28.ads.RewardedAdManager.loadAd(context)
     }
 
     val selectedDate by viewModel.selectedDate.collectAsStateWithLifecycle()

@@ -77,11 +77,14 @@ class MainActivity : FragmentActivity() {
         super.onResume()
         com.l1khith.calender28.security.AppLockManager.onActivityResumed()
         lifecycleScope.launch(Dispatchers.IO) {
-            RevenueCatManager.refresh()
-        }
-        if (!com.l1khith.calender28.billing.SubscriptionManager.isProActive.value && !com.l1khith.calender28.billing.RevenueCatManager.isPremium.value) {
+            val isPro = RevenueCatManager.refresh()
+            if (!isPro && !com.l1khith.calender28.billing.SubscriptionManager.isProActive.value) {
+                lifecycleScope.launch(Dispatchers.Main) {
+                    com.l1khith.calender28.ads.InterstitialAdManager.loadAd(this@MainActivity)
+                }
+            }
             lifecycleScope.launch(Dispatchers.Main) {
-                com.l1khith.calender28.ads.InterstitialAdManager.loadAd(this@MainActivity)
+                com.l1khith.calender28.ads.RewardedAdManager.loadAd(this@MainActivity)
             }
         }
     }
@@ -101,6 +104,7 @@ class MainActivity : FragmentActivity() {
 
     override fun onDestroy() {
         super.onDestroy()
+        com.l1khith.calender28.ads.RewardedAdManager.clear()
         com.l1khith.calender28.ads.InterstitialAdManager.clear()
     }
 

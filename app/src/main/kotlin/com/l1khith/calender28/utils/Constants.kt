@@ -27,6 +27,10 @@ object Constants {
     const val REWARD_HABIT_CYCLE_COMPLETE = 10
     const val REWARD_TASK_COMPLETE = 1
     const val REWARD_FOCUS_SESSION = 5
+    const val REWARD_REWARDED_AD_BASE = 10
+    const val REWARD_REWARDED_AD_COMBO = 20
+    const val REWARDED_AD_COMBO_WINDOW_SECONDS = 60
+    const val REWARDED_AD_COMBO_WINDOW_MS = 60_000L
 
     // Streak Bonuses
     const val REWARD_STREAK_7_DAY = 50
@@ -59,10 +63,12 @@ object Constants {
     const val ADMOB_APP_ID = "ca-app-pub-2924141814856423~1936826751"
     const val ADMOB_BANNER_ID = "ca-app-pub-2924141814856423/6252757545"
     const val ADMOB_INTERSTITIAL_ID = "ca-app-pub-2924141814856423/8473570084"
+    const val ADMOB_REWARDED_ID = "ca-app-pub-2924141814856423/9519996824"
 
     const val TEST_ADMOB_APP_ID = "ca-app-pub-2924141814856423~1936826751"
     const val TEST_ADMOB_BANNER_ID = "ca-app-pub-2924141814856423/6252757545"
     const val TEST_ADMOB_INTERSTITIAL_ID = "ca-app-pub-2924141814856423/8473570084"
+    const val TEST_ADMOB_REWARDED_ID = "ca-app-pub-3940256099942544/5224354917"
 
     // Interstitial Ad Frequency
     const val INTERSTITIAL_NAV_FREQUENCY = 5

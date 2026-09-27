@@ -192,8 +192,7 @@ fun TasksScreen(
 
         LazyColumn(
             modifier = Modifier
-                .fillMaxSize()
-                .imeNestedScroll(),
+                .fillMaxSize(),
             verticalArrangement = Arrangement.spacedBy(20.dp),
             contentPadding = PaddingValues(bottom = 80.dp)
         ) {

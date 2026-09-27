@@ -33,9 +33,13 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 
 import android.util.Log
-import androidx.compose.foundation.relocation.BringIntoViewRequester
-import androidx.compose.foundation.relocation.bringIntoViewRequester
-import androidx.compose.ui.focus.onFocusEvent
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardCapitalization
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.platform.LocalFocusManager
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 private const val TAG = "CreateTaskScreen"
@@ -244,13 +248,17 @@ fun CreateTaskScreen(
     )
 
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(MatrixColors.Surface)
-            .statusBarsPadding()
-            .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Bottom + WindowInsetsSides.Horizontal))
-    ) {
+    Scaffold(
+        modifier = Modifier.fillMaxSize(),
+        containerColor = MatrixColors.Surface,
+        contentWindowInsets = WindowInsets.safeDrawing
+    ) { innerPadding ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(innerPadding)
+                .consumeWindowInsets(innerPadding)
+        ) {
 
         // Top App Bar
         Column(
@@ -335,10 +343,13 @@ fun CreateTaskScreen(
         }
 
 
+        val lazyListState = rememberLazyListState()
+        val focusManager = LocalFocusManager.current
+
         LazyColumn(
+            state = lazyListState,
             modifier = Modifier
                 .fillMaxSize()
-                .imeNestedScroll()
                 .padding(horizontal = 16.dp),
             contentPadding = PaddingValues(top = 16.dp, bottom = 40.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
@@ -825,16 +836,11 @@ fun CreateTaskScreen(
 
             // Notes Section
             item {
-                val coroutineScope = rememberCoroutineScope()
-                val bringIntoViewRequester = remember { BringIntoViewRequester() }
-
                 Card(
                     shape = MatrixShapes.Lg,
                     colors = CardDefaults.cardColors(containerColor = MatrixColors.SurfaceContainerLow),
                     border = BorderStroke(1.dp, MatrixColors.OutlineVariant),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .bringIntoViewRequester(bringIntoViewRequester)
+                    modifier = Modifier.fillMaxWidth()
                 ) {
                     Column(modifier = Modifier.padding(16.dp)) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -860,14 +866,13 @@ fun CreateTaskScreen(
                             maxLines = 4,
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .heightIn(min = 90.dp)
-                                .onFocusEvent { focusState ->
-                                    if (focusState.isFocused) {
-                                        coroutineScope.launch {
-                                            bringIntoViewRequester.bringIntoView()
-                                        }
-                                    }
-                                },
+                                .heightIn(min = 90.dp),
+                            keyboardOptions = KeyboardOptions(
+                                capitalization = KeyboardCapitalization.Sentences,
+                                autoCorrectEnabled = true,
+                                keyboardType = KeyboardType.Text,
+                                imeAction = ImeAction.Default
+                            ),
                             colors = OutlinedTextFieldDefaults.colors(
                                 focusedContainerColor = MatrixColors.Surface,
                                 unfocusedContainerColor = MatrixColors.Surface,
@@ -979,6 +984,7 @@ fun CreateTaskScreen(
             }
         }
     }
+}
 
     if (showStartDatePicker) {
         FixedDatePickerDialog(
