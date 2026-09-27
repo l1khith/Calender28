@@ -72,6 +72,8 @@ object Constants {
 
     // Interstitial Ad Frequency
     const val INTERSTITIAL_NAV_FREQUENCY = 5
+
+    /*
     const val INTERSTITIAL_COUNTDOWN_SECONDS = 5
 
     // --- Database Configuration ---
@@ -89,4 +91,6 @@ object Constants {
     const val DEFAULT_POMODORO_WORK_MINUTES = 25
     const val DEFAULT_POMODORO_SHORT_BREAK_MINUTES = 5
     const val DEFAULT_POMODORO_LONG_BREAK_MINUTES = 15
+
+     */
 }

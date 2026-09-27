@@ -1,9 +1,134 @@
-# Privacy Policy & Terms of Service
-## Calender28
+---
+layout: default
+title: Calender28 — Time, Restructured
+---
 
-**Last Updated:** September 22, 2026
+<p align="center">
+  <img src="assets/logo.svg" width="112" height="112" alt="Calender28 Logo" style="border-radius: 24px; box-shadow: 0 8px 24px rgba(0,0,0,0.12);" />
+</p>
+
+<h1 align="center" style="font-weight: 700; letter-spacing: -0.03em; margin-bottom: 4px;">Calender28</h1>
+<p align="center" style="font-size: 1.25rem; color: #6e6e73; margin-top: 0; font-weight: 400;">
+  Time, Restructured.
+</p>
+
+<p align="center" style="max-width: 680px; margin: 0 auto 1.5rem auto; line-height: 1.6; color: #424245;">
+  A local-first productivity workspace combining a 28-day cyclical grid, automated Eisenhower conflict resolution, bi-directional knowledge graphs, and RevenueCat subscription tiers. Engineered with the principles of essentialism and uncompromised privacy.
+</p>
+
+<p align="center">
+  <a href="https://github.com/l1khith/Calender28/releases" style="display:inline-block; padding: 10px 20px; background-color: #0071e3; color: white; border-radius: 980px; text-decoration: none; font-weight: 600; font-size: 0.95rem; margin-right: 8px;">Download Release APK</a>
+  <a href="https://www.youtube.com/watch?v=GS6beTNc5O0" style="display:inline-block; padding: 10px 20px; background-color: #f5f5f7; color: #1d1d1f; border-radius: 980px; text-decoration: none; font-weight: 600; font-size: 0.95rem; border: 1px solid #d2d2d7; margin-right: 8px;">Watch Demo</a>
+  <a href="https://github.com/l1khith/Calender28" style="display:inline-block; padding: 10px 20px; background-color: #f5f5f7; color: #1d1d1f; border-radius: 980px; text-decoration: none; font-weight: 600; font-size: 0.95rem; border: 1px solid #d2d2d7;">GitHub</a>
+</p>
+
+<p align="center" style="font-size: 0.85rem; color: #86868b; margin-top: 1.5rem;">
+  <a href="#-the-philosophy" style="color: inherit; text-decoration: underline;">Philosophy</a> &nbsp;•&nbsp;
+  <a href="#-core-capabilities" style="color: inherit; text-decoration: underline;">Capabilities</a> &nbsp;•&nbsp;
+  <a href="#-interface-gallery" style="color: inherit; text-decoration: underline;">Gallery</a> &nbsp;•&nbsp;
+  <a href="#%EF%B8%8F-technical-specifications" style="color: inherit; text-decoration: underline;">Architecture</a> &nbsp;•&nbsp;
+  <a href="#2-privacy-policy" style="color: inherit; text-decoration: underline;">Privacy Policy</a> &nbsp;•&nbsp;
+  <a href="#3-terms-of-service" style="color: inherit; text-decoration: underline;">Terms of Service</a> &nbsp;•&nbsp;
+  <a href="#refund-policy" style="color: inherit; text-decoration: underline;">Refund Policy</a> &nbsp;•&nbsp;
+  <a href="#4-contact-information" style="color: inherit; text-decoration: underline;">Contact</a>
+</p>
 
 ---
+
+## 🏛️ The Philosophy
+
+Traditional calendars are mathematically asymmetric. Months fluctuate arbitrarily between 28 and 31 days. Weekday alignments drift endlessly. Scheduling intervals change, distorting retrospectives, recurring habits, and focus metrics.
+
+**Calender28** discards arbitrary calendar irregularities in favor of the **International Fixed Calendar**:
+
+| Dimension | Gregorian Standard | Calender28 Fixed Model |
+|---|---|---|
+| **Months per Year** | 12 (Irregular lengths) | **13 (Exactly 28 days each)** |
+| **Weeks per Month** | ~4.3 weeks (Variable) | **Exactly 4 clean weeks (28 days)** |
+| **First Day of Month** | Random day of the week | **Always Sunday** |
+| **Last Day of Month** | Random day of the week | **Always Saturday** |
+| **Intercalary Month** | None | **Sol** (Inserted between June & July) |
+| **Year Completer** | Leap days | **Year Day** (A timeless celebration day) |
+
+> *"Simplicity is not the absence of clutter, that's a consequence of simplicity. Simplicity is somehow essentially describing the purpose and place of an object and product."*
+
+Every single month in Calender28 reflects identical geometry: the 1st is always Sunday, the 14th is always Saturday, and the 28th concludes the cycle. Your habits, sprints, and reflections gain a calm, predictable tempo.
+
+---
+
+## ⚡ Core Capabilities
+
+### 1. The Perpetual 28-Day Grid
+Experience time without mental friction. Navigate across 13 uniform months with fluid gestures, continuous cycle progress indicators, and instant bidirectional conversion with standard Gregorian dates for full system interoperability.
+
+### 2. Eisenhower Matrix & Automated Conflict Resolver
+Tasks are organized across urgency and importance vectors. When time-blocked tasks overlap, Calender28 detects the clash immediately, presenting an intelligent banner that analyzes your schedule and proposes conflict-free slots in a single tap.
+
+### 3. Bi-directional Knowledge Graph
+Note-taking reduced to pure expression. Freeform Markdown writing without required titles—your opening line forms the concept naturally. Connect ideas with `[[wiki-links]]` and watch your notes assemble in real time onto an interactive 60 FPS force-directed physics graph.
+
+### 4. 28-Day Habit Cycles & Sparky Companion
+Build lasting discipline through fixed 28-day habit cycles. Your virtual companion, **Sparky**, matures through multiple life stages (from Egg to Legend) as you accumulate focus minutes, win confidence contracts, and maintain streaks.
+
+### 5. Pomodoro Focus Engine with Anti-Cheat
+Deep work intervals backed by foreground timing services, screen pinning modes, and tactile haptic feedback. Navigating away during strict sessions penalizes coin rewards, keeping your attention guarded.
+
+### 6. Dual Monetization (RevenueCat & AdMob)
+Seamless subscription entitlements managed via the official RevenueCat SDK and RevenueCat Customer Center. Supplemented with an optional in-app CalCoin reward system powered by AdMob two-step rewarded video combos.
+
+### 7. Android Glance Widgets
+Live glanceable surfaces directly on your Android home screen. Review today's priority agenda and track your exact day-of-cycle progress without ever opening the app.
+
+### 8. Local-First & Biometric Security
+Your thoughts, habits, and schedules are exclusively yours. Calender28 stores everything locally in an indexed SQLite database via Room. Biometric authentication (fingerprint / face unlock) safeguards access using the device's hardware security module.
+
+---
+
+## 📱 Interface Gallery
+
+<p align="center">
+  <a href="assets/screenshots/screenshot_1_month_view.jpg"><img src="assets/screenshots/screenshot_1_month_view.jpg" width="31%" alt="Main Month View" style="border-radius: 12px; margin: 4px;" /></a>
+  &nbsp;
+  <a href="assets/screenshots/screenshot_2_timeline_conflicts.jpg"><img src="assets/screenshots/screenshot_2_timeline_conflicts.jpg" width="31%" alt="Timeline & Conflict Resolution" style="border-radius: 12px; margin: 4px;" /></a>
+  &nbsp;
+  <a href="assets/screenshots/screenshot_3_knowledge_graph.jpg"><img src="assets/screenshots/screenshot_3_knowledge_graph.jpg" width="31%" alt="Connected Knowledge Graph" style="border-radius: 12px; margin: 4px;" /></a>
+</p>
+
+<p align="center">
+  <a href="assets/screenshots/screenshot_4_calcoin_store.jpg"><img src="assets/screenshots/screenshot_4_calcoin_store.jpg" width="31%" alt="CalCoin Store & Subscriptions" style="border-radius: 12px; margin: 4px;" /></a>
+  &nbsp;
+  <a href="assets/screenshots/screenshot_5_sparky_companion.jpg"><img src="assets/screenshots/screenshot_5_sparky_companion.jpg" width="31%" alt="Sparky Companion Profile" style="border-radius: 12px; margin: 4px;" /></a>
+  &nbsp;
+  <a href="assets/screenshots/screenshot_6_glance_widget.jpg"><img src="assets/screenshots/screenshot_6_glance_widget.jpg" width="31%" alt="Home Screen Glance Widget" style="border-radius: 12px; margin: 4px;" /></a>
+</p>
+
+| View | Focus | Detail |
+|---|---|---|
+| **01. Month Architecture** | Fixed 28-day 4-week calendar grid | Symmetrical day layout, cycle streak tracker, and Sparky state |
+| **02. Conflict Resolution** | Automated timeline scheduling | Urgent conflict detection, time blocking, and 1-tap slot resolver |
+| **03. Knowledge Graph** | Interactive node topology | Dynamic force-directed canvas visualizing `[[wiki-links]]` |
+| **04. Subscription Center** | RevenueCat & CalCoin economy | Pro entitlement status, ad combo bonus, and promo code redemption |
+| **05. Companion Evolution** | Sparky profile & roadmap | Progressive evolutionary stages (Egg to Legend) and habit XP |
+| **06. Glance Widget** | Android home screen surface | Real-time 28-day cycle counter and instant task checklist |
+
+---
+
+## 🛠️ Technical Specifications
+
+Calender28 is developed natively for Android using modern declarative foundations:
+
+- **Language & Runtime:** Kotlin 2.1.20 with structured concurrency (Coroutines & StateFlow)
+- **UI Framework:** 100% Jetpack Compose (BOM 2025.06) with Material 3 design tokens
+- **Persistence:** Local SQLite via AndroidX Room 2.7.1 with indexed schemas and zero remote sync
+- **Subscriptions & Billing:** RevenueCat Android Purchases SDK 10.x & Customer Center UI
+- **Ad Monetization:** Google Mobile Ads (AdMob) 24.x for rewarded video combos
+- **Background Operations:** AndroidX WorkManager 2.10.0 for deterministic midnight rollovers
+- **Glanceables:** Jetpack Glance 1.1.1 interactive app widgets
+- **Security:** AndroidX Biometric 1.1.0 with hardware-backed KeyStore security
+
+---
+
+# Legal Policies & Terms of Service
 
 ## 1. Introduction
 
