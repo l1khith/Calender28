@@ -13,7 +13,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import com.l1khith.calender28.billing.SubscriptionManager
@@ -26,7 +25,6 @@ fun SubscriptionPaywallDialog(
     onPurchaseSuccess: () -> Unit = {}
 ) {
     val isProActive by SubscriptionManager.isProActive.collectAsState()
-    val coroutineScope = rememberCoroutineScope()
 
     Dialog(onDismissRequest = onDismiss) {
         Card(
@@ -43,26 +41,6 @@ fun SubscriptionPaywallDialog(
                     .fillMaxWidth(),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                val isDevMode = remember { SubscriptionManager.isDevModeActive() }
-
-                if (isDevMode) {
-                    Surface(
-                        shape = MatrixShapes.Sm,
-                        color = Color(0xFF10B981).copy(alpha = 0.2f),
-                        border = BorderStroke(1.dp, Color(0xFF10B981)),
-                        modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)
-                    ) {
-                        Text(
-                            text = "DEV MODE — Pro features active without purchase",
-                            color = Color(0xFF10B981),
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.Bold,
-                            textAlign = TextAlign.Center,
-                            modifier = Modifier.padding(8.dp)
-                        )
-                    }
-                }
-
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
@@ -77,7 +55,7 @@ fun SubscriptionPaywallDialog(
                         )
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
-                            text = "Matrix 28 Pro (Testing Track)",
+                            text = "Matrix 28 Pro",
                             style = MaterialTheme.typography.titleMedium.copy(
                                 fontWeight = FontWeight.Bold,
                                 color = MatrixColors.TextHeader
@@ -125,7 +103,7 @@ fun SubscriptionPaywallDialog(
                     }
                 } else {
                     Text(
-                        text = "Closed Testing Track Mode\nUnlock Premium Features & Remove Ads locally.",
+                        text = "Upgrade to Pro to unlock premium features and remove ads.",
                         color = MatrixColors.TextSecondary,
                         fontSize = 13.sp,
                         textAlign = TextAlign.Center
@@ -134,26 +112,6 @@ fun SubscriptionPaywallDialog(
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                Button(
-                    onClick = {
-                        SubscriptionManager.toggleProMode(coroutineScope)
-                        onPurchaseSuccess()
-                        onDismiss()
-                    },
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = if (isProActive) MatrixColors.SurfaceContainerHigh else MatrixColors.Primary
-                    ),
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = MatrixShapes.Md
-                ) {
-                    Text(
-                        text = if (isProActive) "Deactivate Pro Mode" else "Activate Pro Mode (Testing Phase)",
-                        fontWeight = FontWeight.Bold
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(12.dp))
-
                 TextButton(onClick = onDismiss) {
                     Text("Close", color = MatrixColors.TextSecondary, fontSize = 12.sp)
                 }
@@ -161,4 +119,3 @@ fun SubscriptionPaywallDialog(
         }
     }
 }
-

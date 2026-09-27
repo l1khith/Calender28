@@ -61,10 +61,29 @@ fun CoinStoreScreen(
     val sparkyState by sparkyViewModel.sparkyState.collectAsStateWithLifecycle()
     val currentMood by sparkyViewModel.currentMood.collectAsStateWithLifecycle()
 
+    val isRewardedAdReady by coinViewModel.isRewardedAdReady.collectAsStateWithLifecycle()
+    val isAdLoading by coinViewModel.isAdLoading.collectAsStateWithLifecycle()
+    val isComboActive by coinViewModel.isComboActive.collectAsStateWithLifecycle()
+    val comboRemainingSeconds by coinViewModel.comboRemainingSeconds.collectAsStateWithLifecycle()
+
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val activity = remember(context) {
+        var ctx = context
+        while (ctx is android.content.ContextWrapper) {
+            if (ctx is android.app.Activity) return@remember ctx
+            ctx = ctx.baseContext
+        }
+        ctx as? android.app.Activity
+    }
+
     var selectedStoreTab by remember { mutableStateOf(initialTab) }
     var promoInput by remember { mutableStateOf("") }
     val snackbarHostState = remember { SnackbarHostState() }
     val keyboardController = LocalSoftwareKeyboardController.current
+
+    LaunchedEffect(Unit) {
+        coinViewModel.loadRewardedAd(context)
+    }
 
     LaunchedEffect(Unit) {
         coinViewModel.uiEvent.collectLatest { event ->
@@ -105,6 +124,7 @@ fun CoinStoreScreen(
     }
 
     Scaffold(
+        contentWindowInsets = WindowInsets.safeDrawing,
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             Column(modifier = Modifier.background(MatrixColors.Surface)) {
@@ -193,18 +213,32 @@ fun CoinStoreScreen(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(paddingValues)
+                    .consumeWindowInsets(paddingValues)
                     .padding(horizontal = 16.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp),
-                contentPadding = PaddingValues(vertical = 16.dp)
+                contentPadding = PaddingValues(top = 16.dp, bottom = 40.dp)
             ) {
                 // 1. Balance Banner Card
                 item {
                     BalanceCard(balance = coinBalance)
                 }
 
-            // 2. Pro Unlock Card
-            item {
-                PremiumUnlockCard(
+                // 2. Watch & Earn Card (Rewarded Ads & Combo System)
+                item {
+                    WatchAndEarnCard(
+                        isAdReady = isRewardedAdReady,
+                        isLoading = isAdLoading,
+                        isComboActive = isComboActive,
+                        comboRemainingSeconds = comboRemainingSeconds,
+                        onWatchAd = {
+                            activity?.let { coinViewModel.showRewardedAd(it) }
+                        }
+                    )
+                }
+
+                // 3. Pro Unlock Card
+                item {
+                    PremiumUnlockCard(
                     coinBalance = coinBalance,
                     isProActive = isProActive,
                     isPurchasing = isPurchasing,
@@ -545,7 +579,7 @@ private fun PremiumUnlockCard(
                         contentColor = MatrixColors.TextHeader
                     )
                 ) {
-                    Text("Or Try Testing Track Free")
+                    Text("Purchase Pro with Google Play")
                 }
             }
         }
@@ -665,6 +699,8 @@ private fun HowToEarnCard() {
                 )
             }
             Spacer(modifier = Modifier.height(10.dp))
+            EarnRuleRow("Watch Rewarded Video", "+10 coins")
+            EarnRuleRow("🔥 60s Video Combo Bonus", "+20 coins")
             EarnRuleRow("Daily App Open", "+1 coin")
             EarnRuleRow("Log Day in Habit", "+1 coin")
             EarnRuleRow("Complete Any Task", "+1 coin")
@@ -672,6 +708,239 @@ private fun HowToEarnCard() {
             EarnRuleRow("Focus Session Complete", "+5 coins")
             EarnRuleRow("Complete Habit Cycle", "+10 coins")
             EarnRuleRow("10 / 50 / 100 Cycles Milestone", "+100 / +500 / +1000 coins")
+        }
+    }
+}
+
+@Composable
+private fun WatchAndEarnCard(
+    isAdReady: Boolean,
+    isLoading: Boolean,
+    isComboActive: Boolean,
+    comboRemainingSeconds: Int,
+    onWatchAd: () -> Unit
+) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .border(
+                width = if (isComboActive) 1.5.dp else 1.dp,
+                brush = if (isComboActive) {
+                    Brush.horizontalGradient(
+                        colors = listOf(
+                            Color(0xFFFF9800),
+                            Color(0xFFFF5722),
+                            MatrixColors.Primary
+                        )
+                    )
+                } else {
+                    androidx.compose.ui.graphics.SolidColor(MatrixColors.OutlineVariant)
+                },
+                shape = MatrixShapes.Lg
+            ),
+        shape = MatrixShapes.Lg,
+        colors = CardDefaults.cardColors(
+            containerColor = if (isComboActive) MatrixColors.SurfaceContainerHigh else MatrixColors.SurfaceContainer
+        )
+    ) {
+        Column(
+            modifier = Modifier
+                .padding(18.dp)
+                .animateContentSize()
+        ) {
+            // Header Row: Icon + Title + Dynamic Reward Badge
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        imageVector = Icons.Default.PlayCircle,
+                        contentDescription = null,
+                        tint = if (isComboActive) Color(0xFFFF9800) else MatrixColors.Primary,
+                        modifier = Modifier.size(24.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = "Watch & Earn",
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 18.sp,
+                        color = MatrixColors.TextHeader
+                    )
+                }
+
+                // Dynamic Reward Badge
+                Surface(
+                    shape = CircleShape,
+                    color = if (isComboActive) Color(0xFFFF5722).copy(alpha = 0.2f) else MatrixColors.Primary.copy(alpha = 0.15f),
+                    border = BorderStroke(
+                        1.dp,
+                        if (isComboActive) Color(0xFFFF5722) else MatrixColors.Primary.copy(alpha = 0.5f)
+                    )
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        if (isComboActive) {
+                            Text(
+                                text = "🔥 COMBO ACTIVE (+20 Coins)",
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color(0xFFFF5722)
+                            )
+                        } else {
+                            Icon(
+                                imageVector = AppIcons.Coin,
+                                contentDescription = null,
+                                tint = Color.Unspecified,
+                                modifier = Modifier.size(14.dp)
+                            )
+                            Text(
+                                text = "+10 Coins",
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = MatrixColors.Primary
+                            )
+                        }
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(10.dp))
+
+            // Subtitle / Explanatory Text
+            Text(
+                text = if (isComboActive) {
+                    "2x Combo is ticking! Complete a second video before the timer runs out to claim +20 CalCoins!"
+                } else {
+                    "Watch a short video to earn +10 CalCoins. Finish a second video within 60s to trigger a 2x Combo (+20 Coins)!"
+                },
+                fontSize = 13.sp,
+                color = MatrixColors.TextSecondary,
+                lineHeight = 18.sp
+            )
+
+            // Reactive 60-Second Ticker / Countdown when combo is active
+            AnimatedVisibility(
+                visible = isComboActive,
+                enter = expandVertically() + fadeIn(),
+                exit = shrinkVertically() + fadeOut()
+            ) {
+                Column(modifier = Modifier.padding(top = 12.dp)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Timer,
+                                contentDescription = null,
+                                tint = Color(0xFFFF9800),
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Text(
+                                text = "Combo Timer:",
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = Color(0xFFFF9800)
+                            )
+                        }
+                        Text(
+                            text = "${comboRemainingSeconds}s remaining",
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = if (comboRemainingSeconds <= 10) Color.Red else Color(0xFFFF9800)
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(6.dp))
+
+                    LinearProgressIndicator(
+                        progress = { (comboRemainingSeconds / 60f).coerceIn(0f, 1f) },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(6.dp)
+                            .clip(CircleShape),
+                        color = if (comboRemainingSeconds <= 10) Color.Red else Color(0xFFFF9800),
+                        trackColor = MatrixColors.OutlineVariant.copy(alpha = 0.3f)
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(14.dp))
+
+            // Action Button with Loading States
+            val isButtonEnabled = isAdReady && !isLoading
+            Button(
+                onClick = onWatchAd,
+                enabled = isButtonEnabled,
+                modifier = Modifier.fillMaxWidth(),
+                shape = MatrixShapes.Md,
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = if (isComboActive) Color(0xFFFF5722) else MatrixColors.Primary,
+                    contentColor = Color.White,
+                    disabledContainerColor = MatrixColors.OutlineVariant.copy(alpha = 0.4f),
+                    disabledContentColor = MatrixColors.TextSecondary.copy(alpha = 0.6f)
+                )
+            ) {
+                if (isLoading) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(16.dp),
+                        strokeWidth = 2.dp,
+                        color = MatrixColors.TextSecondary
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = "Loading Ad...",
+                        fontWeight = FontWeight.SemiBold,
+                        fontSize = 14.sp
+                    )
+                } else if (!isAdReady) {
+                    Icon(
+                        imageVector = Icons.Default.CloudQueue,
+                        contentDescription = null,
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = "Preparing Video...",
+                        fontWeight = FontWeight.SemiBold,
+                        fontSize = 14.sp
+                    )
+                } else if (isComboActive) {
+                    Icon(
+                        imageVector = Icons.Default.LocalFireDepartment,
+                        contentDescription = null,
+                        tint = Color.Yellow,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = "Watch Combo (+20 CalCoins)",
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 14.sp
+                    )
+                } else {
+                    Icon(
+                        imageVector = Icons.Default.PlayArrow,
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = "Watch Video (+10 CalCoins)",
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 14.sp
+                    )
+                }
+            }
         }
     }
 }

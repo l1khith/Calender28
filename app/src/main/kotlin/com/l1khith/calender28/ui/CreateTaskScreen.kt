@@ -28,9 +28,19 @@ import com.l1khith.calender28.ui.theme.AppIcons
 import com.l1khith.calender28.ui.theme.MatrixColors
 import com.l1khith.calender28.ui.theme.MatrixShapes
 import com.l1khith.calender28.utils.PlatformTimePicker
+import com.l1khith.calender28.utils.TimeFormatter
+import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 
 import android.util.Log
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardCapitalization
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.platform.LocalFocusManager
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 private const val TAG = "CreateTaskScreen"
 
@@ -238,12 +248,17 @@ fun CreateTaskScreen(
     )
 
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(MatrixColors.Surface)
-            .statusBarsPadding()
-    ) {
+    Scaffold(
+        modifier = Modifier.fillMaxSize(),
+        containerColor = MatrixColors.Surface,
+        contentWindowInsets = WindowInsets.safeDrawing
+    ) { innerPadding ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(innerPadding)
+                .consumeWindowInsets(innerPadding)
+        ) {
 
         // Top App Bar
         Column(
@@ -328,7 +343,11 @@ fun CreateTaskScreen(
         }
 
 
+        val lazyListState = rememberLazyListState()
+        val focusManager = LocalFocusManager.current
+
         LazyColumn(
+            state = lazyListState,
             modifier = Modifier
                 .fillMaxSize()
                 .padding(horizontal = 16.dp),
@@ -556,7 +575,7 @@ fun CreateTaskScreen(
                                         }
 
                                         TextButton(onClick = { showStartTimePicker = true }) {
-                                            Text(startTimeStr, color = MatrixColors.Primary, fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                                            Text(TimeFormatter.formatTime(LocalContext.current, startTimeStr), color = MatrixColors.Primary, fontWeight = FontWeight.Bold, fontSize = 15.sp)
                                         }
                                     }
                                 }
@@ -631,7 +650,7 @@ fun CreateTaskScreen(
                                         }
 
                                         TextButton(onClick = { showEndTimePicker = true }) {
-                                            Text(endTimeStr, color = MatrixColors.Secondary, fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                                            Text(TimeFormatter.formatTime(LocalContext.current, endTimeStr), color = MatrixColors.Secondary, fontWeight = FontWeight.Bold, fontSize = 15.sp)
                                         }
                                     }
                                 }
@@ -696,7 +715,7 @@ fun CreateTaskScreen(
                                         fontSize = 13.sp
                                     )
                                     Text(
-                                        text = "Overlaps with '${detectedConflict.title}' (${detectedConflict.formattedTimeRange})",
+                                        text = "Overlaps with '${detectedConflict.title}' (${TimeFormatter.formatTaskTimeRange(LocalContext.current, detectedConflict)})",
                                         color = MatrixColors.TextHeader,
                                         fontSize = 12.sp
                                     )
@@ -848,6 +867,12 @@ fun CreateTaskScreen(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .heightIn(min = 90.dp),
+                            keyboardOptions = KeyboardOptions(
+                                capitalization = KeyboardCapitalization.Sentences,
+                                autoCorrectEnabled = true,
+                                keyboardType = KeyboardType.Text,
+                                imeAction = ImeAction.Default
+                            ),
                             colors = OutlinedTextFieldDefaults.colors(
                                 focusedContainerColor = MatrixColors.Surface,
                                 unfocusedContainerColor = MatrixColors.Surface,
@@ -959,6 +984,7 @@ fun CreateTaskScreen(
             }
         }
     }
+}
 
     if (showStartDatePicker) {
         FixedDatePickerDialog(

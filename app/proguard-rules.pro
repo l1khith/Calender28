@@ -22,6 +22,7 @@
 -keep class com.l1khith.calender28.receiver.** { *; }
 -keep class com.l1khith.calender28.widget.** { *; }
 -keep class com.l1khith.calender28.billing.** { *; }
+-keep class com.l1khith.calender28.ads.** { *; }
 -keep class com.l1khith.calender28.utils.** { *; }
 
 # -----------------------------------------------------------------------------
@@ -77,7 +78,37 @@
 }
 
 # -----------------------------------------------------------------------------
-# DataStore & Serialization
+# DataStore & Protobuf
 # -----------------------------------------------------------------------------
--keepclassmembers class * extends androidx.datastore.preferences.core.Preferences { *; }
+-keepclassmembers class * extends androidx.datastore.preferences.protobuf.GeneratedMessageLite {
+    <fields>;
+}
+-keep class androidx.datastore.preferences.protobuf.** { *; }
+-dontwarn androidx.datastore.preferences.protobuf.**
+
+-keep class androidx.datastore.preferences.PreferencesProto** { *; }
+-keepclassmembers class androidx.datastore.preferences.PreferencesProto** { *; }
+
+-keep class androidx.datastore.** { *; }
+-keepclassmembers class androidx.datastore.** { *; }
+
+-keepclassmembers class * extends com.google.protobuf.GeneratedMessageLite {
+    <fields>;
+}
+-keep class com.google.protobuf.** { *; }
+-dontwarn com.google.protobuf.**
+
+# -----------------------------------------------------------------------------
+# Kotlinx Serialization
+# -----------------------------------------------------------------------------
+-keepattributes *Annotation*, InnerClasses
 -dontwarn kotlinx.serialization.**
+-keepclassmembers class * {
+    @kotlinx.serialization.Serializable <fields>;
+}
+-keepclassmembers class * {
+    @kotlinx.serialization.SerialName <fields>;
+}
+-keep class kotlinx.serialization.** { *; }
+-keepclassmembers class * extends kotlinx.serialization.KSerializer { *; }
+

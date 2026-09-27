@@ -49,6 +49,7 @@ fun NoteEditorScreen(
         modifier = modifier
             .fillMaxSize()
             .background(MatrixColors.Surface)
+            .statusBarsPadding()
     ) {
         // ── Minimalist Top Action Bar ──────────────────────────────
         Row(
@@ -106,6 +107,7 @@ fun NoteEditorScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
+                .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Bottom))
                 .imePadding()
                 .verticalScroll(rememberScrollState())
                 .padding(horizontal = 20.dp, vertical = 12.dp)

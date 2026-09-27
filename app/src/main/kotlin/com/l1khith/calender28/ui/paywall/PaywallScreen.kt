@@ -1,6 +1,10 @@
 package com.l1khith.calender28.ui.paywall
 
 import android.app.Activity
+import android.content.Context
+import android.content.ContextWrapper
+import android.util.Log
+import com.l1khith.calender28.Calender28Application
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -16,6 +20,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.l1khith.calender28.R
 import com.l1khith.calender28.billing.RevenueCatManager
@@ -30,35 +35,48 @@ fun PaywallScreen(onClose: () -> Unit) {
     val scope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
 
-    var monthlyPackage by remember { mutableStateOf<Package?>(null) }
-    var yearlyPackage by remember { mutableStateOf<Package?>(null) }
+    var packages by remember { mutableStateOf<List<Package>>(emptyList()) }
     var selectedPackage by remember { mutableStateOf<Package?>(null) }
     var loading by remember { mutableStateOf(false) }
     var loaded by remember { mutableStateOf(false) }
     var loadError by remember { mutableStateOf<String?>(null) }
 
-    LaunchedEffect(Unit) {
-        val offerings = RevenueCatManager.getOfferings()
-        val current = offerings?.current
-        if (current == null) {
-            loadError = "Unable to load offerings. Check your connection."
-            loaded = true
-            return@LaunchedEffect
-        }
-        current.availablePackages.forEach { pkg ->
-            when (pkg.packageType) {
-                PackageType.MONTHLY -> monthlyPackage = pkg
-                PackageType.ANNUAL  -> yearlyPackage = pkg
-                else -> {
-                    if (pkg.identifier.contains("month", true))
-                        monthlyPackage = pkg
-                    else yearlyPackage = pkg
-                }
+    fun loadOfferings() {
+        loading = true
+        loadError = null
+        scope.launch {
+            val offerings = RevenueCatManager.getOfferings()
+            val current = offerings?.current ?: offerings?.all?.values?.firstOrNull()
+            if (current == null) {
+                loadError = "Unable to load subscription plans. Please verify your internet connection or Google Play account."
+                loaded = true
+                loading = false
+                return@launch
             }
+            val available = current.availablePackages
+            if (available.isEmpty()) {
+                loadError = "No subscription packages are currently active. Please check back later."
+                loaded = true
+                loading = false
+                return@launch
+            }
+            packages = available
+            // Preferred default: Annual, else Monthly, else first package
+            selectedPackage = available.find {
+                it.packageType == PackageType.ANNUAL ||
+                        it.identifier.contains("annual", ignoreCase = true) ||
+                        it.identifier.contains("year", ignoreCase = true)
+            } ?: available.find {
+                it.packageType == PackageType.MONTHLY ||
+                        it.identifier.contains("month", ignoreCase = true)
+            } ?: available.firstOrNull()
+            loaded = true
+            loading = false
         }
-        // Default selection: Yearly (best value)
-        selectedPackage = yearlyPackage ?: monthlyPackage
-        loaded = true
+    }
+
+    LaunchedEffect(Unit) {
+        loadOfferings()
     }
 
     Scaffold(
@@ -104,37 +122,74 @@ fun PaywallScreen(onClose: () -> Unit) {
             Spacer(Modifier.height(24.dp))
 
             when {
-                !loaded -> CircularProgressIndicator()
+                !loaded -> {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 32.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        CircularProgressIndicator()
+                    }
+                }
 
                 loadError != null -> {
-                    Text(
-                        text = loadError!!,
-                        color = MaterialTheme.colorScheme.error,
-                        style = MaterialTheme.typography.bodyMedium
-                    )
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 16.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        Text(
+                            text = loadError!!,
+                            color = MaterialTheme.colorScheme.error,
+                            style = MaterialTheme.typography.bodyMedium,
+                            textAlign = TextAlign.Center
+                        )
+                        OutlinedButton(onClick = { loadOfferings() }) {
+                            Text("Retry")
+                        }
+                    }
                 }
 
                 else -> {
-                    yearlyPackage?.let { pkg ->
+                    packages.forEach { pkg ->
+                        val isAnnual = pkg.packageType == PackageType.ANNUAL ||
+                                pkg.identifier.contains("annual", ignoreCase = true) ||
+                                pkg.identifier.contains("year", ignoreCase = true)
+                        val isMonthly = pkg.packageType == PackageType.MONTHLY ||
+                                pkg.identifier.contains("month", ignoreCase = true)
+                        val isLifetime = pkg.packageType == PackageType.LIFETIME ||
+                                pkg.identifier.contains("life", ignoreCase = true)
+
+                        val title = when {
+                            isAnnual -> "Annual"
+                            isMonthly -> "Monthly"
+                            isLifetime -> "Lifetime"
+                            else -> pkg.product.title.substringBefore(" (").ifBlank {
+                                pkg.identifier.replaceFirstChar { if (it.isLowerCase()) it.titlecase() else it.toString() }
+                            }
+                        }
+
+                        val subtitle = when {
+                            isAnnual -> "Best value • Billed yearly"
+                            isMonthly -> "Flexible • Cancel anytime"
+                            isLifetime -> "Pay once • Lifetime access"
+                            else -> pkg.product.description.ifBlank { "Cancel anytime" }
+                        }
+
+                        val badge = if (isAnnual) "BEST VALUE" else null
+
                         PlanCard(
-                            title = "Yearly",
-                            subtitle = "Best value",
+                            title = title,
+                            subtitle = subtitle,
                             price = pkg.product.price.formatted,
-                            badge = "BEST VALUE",
+                            badge = badge,
                             isSelected = selectedPackage?.identifier == pkg.identifier,
                             onClick = { selectedPackage = pkg }
                         )
                         Spacer(Modifier.height(12.dp))
-                    }
-                    monthlyPackage?.let { pkg ->
-                        PlanCard(
-                            title = "Monthly",
-                            subtitle = "Cancel anytime",
-                            price = pkg.product.price.formatted,
-                            badge = null,
-                            isSelected = selectedPackage?.identifier == pkg.identifier,
-                            onClick = { selectedPackage = pkg }
-                        )
                     }
                 }
             }
@@ -143,24 +198,50 @@ fun PaywallScreen(onClose: () -> Unit) {
 
             Button(
                 onClick = {
-                    val pkg = selectedPackage ?: return@Button
-                    val activity = context as? Activity ?: return@Button
+                    val activity = context.findActivity()
+                        ?: Calender28Application.currentActivity?.get()
+                    if (activity == null) {
+                        Log.e("PaywallScreen", "Cannot find Activity context to launch purchase!")
+                        scope.launch {
+                            snackbarHostState.showSnackbar("Unable to launch purchase flow. Please try reopening the screen.")
+                        }
+                        return@Button
+                    }
+                    val pkg = selectedPackage ?: packages.firstOrNull()
+                    if (pkg == null) {
+                        Log.e("PaywallScreen", "No package selected!")
+                        scope.launch {
+                            snackbarHostState.showSnackbar("No package selected. Please select a plan.")
+                        }
+                        return@Button
+                    }
+                    Log.d("PaywallScreen", "Continue clicked! Starting purchase: package=${pkg.identifier}, product=${pkg.product.id}, activity=$activity")
                     loading = true
                     scope.launch {
-                        when (val r = RevenueCatManager.purchase(activity, pkg)) {
-                            is RevenueCatManager.PurchaseResult.Success -> {
-                                snackbarHostState.showSnackbar("Welcome to Pro")
-                                onClose()
+                        try {
+                            when (val r = RevenueCatManager.purchase(activity, pkg)) {
+                                is RevenueCatManager.PurchaseResult.Success -> {
+                                    Log.d("PaywallScreen", "Purchase succeeded!")
+                                    snackbarHostState.showSnackbar("Welcome to Pro")
+                                    onClose()
+                                }
+                                is RevenueCatManager.PurchaseResult.Cancelled -> {
+                                    Log.d("PaywallScreen", "Purchase cancelled by user")
+                                }
+                                is RevenueCatManager.PurchaseResult.Error -> {
+                                    Log.e("PaywallScreen", "Purchase error: ${r.message}")
+                                    snackbarHostState.showSnackbar(r.message)
+                                }
                             }
-                            is RevenueCatManager.PurchaseResult.Cancelled -> { }
-                            is RevenueCatManager.PurchaseResult.Error -> {
-                                snackbarHostState.showSnackbar(r.message)
-                            }
+                        } catch (e: Exception) {
+                            Log.e("PaywallScreen", "Unexpected error in purchase flow: ${e.message}", e)
+                            snackbarHostState.showSnackbar(e.message ?: "An unexpected error occurred")
+                        } finally {
+                            loading = false
                         }
-                        loading = false
                     }
                 },
-                enabled = selectedPackage != null && !loading,
+                enabled = !loading && (selectedPackage != null || packages.isNotEmpty()),
                 modifier = Modifier.fillMaxWidth().height(56.dp),
                 shape = RoundedCornerShape(16.dp)
             ) {
@@ -296,3 +377,10 @@ private fun PlanCard(
         }
     }
 }
+
+private tailrec fun Context.findActivity(): Activity? = when (this) {
+    is Activity -> this
+    is ContextWrapper -> baseContext.findActivity()
+    else -> null
+}
+

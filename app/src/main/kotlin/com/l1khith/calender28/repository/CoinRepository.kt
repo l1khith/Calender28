@@ -23,5 +23,6 @@ interface CoinRepository {
     suspend fun rewardStreakMilestone(streakCount: Int): CoinRewardResult?
     suspend fun redeemPromoCode(code: String): Result<CoinRewardResult>
     suspend fun buyPremiumWithCoins(): Result<Unit>
+    suspend fun rewardAdWatch(coins: Int, isCombo: Boolean): CoinRewardResult
     suspend fun addCustomCoins(amount: Int, reason: String, note: String? = null): CoinRewardResult
 }

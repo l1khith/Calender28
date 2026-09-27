@@ -18,6 +18,12 @@ interface CoinDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertTransaction(tx: CoinTransactionEntity)
 
+    @Transaction
+    suspend fun updateBalanceAndInsertTransaction(balanceEntity: CoinBalanceEntity, tx: CoinTransactionEntity) {
+        insertOrUpdateBalance(balanceEntity)
+        insertTransaction(tx)
+    }
+
     @Query("SELECT * FROM coin_transactions ORDER BY timestamp DESC LIMIT :limit")
     fun getRecentTransactionsFlow(limit: Int = 50): Flow<List<CoinTransactionEntity>>
 

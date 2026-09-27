@@ -74,10 +74,10 @@ fun FocusSetupDialog(
 
     val presetDurations = listOf(15, 25, 30, 45, 60)
 
-    val estimatedCompletionTime = remember(durationMinutes) {
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val estimatedCompletionTime = remember(durationMinutes, context) {
         val targetMs = System.currentTimeMillis() + (durationMinutes * 60 * 1000L)
-        val sdf = SimpleDateFormat("h:mm a", Locale.getDefault())
-        sdf.format(Date(targetMs))
+        com.l1khith.calender28.utils.TimeFormatter.formatTimestamp(context, targetMs)
     }
 
     Dialog(

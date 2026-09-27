@@ -98,9 +98,11 @@ fun TimeBlockItem(
                     }
                 }
 
-                if (task.formattedTimeRange.isNotEmpty()) {
+                val context = androidx.compose.ui.platform.LocalContext.current
+                val timeRangeStr = com.l1khith.calender28.utils.TimeFormatter.formatTaskTimeRange(context, task)
+                if (timeRangeStr.isNotEmpty()) {
                     Text(
-                        text = task.formattedTimeRange,
+                        text = timeRangeStr,
                         color = MatrixColors.TextSecondary,
                         fontSize = 11.sp,
                         fontWeight = FontWeight.Medium,

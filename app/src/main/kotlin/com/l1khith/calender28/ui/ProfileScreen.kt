@@ -304,10 +304,10 @@ fun ProfileScreen(
                                     .fillMaxWidth()
                                     .padding(horizontal = 12.dp, vertical = 6.dp),
                                 colors = CardDefaults.cardColors(
-                                    containerColor = if (isPremium) MatrixColors.PrimaryContainer.copy(alpha = 0.35f) else MatrixColors.SurfaceContainerHigh
+                                    containerColor = if (isPro) MatrixColors.PrimaryContainer.copy(alpha = 0.35f) else MatrixColors.SurfaceContainerHigh
                                 ),
                                 onClick = {
-                                    if (!isPremium) onOpenSubscription()
+                                    if (isPro) onOpenCustomerCenter() else onOpenSubscription()
                                 }
                             ) {
                                 Row(
@@ -324,23 +324,21 @@ fun ProfileScreen(
                                             color = MatrixColors.TextHeader
                                         )
                                         Text(
-                                            text = if (isPremium) "Active" else "Inactive",
+                                            text = if (isPro) "Active • Tap to manage" else "Inactive • Tap to upgrade",
                                             style = MaterialTheme.typography.bodySmall,
                                             fontWeight = FontWeight.SemiBold,
-                                            color = if (isPremium)
+                                            color = if (isPro)
                                                 MaterialTheme.colorScheme.primary
                                             else
                                                 MaterialTheme.colorScheme.onSurfaceVariant
                                         )
                                     }
-                                    if (!isPremium) {
-                                        Text(
-                                            "Upgrade",
-                                            style = MaterialTheme.typography.labelLarge,
-                                            fontWeight = FontWeight.Bold,
-                                            color = MaterialTheme.colorScheme.primary
-                                        )
-                                    }
+                                    Text(
+                                        text = if (isPro) "Manage" else "Upgrade",
+                                        style = MaterialTheme.typography.labelLarge,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.primary
+                                    )
                                 }
                             }
 
@@ -376,6 +374,16 @@ fun ProfileScreen(
                                         color = MaterialTheme.colorScheme.onSurfaceVariant
                                     )
                                 }
+                            }
+
+                            if (isPro) {
+                                HorizontalDivider(color = MatrixColors.OutlineVariant, thickness = 1.dp)
+                                ProfileSubtitleRow(
+                                    icon = Icons.Default.CardMembership,
+                                    title = "Subscription & Customer Center",
+                                    subtitle = "Manage billing, change plan, or cancel",
+                                    onClick = onOpenCustomerCenter
+                                )
                             }
 
                             val isAppLockEnabled by com.l1khith.calender28.security.AppLockManager.isAppLockEnabled.collectAsState()

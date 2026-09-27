@@ -55,8 +55,6 @@ class CoinRepositoryImpl(
                 val currentBalance = coinDao.getCoinBalance()?.balance ?: 0
                 val newBalance = (currentBalance + amount).coerceAtLeast(0)
 
-                coinDao.insertOrUpdateBalance(CoinBalanceEntity(id = 1, balance = newBalance))
-
                 val tx = CoinTransactionEntity(
                     id = UUID.randomUUID().toString(),
                     amount = amount,
@@ -64,7 +62,10 @@ class CoinRepositoryImpl(
                     timestamp = getCurrentIsoTimestamp(),
                     note = note
                 )
-                coinDao.insertTransaction(tx)
+                coinDao.updateBalanceAndInsertTransaction(
+                    balanceEntity = CoinBalanceEntity(id = 1, balance = newBalance),
+                    tx = tx
+                )
 
                 val message = if (amount >= 0) {
                     "+$amount CalCoins: ${reason.displayName}"
@@ -225,8 +226,7 @@ class CoinRepositoryImpl(
                 )
                 coinDao.insertTransaction(tx)
 
-                userPrefsRepo?.updateIsProUser(true)
-                SubscriptionManager.setProActive(true)
+                userPrefsRepo?.updateCoinPremiumUnlocked(true)
 
                 Result.success(Unit)
             }
@@ -242,6 +242,16 @@ class CoinRepositoryImpl(
             amount = TransactionReason.FOCUS_SESSION.defaultAmount,
             reason = TransactionReason.FOCUS_SESSION,
             note = noteKey
+        )
+    }
+
+    override suspend fun rewardAdWatch(coins: Int, isCombo: Boolean): CoinRewardResult {
+        val reason = if (isCombo) TransactionReason.REWARDED_AD_COMBO else TransactionReason.REWARDED_AD
+        val note = if (isCombo) "2x Combo Bonus (+20 CalCoins)" else "Rewarded Ad (+10 CalCoins)"
+        return executeTransaction(
+            amount = coins,
+            reason = reason,
+            note = note
         )
     }
 

@@ -14,17 +14,25 @@ import com.l1khith.calender28.domain.usecase.conflicts.SuggestFreeSlotsUseCase
 import com.l1khith.calender28.repository.TaskRepository
 import com.l1khith.calender28.utils.FixedCalendarHelper
 import com.l1khith.calender28.utils.FixedDate
+import com.l1khith.calender28.utils.HabitCycleEngine
+import com.l1khith.calender28.utils.TimeFormatter
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import com.l1khith.calender28.Calender28Application
+import com.l1khith.calender28.data.Habit
 import com.l1khith.calender28.data.Note
+import com.l1khith.calender28.data.RecurringTask
+import com.l1khith.calender28.data.RecurrenceType
+import com.l1khith.calender28.data.toEntity
+import com.l1khith.calender28.repository.HabitRepository
 import com.l1khith.calender28.repository.NoteRepository
 import java.util.Calendar
 
@@ -49,7 +57,8 @@ class DayDetailViewModel(
     private val taskRepository: TaskRepository,
     private val resolveConflictUseCase: ResolveConflictUseCase,
     private val suggestFreeSlotsUseCase: SuggestFreeSlotsUseCase,
-    private val noteRepository: NoteRepository = (application as Calender28Application).container.noteRepository
+    private val noteRepository: NoteRepository = (application as Calender28Application).container.noteRepository,
+    private val habitRepository: HabitRepository = (application as Calender28Application).container.habitRepository
 ) : AndroidViewModel(application) {
 
     private val _uiState = MutableStateFlow(
@@ -61,6 +70,33 @@ class DayDetailViewModel(
     val notesForDate: StateFlow<List<Note>> = _notesForDate.asStateFlow()
 
     val hourRangeFlow: StateFlow<IntRange> = MutableStateFlow(0..23).asStateFlow()
+
+    val timelineData: StateFlow<Pair<List<DayTimelineItem>, List<DayTimelineItem>>> = combine(
+        _uiState,
+        _notesForDate
+    ) { state, notes ->
+        buildUnifiedTimeline(state, notes)
+    }.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5000),
+        initialValue = Pair(emptyList(), emptyList())
+    )
+
+    val dayTimelineItems: StateFlow<List<DayTimelineItem>> = timelineData
+        .map { it.first }
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = emptyList()
+        )
+
+    val unscheduledItems: StateFlow<List<DayTimelineItem>> = timelineData
+        .map { it.second }
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = emptyList()
+        )
 
     val timelineItems: StateFlow<List<TimelineItem>> = combine(
         notesForDate,
@@ -124,6 +160,49 @@ class DayDetailViewModel(
         viewModelScope.launch(Dispatchers.IO) {
             taskRepository.toggleTaskCompletion(task)
             loadDate(_uiState.value.selectedDate)
+        }
+    }
+
+    fun toggleRecurringComplete(recurringTask: RecurringTask, generatedTask: AppTask?, isCompleted: Boolean) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val date = _uiState.value.selectedDate
+            val dateStr = date.toString()
+            if (generatedTask != null) {
+                taskRepository.toggleTaskCompletion(generatedTask)
+            } else {
+                val isRem = if (recurringTask.reminderTime != null) 1 else 0
+                val utcTs = if (recurringTask.reminderTime != null) {
+                    FixedCalendarHelper.toTimestamp(date, recurringTask.reminderTime)
+                } else null
+                val newStatus = if (!isCompleted) 1 else 0
+                val genTask = AppTask(
+                    id = "gen_${recurringTask.id}_$dateStr",
+                    title = recurringTask.title,
+                    description = recurringTask.description,
+                    associatedDate = dateStr,
+                    isReminder = isRem,
+                    reminderTime = recurringTask.reminderTime,
+                    utcTimestamp = utcTs,
+                    isCompleted = newStatus,
+                    priority = recurringTask.priority,
+                    recurringParentId = recurringTask.id,
+                    isGenerated = 1
+                )
+                (getApplication<Application>() as Calender28Application).container.database.taskDao().insertTask(genTask.toEntity())
+            }
+            loadDate(date)
+        }
+    }
+
+    fun toggleHabitComplete(habit: Habit) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val date = _uiState.value.selectedDate
+            val epochDay = HabitCycleEngine.getEpochDay(FixedCalendarHelper.toTimestamp(date, "12:00"))
+            val anchorEpochDay = HabitCycleEngine.getEpochDay(habit.createdAtMs)
+            val pos = HabitCycleEngine.computePosition(epochDay, anchorEpochDay)
+            val isCompleted = habit.completedDays.contains(pos.safeDayInCycle)
+            habitRepository.toggleHabitDay(habit.id, pos.cycleIndex, pos.safeDayInCycle, isCompleted)
+            loadDate(date)
         }
     }
 
@@ -313,6 +392,122 @@ class DayDetailViewModel(
             }
 
             return items
+        }
+
+        fun buildUnifiedTimeline(
+            uiState: DayDetailUiState,
+            notes: List<Note>
+        ): Pair<List<DayTimelineItem>, List<DayTimelineItem>> {
+            val selectedDate = uiState.selectedDate
+            val scheduledItems = mutableListOf<DayTimelineItem>()
+            val unscheduledItems = mutableListOf<DayTimelineItem>()
+
+            // 1. One-off tasks vs Generated Recurring tasks in timedTasks
+            val generatedParentIds = mutableSetOf<String>()
+
+            uiState.timedTasks.forEach { task ->
+                if (task.recurringParentId != null || task.isGenerated == 1) {
+                    val parentId = task.recurringParentId ?: task.id.removePrefix("gen_").substringBefore("_")
+                    generatedParentIds.add(parentId)
+                    val parentTemplate = uiState.recurringInstances.find { it.id == parentId }
+                    if (parentTemplate != null) {
+                        scheduledItems.add(
+                            DayTimelineItem.RecurringTaskInstance(
+                                task = parentTemplate,
+                                isCompleted = task.completed,
+                                generatedTask = task
+                            )
+                        )
+                    } else {
+                        scheduledItems.add(
+                            DayTimelineItem.RecurringTaskInstance(
+                                task = RecurringTask(
+                                    id = parentId,
+                                    title = task.title,
+                                    description = task.description,
+                                    recurrenceType = RecurrenceType.DAILY,
+                                    createdAt = System.currentTimeMillis(),
+                                    reminderTime = task.reminderTime,
+                                    priority = task.priority,
+                                    isActive = true
+                                ),
+                                isCompleted = task.completed,
+                                generatedTask = task
+                            )
+                        )
+                    }
+                } else {
+                    scheduledItems.add(DayTimelineItem.OneOffTask(task))
+                }
+            }
+
+            // 2. Recurring tasks from recurringInstances that don't have generated tasks in timedTasks
+            uiState.recurringInstances.forEach { rec ->
+                if (!generatedParentIds.contains(rec.id)) {
+                    val parsedTime = TimeFormatter.parseTimeToHourMinute(rec.reminderTime)
+                    if (parsedTime != null) {
+                        scheduledItems.add(
+                            DayTimelineItem.RecurringTaskInstance(
+                                task = rec,
+                                isCompleted = false,
+                                generatedTask = null
+                            )
+                        )
+                    } else {
+                        unscheduledItems.add(
+                            DayTimelineItem.RecurringTaskInstance(
+                                task = rec,
+                                isCompleted = false,
+                                generatedTask = null
+                            )
+                        )
+                    }
+                }
+            }
+
+            // 3. Habit reminders
+            uiState.habits.forEach { habit ->
+                if (!habit.reminderTime.isNullOrBlank() && habit.reminderTime != "Off") {
+                    val epochDay = HabitCycleEngine.getEpochDay(FixedCalendarHelper.toTimestamp(selectedDate, "12:00"))
+                    val anchorEpochDay = HabitCycleEngine.getEpochDay(habit.createdAtMs)
+                    val pos = HabitCycleEngine.computePosition(epochDay, anchorEpochDay)
+                    val isCompleted = habit.completedDays.contains(pos.safeDayInCycle)
+                    scheduledItems.add(
+                        DayTimelineItem.HabitReminder(
+                            habit = habit,
+                            isCompleted = isCompleted
+                        )
+                    )
+                }
+            }
+
+            // 4. Notes
+            notes.forEach { note ->
+                scheduledItems.add(DayTimelineItem.NoteItem(note))
+            }
+
+            // 5. Unscheduled & All-Day Tasks
+            uiState.unscheduledTasks.forEach { task ->
+                unscheduledItems.add(DayTimelineItem.OneOffTask(task))
+            }
+            uiState.allDayTasks.forEach { task ->
+                unscheduledItems.add(DayTimelineItem.OneOffTask(task))
+            }
+
+            // Group scheduled items by hour (0..23)
+            val itemsByHour = scheduledItems.groupBy { item ->
+                val mins = item.timeMinutes ?: 0
+                (mins / 60).coerceIn(0, 23)
+            }
+
+            val result = mutableListOf<DayTimelineItem>()
+            for (hour in 0..23) {
+                result.add(DayTimelineItem.HourHeader(hour))
+                val inThisHour = itemsByHour[hour] ?: emptyList()
+                result.addAll(inThisHour.sortedBy { it.timeMinutes ?: 0 })
+            }
+
+            return Pair(result, unscheduledItems)
         }
     }
 }

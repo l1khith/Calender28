@@ -15,11 +15,14 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.fragment.app.FragmentActivity
+import androidx.lifecycle.lifecycleScope
+import com.l1khith.calender28.billing.RevenueCatManager
 import com.l1khith.calender28.ui.FixedCalendarApp
 import com.l1khith.calender28.ui.theme.MatrixTheme
 import com.l1khith.calender28.viewmodel.FixedCalendarViewModel
-
 import com.l1khith.calender28.viewmodel.AppViewModelProvider
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 
 class MainActivity : FragmentActivity() {
 
@@ -73,11 +76,21 @@ class MainActivity : FragmentActivity() {
     override fun onResume() {
         super.onResume()
         com.l1khith.calender28.security.AppLockManager.onActivityResumed()
+        lifecycleScope.launch(Dispatchers.IO) {
+            val isPro = RevenueCatManager.refresh()
+            if (!isPro && !com.l1khith.calender28.billing.SubscriptionManager.isProActive.value) {
+                lifecycleScope.launch(Dispatchers.Main) {
+                    com.l1khith.calender28.ads.InterstitialAdManager.loadAd(this@MainActivity)
+                }
+            }
+            lifecycleScope.launch(Dispatchers.Main) {
+                com.l1khith.calender28.ads.RewardedAdManager.loadAd(this@MainActivity)
+            }
+        }
     }
 
     override fun onPause() {
         super.onPause()
-        com.l1khith.calender28.ads.InterstitialAdManager.clear()
         com.l1khith.calender28.security.AppLockManager.onActivityPaused()
 
         // If an active focus session had screen pinning enabled and the user navigated away,
@@ -87,6 +100,12 @@ class MainActivity : FragmentActivity() {
             com.l1khith.calender28.utils.ScreenPinningHelper.stopPinning(this)
             com.l1khith.calender28.service.FocusSessionManager.stopOrCancelFocus(this, markAsCancelled = true)
         }
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        com.l1khith.calender28.ads.RewardedAdManager.clear()
+        com.l1khith.calender28.ads.InterstitialAdManager.clear()
     }
 
     override fun onNewIntent(intent: Intent) {

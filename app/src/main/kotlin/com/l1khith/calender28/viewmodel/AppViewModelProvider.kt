@@ -28,7 +28,8 @@ object AppViewModelProvider {
             val app = matrixApplication()
             CoinViewModel(
                 application = app,
-                coinRepository = app.container.coinRepository
+                coinRepository = app.container.coinRepository,
+                rewardedAdManager = app.container.rewardedAdManager
             )
         }
         initializer {
@@ -70,7 +71,8 @@ object AppViewModelProvider {
                 taskRepository = app.container.taskRepository,
                 resolveConflictUseCase = app.container.resolveConflictUseCase,
                 suggestFreeSlotsUseCase = app.container.suggestFreeSlotsUseCase,
-                noteRepository = app.container.noteRepository
+                noteRepository = app.container.noteRepository,
+                habitRepository = app.container.habitRepository
             )
         }
         initializer {

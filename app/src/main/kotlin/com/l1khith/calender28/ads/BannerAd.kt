@@ -17,8 +17,7 @@ import com.l1khith.calender28.billing.SubscriptionManager
 import com.l1khith.calender28.utils.Constants
 import kotlinx.coroutines.delay
 
-private const val BANNER_AD_UNIT_ID =
-    "ca-app-pub-2924141814856423/6252757545"
+private val BANNER_AD_UNIT_ID = Constants.ADMOB_BANNER_ID
 
 @Composable
 fun BannerAd(modifier: Modifier = Modifier) {
@@ -57,6 +56,14 @@ fun BannerAd(modifier: Modifier = Modifier) {
             AdView(ctx).apply {
                 setAdSize(AdSize.BANNER)
                 adUnitId = BANNER_AD_UNIT_ID
+                adListener = object : com.google.android.gms.ads.AdListener() {
+                    override fun onAdLoaded() {
+                        android.util.Log.d("BannerAd", "AdMob banner loaded successfully")
+                    }
+                    override fun onAdFailedToLoad(error: com.google.android.gms.ads.LoadAdError) {
+                        android.util.Log.e("BannerAd", "AdMob banner failed to load: code=${error.code}, message=${error.message}")
+                    }
+                }
                 loadAd(AdRequest.Builder().build())
             }
         },

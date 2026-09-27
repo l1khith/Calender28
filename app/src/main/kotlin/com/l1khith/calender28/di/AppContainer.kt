@@ -31,6 +31,7 @@ interface AppContainer {
     val appSettingsManager: com.l1khith.calender28.utils.AppSettingsManager
     val subscriptionManager: com.l1khith.calender28.billing.SubscriptionManager
     val themeManager: com.l1khith.calender28.ui.theme.ThemeManager
+    val rewardedAdManager: com.l1khith.calender28.ads.RewardedAdManager
     val getDayDetailUseCase: com.l1khith.calender28.domain.usecase.GetDayDetailUseCase
     val detectTaskConflictsUseCase: com.l1khith.calender28.domain.usecase.DetectTaskConflictsUseCase
     val getDayConflictsUseCase: com.l1khith.calender28.domain.usecase.GetDayConflictsUseCase
@@ -122,6 +123,9 @@ class DefaultAppContainer(private val context: Context) : AppContainer {
 
     override val themeManager: com.l1khith.calender28.ui.theme.ThemeManager
         get() = com.l1khith.calender28.ui.theme.ThemeManager
+
+    override val rewardedAdManager: com.l1khith.calender28.ads.RewardedAdManager
+        get() = com.l1khith.calender28.ads.RewardedAdManager
 
     override val getDayDetailUseCase: com.l1khith.calender28.domain.usecase.GetDayDetailUseCase by lazy {
         com.l1khith.calender28.domain.usecase.GetDayDetailUseCase(

@@ -268,4 +268,23 @@ class CoinSystemTest {
         assertTrue(successResult.isSuccess)
         assertEquals(0, repository.getBalance())
     }
+
+    @Test
+    fun `test rewarded ad awards 10 coins base and 20 coins combo`() = runBlocking {
+        assertEquals(0, repository.getBalance())
+
+        // Watch 1: Base (+10)
+        val result1 = repository.rewardAdWatch(coins = 10, isCombo = false)
+        assertEquals(10, result1.coinsAwarded)
+        assertEquals(TransactionReason.REWARDED_AD.name, result1.reasonName)
+        assertEquals(10, result1.newBalance)
+        assertEquals(10, repository.getBalance())
+
+        // Watch 2: Combo (+20)
+        val result2 = repository.rewardAdWatch(coins = 20, isCombo = true)
+        assertEquals(20, result2.coinsAwarded)
+        assertEquals(TransactionReason.REWARDED_AD_COMBO.name, result2.reasonName)
+        assertEquals(30, result2.newBalance)
+        assertEquals(30, repository.getBalance())
+    }
 }

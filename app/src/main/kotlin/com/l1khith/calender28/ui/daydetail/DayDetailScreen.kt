@@ -49,7 +49,9 @@ fun DayDetailScreen(
     }
 
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    val timelineItems by viewModel.timelineItems.collectAsStateWithLifecycle()
+    val dayTimelineItems by viewModel.dayTimelineItems.collectAsStateWithLifecycle()
+    val unscheduledItems by viewModel.unscheduledItems.collectAsStateWithLifecycle()
+    val isProActive by com.l1khith.calender28.billing.SubscriptionManager.isProActive.collectAsStateWithLifecycle()
     var editingNote by remember { mutableStateOf<Note?>(null) }
 
     BackHandler(enabled = editingNote != null) {
@@ -246,16 +248,28 @@ fun DayDetailScreen(
             Box(modifier = Modifier.weight(1f)) {
                 HourTimeline(
                     dateStr = uiState.selectedDate.toString(),
-                    timedTasks = uiState.timedTasks,
+                    dayTimelineItems = dayTimelineItems,
+                    unscheduledItems = unscheduledItems,
                     crossDayTasks = uiState.crossDayTasks,
                     conflicts = uiState.activeConflicts,
                     isToday = isToday,
                     onTaskClick = onEditTask,
-                    onToggleComplete = { viewModel.toggleTaskComplete(it) },
+                    onToggleTaskComplete = { viewModel.toggleTaskComplete(it) },
+                    onRecurringClick = { rec, genTask ->
+                        if (genTask != null) onEditTask(genTask)
+                    },
+                    onToggleRecurringComplete = { rec, genTask, isCompleted ->
+                        viewModel.toggleRecurringComplete(rec, genTask, isCompleted)
+                    },
+                    onHabitClick = { habit ->
+                        // Focus or detail interaction
+                    },
+                    onToggleHabitComplete = { habit ->
+                        viewModel.toggleHabitComplete(habit)
+                    },
                     onCreateTaskAtHour = { hour ->
                         onOpenCreateTask(uiState.selectedDate.toString(), hour)
                     },
-                    timelineItems = timelineItems,
                     onNoteClick = { note ->
                         if (onNoteClick != null) {
                             onNoteClick(note)
@@ -266,24 +280,14 @@ fun DayDetailScreen(
                 )
             }
 
-            // Collapsible auxiliary sections at bottom
-            if (uiState.allDayTasks.isNotEmpty() || uiState.unscheduledTasks.isNotEmpty() ||
-                uiState.recurringInstances.isNotEmpty() || uiState.habits.isNotEmpty() ||
-                uiState.focusSessions.isNotEmpty()
-            ) {
+            // Auxiliary sections at bottom (Focus Sessions)
+            if (uiState.focusSessions.isNotEmpty()) {
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp, vertical = 8.dp)
                 ) {
-                    AuxiliarySections(
-                        allDayTasks = uiState.allDayTasks,
-                        unscheduledTasks = uiState.unscheduledTasks,
-                        recurringTasks = uiState.recurringInstances,
-                        habits = uiState.habits,
-                        focusSessions = uiState.focusSessions,
-                        onTaskClick = onEditTask
-                    )
+                    FocusSection(focusSessions = uiState.focusSessions)
                 }
             }
         }
@@ -346,7 +350,7 @@ fun DayDetailScreen(
                 viewModel.deleteNote(note)
                 editingNote = null
             },
-            isPro = true,
+            isPro = isProActive,
             onUpgrade = { },
             modifier = Modifier.fillMaxSize()
         )

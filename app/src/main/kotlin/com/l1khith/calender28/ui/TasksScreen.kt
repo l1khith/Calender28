@@ -28,9 +28,10 @@ import com.l1khith.calender28.ui.theme.AppIcons
 import com.l1khith.calender28.ui.theme.MatrixColors
 import com.l1khith.calender28.ui.theme.MatrixShapes
 import com.l1khith.calender28.utils.FixedCalendarHelper
+import com.l1khith.calender28.utils.TimeFormatter
 import com.l1khith.calender28.utils.currentTimeMillis
 import com.l1khith.calender28.viewmodel.FixedCalendarViewModel
-
+import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 
 private const val TAG = "TasksScreen"
@@ -190,7 +191,8 @@ fun TasksScreen(
         Spacer(modifier = Modifier.height(16.dp))
 
         LazyColumn(
-            modifier = Modifier.fillMaxSize(),
+            modifier = Modifier
+                .fillMaxSize(),
             verticalArrangement = Arrangement.spacedBy(20.dp),
             contentPadding = PaddingValues(bottom = 80.dp)
         ) {
@@ -440,7 +442,7 @@ fun UrgentTaskCard(
                     if (task.reminderTime != null) {
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
-                            text = task.reminderTime,
+                            text = TimeFormatter.formatTime(LocalContext.current, task.reminderTime),
                             color = MatrixColors.TextSecondary,
                             fontSize = 12.sp
                         )
@@ -570,7 +572,7 @@ fun FocusTaskCard(
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         if (task.reminderTime != null) {
                             Text(
-                                text = task.reminderTime,
+                                text = TimeFormatter.formatTime(LocalContext.current, task.reminderTime),
                                 color = MatrixColors.TextSecondary,
                                 fontSize = 12.sp
                             )
@@ -693,7 +695,7 @@ fun UpcomingTaskCard(
 
                 if (task.reminderTime != null) {
                     Text(
-                        text = task.reminderTime,
+                        text = TimeFormatter.formatTime(LocalContext.current, task.reminderTime),
                         color = MatrixColors.TextSecondary,
                         fontSize = 11.sp
                     )

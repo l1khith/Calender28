@@ -32,6 +32,8 @@ import androidx.compose.ui.window.DialogProperties
 import com.l1khith.calender28.data.RecurrenceType
 import com.l1khith.calender28.data.RecurringTask
 import com.l1khith.calender28.utils.PlatformTimePicker
+import com.l1khith.calender28.utils.TimeFormatter
+import androidx.compose.ui.platform.LocalContext
 
 @Composable
 fun RecurringManagerDialog(
@@ -251,7 +253,8 @@ fun RecurringTaskItem(
                     )
                 }
                 Spacer(modifier = Modifier.height(3.dp))
-                val timeStr = if (!task.reminderTime.isNullOrEmpty()) " at ${task.reminderTime}" else ""
+                val context = LocalContext.current
+                val timeStr = if (!task.reminderTime.isNullOrEmpty()) " at ${TimeFormatter.formatTime(context, task.reminderTime)}" else ""
                 Text(
                     text = "$ruleText$timeStr",
                     color = primaryColor,
@@ -574,8 +577,9 @@ fun AddEditRecurringDialog(
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Text("Trigger Alarm Time", color = textColor, fontWeight = FontWeight.Medium, fontSize = 14.sp)
+                            val context = LocalContext.current
                             Row(verticalAlignment = Alignment.CenterVertically) {
-                                Text(reminderTime, color = primaryColor, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                                Text(TimeFormatter.formatTime(context, reminderTime), color = primaryColor, fontWeight = FontWeight.Bold, fontSize = 16.sp)
                                 Spacer(modifier = Modifier.width(4.dp))
                                 Icon(imageVector = Icons.Default.ArrowDropDown, contentDescription = "Pick Time", tint = primaryColor)
                             }

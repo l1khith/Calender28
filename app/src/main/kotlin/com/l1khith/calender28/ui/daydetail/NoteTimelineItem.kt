@@ -21,14 +21,9 @@ fun NoteTimelineItem(
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val timeLabel = remember(note.createdAt) {
-        val cal = Calendar.getInstance().apply {
-            timeInMillis = note.createdAt
-        }
-        "%02d:%02d".format(
-            cal.get(Calendar.HOUR_OF_DAY),
-            cal.get(Calendar.MINUTE)
-        )
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val timeLabel = remember(note.createdAt, context) {
+        com.l1khith.calender28.utils.TimeFormatter.formatTimestamp(context, note.createdAt)
     }
 
     Row(
@@ -43,7 +38,7 @@ fun NoteTimelineItem(
             text = timeLabel,
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.width(52.dp)
+            modifier = Modifier.width(64.dp)
         )
 
         Spacer(Modifier.width(8.dp))
